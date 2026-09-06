@@ -98,6 +98,18 @@ jobs:
       - name: Test Rust CLI
         run: cargo test --locked -p paperboy
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Test Go CLI
+        run: |
+          cd clients/go
+          test -z "$(gofmt -l .)"
+          go vet ./...
+          go test ./...
+          go build -o "$RUNNER_TEMP/paperboy-go" .
+
       - name: Lint
         run: bun run lint
 

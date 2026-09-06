@@ -1,3 +1,4 @@
+import { ApiGuides } from "@/components/docs/api-guides";
 import { OpenApiReference } from "@/components/docs/openapi-reference";
 import { parseOpenApiDocument, readOpenApiSpec } from "@/lib/openapi-document";
 
@@ -16,7 +17,7 @@ export default async function ApiDocsPage() {
         <p>{document.description}</p>
         <p>
           Download the linted OpenAPI 3.1 document or call the same routes with
-          the Rust CLI.
+          the Rust CLI or the self-contained Go CLI.
         </p>
         <div className="openapi-toolbar">
           <a className="btn btn-primary btn-compact" href="/openapi.yaml">
@@ -28,8 +29,15 @@ export default async function ApiDocsPage() {
           >
             Rust CLI
           </a>
+          <a
+            className="btn btn-compact"
+            href="https://github.com/jusso-dev/PaperBoy/tree/main/clients/go"
+          >
+            Go CLI
+          </a>
         </div>
       </div>
+      <ApiGuides />
       <OpenApiReference document={document} />
     </section>
   );

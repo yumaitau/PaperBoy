@@ -202,6 +202,8 @@ The signed-in console renders that contract at `/app/docs`. The same document is
 
 The Rust CLI in [`crates/paperboy`](crates/paperboy) calls the bearer-key routes. Build it with `cargo build --release -p paperboy` and see [CLI usage](docs/cli.md). Keep `PAPERBOY_API_KEY` in the process environment.
 
+The self-contained Go CLI in [`clients/go`](clients/go/README.md) covers the full current API surface with no third-party dependencies. Build it with `cd clients/go && go build -o paperboy .`; it reads `PAPERBOY_URL` and `PAPERBOY_API_KEY` and its command table is tested against `openapi.yaml`.
+
 The handwritten [`@paperboy/sdk`](packages/sdk/README.md) exposes `send()` and `get(id)` over the same HTTP surface using platform `fetch` and no runtime dependencies. Build JavaScript and declarations with `bun run sdk:build`; generated `packages/sdk/dist` output is ignored and must not be committed.
 
 Full generated clients for TypeScript (`@paperboy/openapi`) and PHP (`paperboy/openapi`) live in [`sdks/`](sdks/README.md). They are produced from `openapi.yaml` by `bun run sdk:generate` (Java 17+) and by [`.github/workflows/sdk.yml`](.github/workflows/sdk.yml) whenever that spec changes on a push. Do not hand-edit files under `sdks/typescript` or `sdks/php`.
