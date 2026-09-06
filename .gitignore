@@ -12,6 +12,9 @@
 /build
 /target/
 
+# go binaries
+/clients/go/paperboy
+
 # misc
 .DS_Store
 *.pem
