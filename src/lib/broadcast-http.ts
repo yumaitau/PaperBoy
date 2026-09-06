@@ -5,7 +5,11 @@ import {
   BroadcastError,
   type BroadcastValidationIssue,
 } from "@/lib/broadcast-core";
-import type { BroadcastRecord } from "@/lib/broadcasts";
+import type {
+  BroadcastClickedLink,
+  BroadcastRecord,
+  BroadcastRecipientView,
+} from "@/lib/broadcasts";
 import { TemplateError } from "@/lib/template-core";
 import { UnsubscribeConfigurationError } from "@/lib/unsubscribe-core";
 
@@ -18,11 +22,29 @@ export type BroadcastHttpServices = {
     principal: ApiKeyPrincipal,
     payload: unknown,
   ) => Promise<BroadcastRecord>;
+  delete: (
+    principal: ApiKeyPrincipal,
+    broadcastId: string,
+  ) => Promise<void>;
   get: (
     principal: ApiKeyPrincipal,
     broadcastId: string,
   ) => Promise<BroadcastRecord>;
   list: (principal: ApiKeyPrincipal) => Promise<BroadcastRecord[]>;
+  listClickedLinks: (
+    principal: ApiKeyPrincipal,
+    broadcastId: string,
+  ) => Promise<BroadcastClickedLink[]>;
+  listRecipients: (
+    principal: ApiKeyPrincipal,
+    broadcastId: string,
+    filter: { bounceType?: string; email?: string; limit?: number; type?: string },
+  ) => Promise<BroadcastRecipientView[]>;
+  send: (
+    principal: ApiKeyPrincipal,
+    broadcastId: string,
+    payload: unknown,
+  ) => Promise<BroadcastRecord>;
   pause: (
     principal: ApiKeyPrincipal,
     broadcastId: string,
@@ -114,6 +136,10 @@ function failure(error: unknown): Response {
       code = "template_not_found";
       message = "No template with that ID exists in this organization.";
       status = 404;
+    } else if (error.code === "TEMPLATE_NOT_PUBLISHED") {
+      code = "template_not_published";
+      message = "Publish the template before broadcasting with it.";
+      status = 422;
     } else if (error.code === "MEMBERSHIP_REQUIRED") {
       code = "forbidden";
       message = "Create a new API key from a current organization owner or admin.";
@@ -295,6 +321,31 @@ async function handleControlBroadcastRequest(
   }
 }
 
+export function serializeBroadcastRecipient(view: BroadcastRecipientView) {
+  return {
+    bounced_at: view.bouncedAt?.toISOString() ?? null,
+    clicked_at: view.clickedAt?.toISOString() ?? null,
+    complained_at: view.complainedAt?.toISOString() ?? null,
+    contact_id: view.contactId,
+    delivered_at: view.deliveredAt?.toISOString() ?? null,
+    email: view.email,
+    message_id: view.messageId,
+    opened_at: view.openedAt?.toISOString() ?? null,
+    position: view.position,
+    sent_at: view.sentAt?.toISOString() ?? null,
+    status: view.status,
+    unsubscribed: view.unsubscribed,
+  };
+}
+
+export function serializeBroadcastClickedLink(link: BroadcastClickedLink) {
+  return {
+    click_count: link.clickCount,
+    unique_clicks: link.uniqueClicks,
+    url: link.url,
+  };
+}
+
 export function handlePauseBroadcastRequest(
   request: Request,
   broadcastId: string,
@@ -317,4 +368,111 @@ export function handleCancelBroadcastRequest(
   dependencies: BroadcastHttpDependencies,
 ) {
   return handleControlBroadcastRequest(request, broadcastId, "cancel", dependencies);
+}
+
+export async function handleDeleteBroadcastRequest(
+  request: Request,
+  broadcastId: string,
+  dependencies: BroadcastHttpDependencies,
+): Promise<Response> {
+  const principal = await authenticate(request, dependencies);
+
+  if (principal instanceof Response) {
+    return principal;
+  }
+
+  try {
+    await dependencies.services.delete(principal, broadcastId);
+    return json({ data: { deleted: true, id: broadcastId } }, 200);
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function handleSendBroadcastRequest(
+  request: Request,
+  broadcastId: string,
+  dependencies: BroadcastHttpDependencies,
+): Promise<Response> {
+  const principal = await authenticate(request, dependencies);
+
+  if (principal instanceof Response) {
+    return principal;
+  }
+
+  let payload: unknown = {};
+
+  try {
+    const text = await request.text();
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    return invalidJson();
+  }
+
+  try {
+    const record = await dependencies.services.send(
+      principal,
+      broadcastId,
+      payload,
+    );
+    return json({ data: serializeBroadcast(record) }, 200);
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function handleListBroadcastRecipientsRequest(
+  request: Request,
+  broadcastId: string,
+  dependencies: BroadcastHttpDependencies,
+): Promise<Response> {
+  const principal = await authenticate(request, dependencies);
+
+  if (principal instanceof Response) {
+    return principal;
+  }
+
+  const query = new URL(request.url).searchParams;
+  const limit = Number(query.get("limit"));
+
+  try {
+    const recipients = await dependencies.services.listRecipients(
+      principal,
+      broadcastId,
+      {
+        ...(query.get("bounce_type") ? { bounceType: query.get("bounce_type") as string } : {}),
+        ...(query.get("email") ? { email: query.get("email") as string } : {}),
+        ...(Number.isInteger(limit) && limit >= 1 ? { limit: Math.min(limit, 100) } : {}),
+        ...(query.get("type") ? { type: query.get("type") as string } : {}),
+      },
+    );
+    return json(
+      { data: recipients.map(serializeBroadcastRecipient) },
+      200,
+    );
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function handleListBroadcastClickedLinksRequest(
+  request: Request,
+  broadcastId: string,
+  dependencies: BroadcastHttpDependencies,
+): Promise<Response> {
+  const principal = await authenticate(request, dependencies);
+
+  if (principal instanceof Response) {
+    return principal;
+  }
+
+  try {
+    const links = await dependencies.services.listClickedLinks(
+      principal,
+      broadcastId,
+    );
+    return json({ data: links.map(serializeBroadcastClickedLink) }, 200);
+  } catch (error) {
+    return failure(error);
+  }
 }

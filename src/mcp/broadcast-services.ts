@@ -30,10 +30,15 @@ export const paperBoyMcpBroadcastServices: PaperBoyMcpBroadcastServices = {
   cancel: broadcastApiServices.cancel,
   create: (principal: ApiKeyPrincipal, payload: unknown) =>
     broadcastApiServices.create(principal, servicePayload(payload)),
+  delete: broadcastApiServices.delete,
   get: broadcastApiServices.get,
   list: broadcastApiServices.list,
+  listClickedLinks: broadcastApiServices.listClickedLinks,
+  listRecipients: broadcastApiServices.listRecipients,
   pause: broadcastApiServices.pause,
   resume: broadcastApiServices.resume,
+  send: (principal, broadcastId, payload) =>
+    broadcastApiServices.send(principal, broadcastId, servicePayload(payload)),
   update: (principal, broadcastId, payload) =>
     broadcastApiServices.update(principal, broadcastId, servicePayload(payload)),
 };

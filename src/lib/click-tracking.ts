@@ -133,7 +133,7 @@ export async function recordClickTrackingHit(input: {
   }
   try {
     await recordMessageEvent({
-      data: {},
+      data: { url: input.targetUrl },
       messageId: input.messageId,
       type: "clicked",
     });

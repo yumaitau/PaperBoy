@@ -5,9 +5,11 @@ import { TemplateError } from "../src/lib/template-core.ts";
 import {
   handleCreateTemplateRequest,
   handleDeleteTemplateRequest,
+  handleDuplicateTemplateRequest,
   handleGetTemplateRequest,
   handleListTemplatesRequest,
   handlePreviewTemplateRequest,
+  handlePublishTemplateRequest,
   handleUpdateTemplateRequest,
 } from "../src/lib/template-http.ts";
 
@@ -23,16 +25,22 @@ const template = {
   html: "<p>Hello {{reader.name}}</p>",
   id: "33333333-3333-4333-8333-333333333333",
   name: "Welcome",
+  publishedAt: fixedNow,
+  publishedVersion: 1,
+  react: null,
   requiredVariables: ["reader.name"],
+  status: "published",
   subject: "Welcome, {{reader.name}}",
   text: "Hello {{reader.name}}",
   updatedAt: fixedNow,
+  version: 1,
 };
 
 function services(overrides = {}) {
   return {
     create: async () => template,
     delete: async () => undefined,
+    duplicate: async () => template,
     get: async () => template,
     list: async () => [template],
     preview: async () => ({
@@ -41,6 +49,7 @@ function services(overrides = {}) {
       subject: "Welcome, ",
       text: "Hello ",
     }),
+    publish: async () => template,
     update: async () => template,
     ...overrides,
   };
@@ -131,10 +140,15 @@ test("template REST CRUD stays bound to the authenticated principal", async () =
     html: template.html,
     id: template.id,
     name: template.name,
+    published_at: fixedNow.toISOString(),
+    published_version: 1,
+    react: null,
     required_variables: template.requiredVariables,
+    status: "published",
     subject: template.subject,
     text: template.text,
     updated_at: fixedNow.toISOString(),
+    version: 1,
   });
   assert.deepEqual(await deleteResponse.json(), {
     deleted: true,
@@ -146,6 +160,41 @@ test("template REST CRUD stays bound to the authenticated principal", async () =
     ["get", principal, template.id],
     ["update", principal, template.id, { subject: "Updated" }],
     ["delete", principal, template.id],
+  ]);
+});
+
+test("publish and duplicate stay bound to the authenticated principal", async () => {
+  const calls = [];
+  const deps = dependencies({
+    services: services({
+      duplicate: async (received, templateId) => {
+        calls.push(["duplicate", received, templateId]);
+        return template;
+      },
+      publish: async (received, templateId) => {
+        calls.push(["publish", received, templateId]);
+        return template;
+      },
+    }),
+  });
+  const publishResponse = await handlePublishTemplateRequest(
+    request("POST"),
+    template.id,
+    deps,
+  );
+  const duplicateResponse = await handleDuplicateTemplateRequest(
+    request("POST"),
+    template.id,
+    deps,
+  );
+
+  assert.equal(publishResponse.status, 200);
+  assert.equal(duplicateResponse.status, 201);
+  assert.equal((await publishResponse.json()).status, "published");
+  assert.equal((await duplicateResponse.json()).id, template.id);
+  assert.deepEqual(calls, [
+    ["publish", principal, template.id],
+    ["duplicate", principal, template.id],
   ]);
 });
 

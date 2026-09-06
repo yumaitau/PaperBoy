@@ -14,6 +14,11 @@ test("the stdio service graph loads outside the Next.js compiler", async () => {
     emails,
     outboundProviders,
     templates,
+    apiKeys,
+    segments,
+    events,
+    automations,
+    logs,
   ] = await Promise.all([
     import("../src/lib/api-key-auth.ts"),
     import("../src/lib/organization-reader.ts"),
@@ -24,6 +29,11 @@ test("the stdio service graph loads outside the Next.js compiler", async () => {
     import("../src/mcp/email-services.ts"),
     import("../src/mcp/outbound-provider-services.ts"),
     import("../src/mcp/template-services.ts"),
+    import("../src/mcp/api-key-services.ts"),
+    import("../src/mcp/segment-services.ts"),
+    import("../src/mcp/event-services.ts"),
+    import("../src/mcp/automation-services.ts"),
+    import("../src/mcp/log-services.ts"),
   ]);
 
   assert.equal(typeof apiKeyAuth.authenticateApiKey, "function");
@@ -35,4 +45,9 @@ test("the stdio service graph loads outside the Next.js compiler", async () => {
   assert.equal(typeof emails.paperBoyMcpEmailServices.queue, "function");
   assert.equal(typeof outboundProviders.paperBoyMcpOutboundProviderServices.get, "function");
   assert.equal(typeof templates.paperBoyMcpTemplateServices.list, "function");
+  assert.equal(typeof apiKeys.paperBoyMcpApiKeyServices.list, "function");
+  assert.equal(typeof segments.paperBoyMcpSegmentServices.listSegments, "function");
+  assert.equal(typeof events.paperBoyMcpEventServices.list, "function");
+  assert.equal(typeof automations.paperBoyMcpAutomationServices.list, "function");
+  assert.equal(typeof logs.paperBoyMcpLogServices.list, "function");
 });

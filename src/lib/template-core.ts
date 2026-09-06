@@ -1,6 +1,7 @@
 export const MAX_TEMPLATE_NAME_LENGTH = 120;
 export const MAX_TEMPLATE_SUBJECT_LENGTH = 998;
 export const MAX_TEMPLATE_BODY_LENGTH = 2 * 1024 * 1024;
+export const MAX_TEMPLATE_REACT_LENGTH = 512 * 1024;
 export const MAX_TEMPLATE_DATA_BYTES = 256 * 1024;
 
 export type TemplateValidationIssue = {
@@ -13,6 +14,7 @@ export type TemplateErrorCode =
   | "MISSING_REQUIRED_VARIABLES"
   | "TEMPLATE_EXISTS"
   | "TEMPLATE_NOT_FOUND"
+  | "TEMPLATE_NOT_PUBLISHED"
   | "VALIDATION_ERROR";
 
 export class TemplateError extends Error {
@@ -25,9 +27,12 @@ export class TemplateError extends Error {
   }
 }
 
+export type TemplateStatus = "draft" | "published";
+
 export type TemplateDefinition = {
   html: string | null;
   name: string;
+  react: string | null;
   requiredVariables: string[];
   subject: string;
   text: string | null;
@@ -36,7 +41,11 @@ export type TemplateDefinition = {
 export type TemplateRecord = TemplateDefinition & {
   createdAt: Date;
   id: string;
+  publishedAt: Date | null;
+  publishedVersion: number | null;
+  status: TemplateStatus;
   updatedAt: Date;
+  version: number;
 };
 
 export type RenderedTemplate = {
@@ -52,6 +61,7 @@ export type TemplatePreview = RenderedTemplate & {
 const TEMPLATE_FIELDS = new Set([
   "html",
   "name",
+  "react",
   "required_variables",
   "subject",
   "text",
@@ -298,9 +308,33 @@ function parseBody(
   return value;
 }
 
+function parseReactSource(
+  value: unknown,
+  issues: TemplateValidationIssue[],
+): string | null {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    issues.push({ field: "react", message: "Must be a string or null." });
+    return null;
+  }
+
+  if (value.length > MAX_TEMPLATE_REACT_LENGTH) {
+    issues.push({
+      field: "react",
+      message: "Must be no larger than 512 KiB.",
+    });
+  }
+
+  return value;
+}
+
 function definitionFromValues(input: {
   html: unknown;
   name: unknown;
+  react: unknown;
   required_variables: unknown;
   subject: unknown;
   text: unknown;
@@ -309,6 +343,7 @@ function definitionFromValues(input: {
   const definition = {
     html: parseBody(input.html, "html", issues),
     name: parseName(input.name, issues),
+    react: parseReactSource(input.react, issues),
     requiredVariables: parseRequiredVariables(
       input.required_variables,
       issues,
@@ -372,6 +407,7 @@ export function parseCreateTemplateInput(value: unknown): TemplateDefinition {
   return definitionFromValues({
     html: input.html,
     name: input.name,
+    react: input.react,
     required_variables: input.required_variables,
     subject: input.subject,
     text: input.text,
@@ -393,6 +429,7 @@ export function parseUpdateTemplateInput(
   return definitionFromValues({
     html: Object.hasOwn(input, "html") ? input.html : current.html,
     name: Object.hasOwn(input, "name") ? input.name : current.name,
+    react: Object.hasOwn(input, "react") ? input.react : current.react,
     required_variables: Object.hasOwn(input, "required_variables")
       ? input.required_variables
       : current.requiredVariables,
@@ -646,6 +683,7 @@ export function previewTemplate(
   const definition = definitionFromValues({
     html: template.html,
     name: "Stored template",
+    react: null,
     required_variables: template.requiredVariables ?? [],
     subject: template.subject,
     text: template.text,

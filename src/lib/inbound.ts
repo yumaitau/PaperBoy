@@ -1,7 +1,13 @@
-import { and, eq } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  attachmentStorageKey,
+  attachmentStore as configuredAttachmentStore,
+} from "@/lib/attachment-storage";
+import {
   orgs,
+  receivedEmailAttachments,
   receivedEmails,
   webhookDeliveries,
   webhookEndpoints,
@@ -123,43 +129,49 @@ async function enqueueReceivedEmailWebhook(input: {
   email: ReceivedEmailRecord;
   orgId: string;
 }) {
-  const [endpoint] = await db
+  const endpoints = await db
     .select({
       encryptedSecret: webhookEndpoints.encryptedSecret,
       id: webhookEndpoints.id,
       url: webhookEndpoints.url,
     })
     .from(webhookEndpoints)
-    .where(eq(webhookEndpoints.orgId, input.orgId))
-    .limit(1);
+    .where(
+      and(
+        eq(webhookEndpoints.orgId, input.orgId),
+        eq(webhookEndpoints.enabled, true),
+      ),
+    );
 
-  if (!endpoint) return;
+  if (endpoints.length === 0) return;
 
-  const [delivery] = await db
+  const created = await db
     .insert(webhookDeliveries)
-    .values({
-      body: receivedEmailWebhookBody({
+    .values(
+      endpoints.map((endpoint) => ({
+        body: receivedEmailWebhookBody({
+          createdAt: input.email.createdAt,
+          environment: input.email.environment,
+          from: input.email.from,
+          messageId: input.email.messageId,
+          receivedEmailId: input.email.id,
+          subject: input.email.subject,
+          to: input.email.to,
+        }),
         createdAt: input.email.createdAt,
-        environment: input.email.environment,
-        from: input.email.from,
-        messageId: input.email.messageId,
+        encryptedSecret: endpoint.encryptedSecret,
+        endpointId: endpoint.id,
+        nextAttemptAt: input.email.createdAt,
+        orgId: input.orgId,
         receivedEmailId: input.email.id,
-        subject: input.email.subject,
-        to: input.email.to,
-      }),
-      createdAt: input.email.createdAt,
-      encryptedSecret: endpoint.encryptedSecret,
-      endpointId: endpoint.id,
-      nextAttemptAt: input.email.createdAt,
-      orgId: input.orgId,
-      receivedEmailId: input.email.id,
-      updatedAt: input.email.createdAt,
-      url: endpoint.url,
-    })
+        updatedAt: input.email.createdAt,
+        url: endpoint.url,
+      })),
+    )
     .onConflictDoNothing()
     .returning({ id: webhookDeliveries.id });
 
-  if (delivery) {
+  for (const delivery of created) {
     void enqueuePendingWebhook(delivery.id).catch(() => {
       console.error(
         `PaperBoy could not dispatch inbound webhook ${delivery.id}; BullMQ reconciliation will retry it.`,
@@ -243,6 +255,43 @@ export async function receiveInboundEmail(input: {
         throw new Error("Inbound email insert returned no row.");
       }
 
+      const storedKeys: string[] = [];
+      try {
+        for (const [position, attachment] of email.attachments.entries()) {
+          const attachmentId = randomUUID();
+          const storageKey = attachmentStorageKey({
+            attachmentId,
+            messageId: inserted.id,
+            orgId: input.principal.orgId,
+          });
+
+          await configuredAttachmentStore.put({
+            content: attachment.content,
+            storageKey,
+          });
+          storedKeys.push(storageKey);
+
+          await tx.insert(receivedEmailAttachments).values({
+            byteSize: attachment.size,
+            contentId: attachment.contentId,
+            contentSha256: attachment.contentSha256,
+            contentType: attachment.contentType,
+            filename: attachment.filename,
+            id: attachmentId,
+            position,
+            receivedEmailId: inserted.id,
+            storageKey,
+          });
+        }
+      } catch (error) {
+        await Promise.allSettled(
+          storedKeys.map((storageKey) =>
+            configuredAttachmentStore.delete(storageKey),
+          ),
+        );
+        throw error;
+      }
+
       return recordFromRow(inserted);
     });
 
@@ -290,3 +339,98 @@ export async function getReceivedEmail(input: {
 
 export { inboundEmailApiBody } from "@/lib/inbound-core";
 export type { InboundEmailInput } from "@/lib/inbound-core";
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export type ReceivedEmailAttachmentRecord = {
+  byteSize: number;
+  contentId: string | null;
+  contentType: string;
+  createdAt: Date;
+  filename: string;
+  id: string;
+  receivedEmailId: string;
+};
+
+const RECEIVED_ATTACHMENT_SELECTION = {
+  byteSize: receivedEmailAttachments.byteSize,
+  contentId: receivedEmailAttachments.contentId,
+  contentType: receivedEmailAttachments.contentType,
+  createdAt: receivedEmailAttachments.createdAt,
+  filename: receivedEmailAttachments.filename,
+  id: receivedEmailAttachments.id,
+  receivedEmailId: receivedEmailAttachments.receivedEmailId,
+};
+
+async function requireReceivedEmail(input: {
+  environment: "live" | "test";
+  orgId: string;
+  receivedEmailId: string;
+}): Promise<{ id: string }> {
+  if (!UUID_PATTERN.test(input.receivedEmailId)) {
+    throw new MessageStatusError("MESSAGE_NOT_FOUND");
+  }
+
+  const [row] = await db
+    .select({ id: receivedEmails.id })
+    .from(receivedEmails)
+    .where(
+      and(
+        eq(receivedEmails.id, input.receivedEmailId),
+        eq(receivedEmails.orgId, input.orgId),
+        eq(receivedEmails.environment, input.environment),
+      ),
+    )
+    .limit(1);
+
+  if (!row) {
+    throw new MessageStatusError("MESSAGE_NOT_FOUND");
+  }
+
+  return row;
+}
+
+export async function listReceivedEmailAttachments(input: {
+  environment: "live" | "test";
+  orgId: string;
+  receivedEmailId: string;
+}): Promise<ReceivedEmailAttachmentRecord[]> {
+  const email = await requireReceivedEmail(input);
+
+  return db
+    .select(RECEIVED_ATTACHMENT_SELECTION)
+    .from(receivedEmailAttachments)
+    .where(eq(receivedEmailAttachments.receivedEmailId, email.id))
+    .orderBy(asc(receivedEmailAttachments.position));
+}
+
+export async function getReceivedEmailAttachment(input: {
+  attachmentId: string;
+  environment: "live" | "test";
+  orgId: string;
+  receivedEmailId: string;
+}): Promise<ReceivedEmailAttachmentRecord> {
+  const email = await requireReceivedEmail(input);
+
+  if (!UUID_PATTERN.test(input.attachmentId)) {
+    throw new MessageStatusError("MESSAGE_NOT_FOUND");
+  }
+
+  const [row] = await db
+    .select(RECEIVED_ATTACHMENT_SELECTION)
+    .from(receivedEmailAttachments)
+    .where(
+      and(
+        eq(receivedEmailAttachments.id, input.attachmentId),
+        eq(receivedEmailAttachments.receivedEmailId, email.id),
+      ),
+    )
+    .limit(1);
+
+  if (!row) {
+    throw new MessageStatusError("MESSAGE_NOT_FOUND");
+  }
+
+  return row;
+}

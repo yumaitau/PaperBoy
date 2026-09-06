@@ -307,6 +307,7 @@ export async function createContact(input: {
           ...definition,
           audienceId: input.audienceId,
           createdAt: now,
+          orgId: input.orgId,
           unsubscribedAt:
             suppression?.reason === "unsubscribed" ? now : null,
           updatedAt: now,
@@ -458,6 +459,7 @@ export async function importContacts(input: {
           ...row,
           audienceId: input.audienceId,
           createdAt: now,
+          orgId: input.orgId,
           unsubscribedAt,
           updatedAt: now,
         });

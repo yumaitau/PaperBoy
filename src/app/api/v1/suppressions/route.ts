@@ -1,4 +1,5 @@
 import { authenticateApiRequest } from "@/lib/api-key-request";
+import { withApiLog } from "@/lib/request-logs";
 import { suppressionApiServices } from "@/lib/suppression-api-services";
 import {
   handleCreateSuppressionRequest,
@@ -11,9 +12,9 @@ const dependencies = {
 };
 
 export async function GET(request: Request) {
-  return handleListSuppressionsRequest(request, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleListSuppressionsRequest(request, scoped));
 }
 
 export async function POST(request: Request) {
-  return handleCreateSuppressionRequest(request, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleCreateSuppressionRequest(request, scoped));
 }

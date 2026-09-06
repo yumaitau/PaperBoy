@@ -1,4 +1,5 @@
 import { authenticateApiRequest } from "@/lib/api-key-request";
+import { withApiLog } from "@/lib/request-logs";
 import { suppressionApiServices } from "@/lib/suppression-api-services";
 import {
   handleDeleteSuppressionRequest,
@@ -17,15 +18,15 @@ const dependencies = {
 
 export async function GET(request: Request, context: SuppressionRouteContext) {
   const { suppressionId } = await context.params;
-  return handleGetSuppressionRequest(request, suppressionId, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleGetSuppressionRequest(request, suppressionId, scoped));
 }
 
 export async function PATCH(request: Request, context: SuppressionRouteContext) {
   const { suppressionId } = await context.params;
-  return handleUpdateSuppressionRequest(request, suppressionId, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleUpdateSuppressionRequest(request, suppressionId, scoped));
 }
 
 export async function DELETE(request: Request, context: SuppressionRouteContext) {
   const { suppressionId } = await context.params;
-  return handleDeleteSuppressionRequest(request, suppressionId, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleDeleteSuppressionRequest(request, suppressionId, scoped));
 }

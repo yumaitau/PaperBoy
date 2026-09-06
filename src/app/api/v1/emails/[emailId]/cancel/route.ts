@@ -1,4 +1,5 @@
 import { authenticateApiRequest } from "@/lib/api-key-request";
+import { withApiLog } from "@/lib/request-logs";
 import { messageApiServices } from "@/lib/message-api-services";
 import { handleCancelMessageRequest } from "@/lib/message-http";
 
@@ -13,5 +14,5 @@ const dependencies = {
 
 export async function POST(request: Request, context: EmailCancelRouteContext) {
   const { emailId } = await context.params;
-  return handleCancelMessageRequest(request, emailId, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleCancelMessageRequest(request, emailId, scoped));
 }

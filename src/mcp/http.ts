@@ -19,6 +19,11 @@ import { paperBoyMcpOpenTrackingServices } from "@/mcp/open-tracking-services";
 import { paperBoyMcpOutboundProviderServices } from "@/mcp/outbound-provider-services";
 import { paperBoyMcpRateLimitServices } from "@/mcp/rate-limit-services";
 import { paperBoyMcpSuppressionServices } from "@/mcp/suppression-services";
+import { paperBoyMcpApiKeyServices } from "@/mcp/api-key-services";
+import { paperBoyMcpSegmentServices } from "@/mcp/segment-services";
+import { paperBoyMcpEventServices } from "@/mcp/event-services";
+import { paperBoyMcpAutomationServices } from "@/mcp/automation-services";
+import { paperBoyMcpLogServices } from "@/mcp/log-services";
 import { paperBoyMcpTemplateServices } from "@/mcp/template-services";
 import { paperBoyMcpWebhookServices } from "@/mcp/webhook-services";
 import { createPaperBoyMcpServer } from "@/mcp/server";
@@ -41,7 +46,13 @@ function principalFromRequestContext(
       typeof principal.actorUserId !== "string") ||
     typeof principal.apiKeyId !== "string" ||
     typeof principal.orgId !== "string" ||
-    !isApiKeyEnvironment(principal.environment)
+    !isApiKeyEnvironment(principal.environment) ||
+    !(
+      principal.scopes === null ||
+      principal.scopes === undefined ||
+      (Array.isArray(principal.scopes) &&
+        principal.scopes.every((scope) => typeof scope === "string"))
+    )
   ) {
     return null;
   }
@@ -51,6 +62,7 @@ function principalFromRequestContext(
     apiKeyId: principal.apiKeyId,
     environment: principal.environment,
     orgId: principal.orgId,
+    scopes: (principal.scopes ?? null) as ApiKeyPrincipal["scopes"],
   };
 }
 
@@ -81,6 +93,11 @@ export const paperBoyMcpHttpHandler = createMcpHandler(
       suppressions: paperBoyMcpSuppressionServices,
       templates: paperBoyMcpTemplateServices,
       webhooks: paperBoyMcpWebhookServices,
+      apiKeys: paperBoyMcpApiKeyServices,
+      segments: paperBoyMcpSegmentServices,
+      events: paperBoyMcpEventServices,
+      automations: paperBoyMcpAutomationServices,
+      logs: paperBoyMcpLogServices,
     }),
   {
     onerror: () =>

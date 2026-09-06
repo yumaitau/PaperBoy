@@ -1,4 +1,5 @@
 import { authenticateApiRequest } from "@/lib/api-key-request";
+import { withApiLog } from "@/lib/request-logs";
 import { messageApiServices } from "@/lib/message-api-services";
 import {
   handleGetMessageRequest,
@@ -16,10 +17,10 @@ const dependencies = {
 
 export async function GET(request: Request, context: EmailRouteContext) {
   const { emailId } = await context.params;
-  return handleGetMessageRequest(request, emailId, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleGetMessageRequest(request, emailId, scoped));
 }
 
 export async function PATCH(request: Request, context: EmailRouteContext) {
   const { emailId } = await context.params;
-  return handleRescheduleMessageRequest(request, emailId, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleRescheduleMessageRequest(request, emailId, scoped));
 }

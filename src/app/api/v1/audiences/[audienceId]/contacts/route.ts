@@ -1,4 +1,5 @@
 import { authenticateApiRequest } from "@/lib/api-key-request";
+import { withApiLog } from "@/lib/request-logs";
 import { audienceApiServices } from "@/lib/audience-api-services";
 import {
   handleCreateContactRequest,
@@ -9,9 +10,9 @@ type Context = { params: Promise<{ audienceId: string }> };
 const dependencies = { authenticate: authenticateApiRequest, services: audienceApiServices };
 
 export async function GET(request: Request, context: Context) {
-  return handleListContactsRequest(request, (await context.params).audienceId, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleListContactsRequest(request, (await context.params).audienceId, scoped));
 }
 
 export async function POST(request: Request, context: Context) {
-  return handleCreateContactRequest(request, (await context.params).audienceId, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleCreateContactRequest(request, (await context.params).audienceId, scoped));
 }

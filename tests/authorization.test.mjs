@@ -4,7 +4,9 @@ import {
   AuthorizationError,
   ORG_PERMISSIONS,
   can,
+  isKeyScopeGranted,
   isOrgRole,
+  requireKeyScope,
   requirePermission,
 } from "../src/lib/authorization.ts";
 
@@ -16,15 +18,25 @@ const matrix = {
     "apiKeys.create",
     "apiKeys.read",
     "apiKeys.revoke",
+    "apiKeys.update",
+    "automations.manage",
+    "automations.read",
     "broadcasts.control",
     "broadcasts.create",
     "broadcasts.read",
+    "contactProperties.manage",
+    "contactProperties.read",
     "domains.create",
     "domains.delete",
     "domains.manageDkim",
     "domains.read",
     "domains.verify",
+    "emails.metrics",
+    "emails.share",
+    "events.manage",
+    "events.read",
     "feedback.ingest",
+    "logs.read",
     "members.invite",
     "members.read",
     "messages.read",
@@ -35,26 +47,36 @@ const matrix = {
     "outboundProviders.read",
     "rateLimits.manage",
     "rateLimits.read",
+    "segments.manage",
+    "segments.read",
     "suppressions.manage",
     "suppressions.read",
     "templates.create",
     "templates.delete",
     "templates.read",
     "templates.update",
+    "topics.manage",
+    "topics.read",
     "webhooks.manage",
     "webhooks.read",
   ]),
   member: new Set([
     "audiences.read",
+    "automations.read",
     "broadcasts.read",
+    "contactProperties.read",
     "domains.read",
+    "events.read",
+    "logs.read",
     "members.read",
     "messages.read",
     "openTracking.read",
     "outboundProviders.read",
     "rateLimits.read",
+    "segments.read",
     "suppressions.read",
     "templates.read",
+    "topics.read",
   ]),
 };
 
@@ -103,4 +125,29 @@ test("only declared roles are accepted", () => {
   assert.equal(isOrgRole("admin"), true);
   assert.equal(isOrgRole("member"), true);
   assert.equal(isOrgRole("super-admin"), false);
+});
+
+test("key scopes are role-capped and null means full role access", () => {
+  assert.equal(isKeyScopeGranted(null, "messages.send"), true);
+  assert.equal(isKeyScopeGranted(undefined, "messages.send"), true);
+  assert.equal(
+    isKeyScopeGranted(["messages.send"], "messages.send"),
+    true,
+  );
+  assert.equal(isKeyScopeGranted([], "messages.send"), false);
+  assert.equal(
+    isKeyScopeGranted(["templates.read"], "templates.update"),
+    false,
+  );
+
+  requireKeyScope(null, "messages.send");
+  requireKeyScope(["messages.send"], "messages.send");
+  assert.throws(
+    () => requireKeyScope([], "messages.send"),
+    AuthorizationError,
+  );
+  assert.throws(
+    () => requireKeyScope(["templates.read"], "templates.update"),
+    AuthorizationError,
+  );
 });

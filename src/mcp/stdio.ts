@@ -26,6 +26,11 @@ async function main() {
     { paperBoyMcpSuppressionServices },
     { paperBoyMcpTemplateServices },
     { paperBoyMcpWebhookServices },
+    { paperBoyMcpApiKeyServices },
+    { paperBoyMcpSegmentServices },
+    { paperBoyMcpEventServices },
+    { paperBoyMcpAutomationServices },
+    { paperBoyMcpLogServices },
   ] = await Promise.all([
     import("@/lib/api-key-auth"),
     import("@/lib/organization-reader"),
@@ -42,6 +47,11 @@ async function main() {
     import("@/mcp/suppression-services"),
     import("@/mcp/template-services"),
     import("@/mcp/webhook-services"),
+    import("@/mcp/api-key-services"),
+    import("@/mcp/segment-services"),
+    import("@/mcp/event-services"),
+    import("@/mcp/automation-services"),
+    import("@/mcp/log-services"),
   ]);
   const principal = await authenticateApiKey(rawApiKey);
 
@@ -69,6 +79,11 @@ async function main() {
         suppressions: paperBoyMcpSuppressionServices,
         templates: paperBoyMcpTemplateServices,
         webhooks: paperBoyMcpWebhookServices,
+        apiKeys: paperBoyMcpApiKeyServices,
+        segments: paperBoyMcpSegmentServices,
+        events: paperBoyMcpEventServices,
+        automations: paperBoyMcpAutomationServices,
+        logs: paperBoyMcpLogServices,
       }),
     {
       onerror: () =>

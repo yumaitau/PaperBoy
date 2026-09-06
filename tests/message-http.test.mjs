@@ -3,10 +3,13 @@ import test from "node:test";
 import { MessageStatusError } from "../src/lib/message-status-core.ts";
 import {
   handleCancelMessageRequest,
+  handleGetMessageAttachmentRequest,
   handleGetMessageRequest,
+  handleListMessageAttachmentsRequest,
   handleListMessageEventsRequest,
   handleListMessagesRequest,
   handleRescheduleMessageRequest,
+  handleShareEmailRequest,
 } from "../src/lib/message-http.ts";
 import { MessageLifecycleError } from "../src/lib/message-lifecycle.ts";
 
@@ -75,6 +78,35 @@ function dependencies(overrides = {}) {
       received.headers.get("authorization") ? principal : null,
     services: {
       get: async () => detail(),
+      attachmentDownloadUrl: async () => ({
+        expiresAt: new Date("2026-08-24T10:00:00.000Z"),
+        url: "http://paperboy.test/api/v1/attachments/download?token=x",
+      }),
+      getAttachment: async () => ({
+        byteSize: 123,
+        contentId: null,
+        contentType: "application/pdf",
+        createdAt: new Date("2026-08-23T10:00:00.000Z"),
+        filename: "invoice.pdf",
+        id: "33333333-3333-4333-8333-333333333333",
+        messageId,
+      }),
+      listAttachments: async () => [
+        {
+          byteSize: 123,
+          contentId: null,
+          contentType: "application/pdf",
+          createdAt: new Date("2026-08-23T10:00:00.000Z"),
+          filename: "invoice.pdf",
+          id: "33333333-3333-4333-8333-333333333333",
+          messageId,
+        },
+      ],
+      share: async () => ({
+        expiresAt: new Date("2026-08-24T10:00:00.000Z"),
+        id: messageId,
+        url: "http://paperboy.test/api/v1/shared/token",
+      }),
       listEvents: async () => [
         {
           createdAt: new Date("2026-08-23T10:00:00.000Z"),
@@ -282,4 +314,70 @@ test("POST emails cancel rejects a sent message", async () => {
 
   assert.equal(response.status, 422);
   assert.equal((await response.json()).error.code, "email_not_cancellable");
+});
+
+test("POST emails share returns an expiring link", async () => {
+  const calls = [];
+  const deps = dependencies({
+    share: async (received, receivedId, input) => {
+      calls.push([received, receivedId, input]);
+      return {
+        expiresAt: new Date("2026-08-24T10:00:00.000Z"),
+        id: messageId,
+        url: "http://paperboy.test/api/v1/shared/token",
+      };
+    },
+  });
+  const response = await handleShareEmailRequest(
+    new Request(`http://paperboy.test/api/v1/emails/${messageId}/share`, {
+      body: JSON.stringify({ expires_in: "1 hour" }),
+      headers: {
+        Authorization: "Bearer test-key",
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    }),
+    messageId,
+    deps,
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.url, "http://paperboy.test/api/v1/shared/token");
+  assert.equal(body.expires_at, "2026-08-24T10:00:00.000Z");
+  assert.deepEqual(calls, [
+    [principal, messageId, { expiresIn: "1 hour", origin: "http://paperboy.test" }],
+  ]);
+});
+
+test("GET email attachments returns signed download URLs", async () => {
+  const listResponse = await handleListMessageAttachmentsRequest(
+    new Request(`http://paperboy.test/api/v1/emails/${messageId}/attachments`, {
+      headers: { Authorization: "Bearer test-key" },
+    }),
+    messageId,
+    dependencies(),
+  );
+  const getResponse = await handleGetMessageAttachmentRequest(
+    new Request(`http://paperboy.test/api/v1/emails/${messageId}/attachments/33333333-3333-4333-8333-333333333333`, {
+      headers: { Authorization: "Bearer test-key" },
+    }),
+    messageId,
+    "33333333-3333-4333-8333-333333333333",
+    dependencies(),
+  );
+
+  assert.equal(listResponse.status, 200);
+  assert.deepEqual((await listResponse.json()).data, [
+    {
+      content_id: null,
+      content_type: "application/pdf",
+      download_url:
+        "http://paperboy.test/api/v1/attachments/download?token=x",
+      filename: "invoice.pdf",
+      id: "33333333-3333-4333-8333-333333333333",
+    },
+  ]);
+  assert.equal(getResponse.status, 200);
+  assert.equal((await getResponse.json()).filename, "invoice.pdf");
 });

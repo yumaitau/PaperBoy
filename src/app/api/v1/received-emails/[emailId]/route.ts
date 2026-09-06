@@ -1,4 +1,5 @@
 import { authenticateApiRequest } from "@/lib/api-key-request";
+import { withApiLog } from "@/lib/request-logs";
 import { handleGetReceivedEmailRequest } from "@/lib/inbound-http";
 
 type ReceivedEmailRouteContext = {
@@ -7,7 +8,7 @@ type ReceivedEmailRouteContext = {
 
 export async function GET(request: Request, context: ReceivedEmailRouteContext) {
   const { emailId } = await context.params;
-  return handleGetReceivedEmailRequest(request, emailId, {
-    authenticate: authenticateApiRequest,
-  });
+  return withApiLog(request, { authenticate: authenticateApiRequest }, async (scoped) =>
+    handleGetReceivedEmailRequest(request, emailId, scoped),
+  );
 }

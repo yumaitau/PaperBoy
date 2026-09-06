@@ -6,17 +6,27 @@ export const ORG_PERMISSIONS = [
   "apiKeys.create",
   "apiKeys.read",
   "apiKeys.revoke",
+  "apiKeys.update",
+  "automations.manage",
+  "automations.read",
   "broadcasts.control",
   "broadcasts.create",
   "broadcasts.read",
   "audiences.manage",
   "audiences.read",
+  "contactProperties.manage",
+  "contactProperties.read",
   "domains.create",
   "domains.delete",
   "domains.manageDkim",
   "domains.read",
   "domains.verify",
+  "emails.metrics",
+  "emails.share",
+  "events.manage",
+  "events.read",
   "feedback.ingest",
+  "logs.read",
   "members.invite",
   "members.remove",
   "members.read",
@@ -30,12 +40,16 @@ export const ORG_PERMISSIONS = [
   "outboundProviders.read",
   "rateLimits.manage",
   "rateLimits.read",
+  "segments.manage",
+  "segments.read",
   "suppressions.manage",
   "suppressions.read",
   "templates.create",
   "templates.delete",
   "templates.read",
   "templates.update",
+  "topics.manage",
+  "topics.read",
   "webhooks.manage",
   "webhooks.read",
 ] as const;
@@ -48,17 +62,27 @@ const rolePermissions: Record<OrgRole, ReadonlySet<OrgPermission>> = {
     "apiKeys.create",
     "apiKeys.read",
     "apiKeys.revoke",
+    "apiKeys.update",
+    "automations.manage",
+    "automations.read",
     "broadcasts.control",
     "broadcasts.create",
     "broadcasts.read",
     "audiences.manage",
     "audiences.read",
+    "contactProperties.manage",
+    "contactProperties.read",
     "domains.create",
     "domains.delete",
     "domains.manageDkim",
     "domains.read",
     "domains.verify",
+    "emails.metrics",
+    "emails.share",
+    "events.manage",
+    "events.read",
     "feedback.ingest",
+    "logs.read",
     "members.invite",
     "members.read",
     "messages.read",
@@ -69,26 +93,37 @@ const rolePermissions: Record<OrgRole, ReadonlySet<OrgPermission>> = {
     "outboundProviders.read",
     "rateLimits.manage",
     "rateLimits.read",
+    "segments.manage",
+    "segments.read",
     "suppressions.manage",
     "suppressions.read",
     "templates.create",
     "templates.delete",
     "templates.read",
     "templates.update",
+    "topics.manage",
+    "topics.read",
     "webhooks.manage",
     "webhooks.read",
   ]),
   member: new Set([
     "audiences.read",
+    "automations.read",
     "broadcasts.read",
+    "contactProperties.read",
     "domains.read",
+    "emails.metrics",
+    "events.read",
+    "logs.read",
     "members.read",
     "messages.read",
     "openTracking.read",
     "outboundProviders.read",
     "rateLimits.read",
+    "segments.read",
     "suppressions.read",
     "templates.read",
+    "topics.read",
   ]),
 };
 
@@ -116,4 +151,35 @@ export function requirePermission(
   if (!can(role, permission)) {
     throw new AuthorizationError(permission);
   }
+}
+
+export type KeyScopes = readonly OrgPermission[] | null | undefined;
+
+export function isKeyScopeGranted(
+  scopes: KeyScopes,
+  permission: OrgPermission,
+): boolean {
+  if (!scopes) {
+    return true;
+  }
+
+  return scopes.includes(permission);
+}
+
+export function requireKeyScope(
+  scopes: KeyScopes,
+  permission: OrgPermission,
+): void {
+  if (!isKeyScopeGranted(scopes, permission)) {
+    throw new AuthorizationError(permission);
+  }
+}
+
+export function requirePrincipalPermission(
+  role: OrgRole,
+  scopes: KeyScopes,
+  permission: OrgPermission,
+): void {
+  requirePermission(role, permission);
+  requireKeyScope(scopes, permission);
 }

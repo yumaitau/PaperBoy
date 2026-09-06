@@ -1,4 +1,5 @@
 import { authenticateApiRequest } from "@/lib/api-key-request";
+import { withApiLog } from "@/lib/request-logs";
 import { rateLimitApiServices } from "@/lib/rate-limit-api-services";
 import {
   handleGetRateLimitsRequest,
@@ -11,9 +12,9 @@ const dependencies = {
 };
 
 export async function GET(request: Request) {
-  return handleGetRateLimitsRequest(request, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleGetRateLimitsRequest(request, scoped));
 }
 
 export async function PATCH(request: Request) {
-  return handleUpdateRateLimitsRequest(request, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleUpdateRateLimitsRequest(request, scoped));
 }

@@ -1,5 +1,6 @@
 import type { ApiKeyPrincipal } from "@/lib/api-key-auth";
 import { AttachmentStorageError } from "@/lib/attachment-storage";
+import { isKeyScopeGranted } from "@/lib/authorization";
 import { DomainError } from "@/lib/domain-core";
 import { EmailError, normalizeIdempotencyKey } from "@/lib/email-core";
 import type { QueuedMessageRecord } from "@/lib/messages";
@@ -117,6 +118,19 @@ export function describeEmailFailure(error: unknown): EmailFailure {
           },
         },
         status: 404,
+      };
+    }
+
+    if (error.code === "TEMPLATE_NOT_PUBLISHED") {
+      return {
+        body: {
+          error: {
+            code: "template_not_published",
+            message:
+              "Publish the template before sending with it. Draft templates cannot send.",
+          },
+        },
+        status: 422,
       };
     }
 
@@ -310,6 +324,19 @@ export async function handleSendEmailRequest(
       },
       401,
       { "WWW-Authenticate": 'Bearer realm="PaperBoy"' },
+    );
+  }
+
+  if (!isKeyScopeGranted(principal.scopes, "messages.send")) {
+    return emailJson(
+      {
+        error: {
+          code: "forbidden",
+          message:
+            "This API key is not granted the messages.send scope required to send email.",
+        },
+      },
+      403,
     );
   }
 

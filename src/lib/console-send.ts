@@ -58,6 +58,7 @@ export async function queueConsoleTestEmail(input: {
       apiKeyId: null,
       environment: "live",
       orgId: input.orgId,
+      scopes: null,
     },
   });
 }

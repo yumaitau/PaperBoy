@@ -1,14 +1,16 @@
 import { createHash } from "node:crypto";
-import { simpleParser, type AddressObject } from "mailparser";
+import { simpleParser, type AddressObject, type Attachment } from "mailparser";
 import {
   EmailError,
   parseEmailAddressField,
+  type EmailAttachment,
   type EmailValidationIssue,
 } from "@/lib/email-core";
 
 export const MAX_INBOUND_RAW_BYTES = 2 * 1024 * 1024;
 
 export type InboundEmailInput = {
+  attachments: EmailAttachment[];
   bcc: string[];
   cc: string[];
   contentSha256: string;
@@ -82,7 +84,9 @@ function boundedBody(value: unknown): string | null {
     : value;
 }
 
-export function inboundEmailHash(input: Omit<InboundEmailInput, "contentSha256">) {
+export function inboundEmailHash(
+  input: Omit<InboundEmailInput, "contentSha256" | "attachments">,
+) {
   return createHash("sha256")
     .update(
       JSON.stringify({
@@ -157,6 +161,7 @@ export async function parseInboundEmailInput(
   }
 
   const parsed = {
+    attachments: [],
     bcc: parseAddressInput(value.bcc, "bcc", issues),
     cc: parseAddressInput(value.cc, "cc", issues),
     from: from.formatted,
@@ -236,6 +241,7 @@ export async function parseInboundMime(raw: string): Promise<InboundEmailInput> 
   }
 
   const parsed = {
+    attachments: parseInboundAttachments(mail.attachments ?? []),
     bcc: formattedAddresses(mail.bcc),
     cc: formattedAddresses(mail.cc),
     from,
@@ -250,6 +256,49 @@ export async function parseInboundMime(raw: string): Promise<InboundEmailInput> 
     ...parsed,
     contentSha256: createHash("sha256").update(raw, "utf8").digest("hex"),
   };
+}
+
+const MAX_INBOUND_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+
+function parseInboundAttachments(attachments: Attachment[]): EmailAttachment[] {
+  const parsed: EmailAttachment[] = [];
+  let total = 0;
+
+  for (const attachment of attachments) {
+    const content = Buffer.isBuffer(attachment.content)
+      ? attachment.content
+      : Buffer.from(attachment.content ?? "");
+    const filename =
+      typeof attachment.filename === "string" && attachment.filename.trim()
+        ? attachment.filename.trim().slice(0, 255)
+        : "attachment";
+    const contentType =
+      typeof attachment.contentType === "string" && attachment.contentType.includes("/")
+        ? attachment.contentType
+        : "application/octet-stream";
+    const contentId =
+      typeof attachment.contentId === "string" && attachment.contentId.trim()
+        ? attachment.contentId.trim().slice(0, 256)
+        : null;
+
+    total += content.byteLength;
+    if (total > MAX_INBOUND_ATTACHMENT_BYTES) {
+      throw new EmailError("ATTACHMENTS_TOO_LARGE");
+    }
+
+    parsed.push({
+      content,
+      contentId,
+      contentSha256: createHash("sha256").update(content).digest("hex"),
+      contentType,
+      filename,
+      size: content.byteLength,
+    });
+
+    if (parsed.length >= 100) break;
+  }
+
+  return parsed;
 }
 
 export function inboundEmailApiBody(record: {

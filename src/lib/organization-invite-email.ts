@@ -94,6 +94,7 @@ export async function queueOrganizationInviteEmail(
         apiKeyId: null;
         environment: "live";
         orgId: string;
+        scopes: null;
       };
     }) => Promise<{ id: string }>;
     readyDomains: () => Promise<readonly string[]>;
@@ -121,6 +122,7 @@ export async function queueOrganizationInviteEmail(
       apiKeyId: null,
       environment: "live",
       orgId: input.orgId,
+      scopes: null,
     },
   });
 }

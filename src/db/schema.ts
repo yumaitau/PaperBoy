@@ -320,6 +320,7 @@ export const apiKeys = pgTable(
     keyId: text("key_id").notNull(),
     keyHash: text("key_hash").notNull(),
     environment: text("environment").default("live").notNull(),
+    scopes: text("scopes").array(),
     createdByUserId: text("created_by_user_id").references(() => users.id, {
       onDelete: "set null",
     }),
@@ -542,6 +543,11 @@ export const emailTemplates = pgTable(
     subject: text("subject").notNull(),
     html: text("html"),
     textBody: text("text"),
+    react: text("react"),
+    status: text("status").$type<"draft" | "published">().default("draft").notNull(),
+    version: integer("version").default(1).notNull(),
+    publishedVersion: integer("published_version"),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -579,6 +585,22 @@ export const emailTemplates = pgTable(
     check(
       "email_templates_body_check",
       sql`${table.html} is not null or ${table.textBody} is not null`,
+    ),
+    check(
+      "email_templates_status_check",
+      sql`${table.status} in ('draft', 'published')`,
+    ),
+    check(
+      "email_templates_version_check",
+      sql`${table.version} >= 1`,
+    ),
+    check(
+      "email_templates_published_state_check",
+      sql`(${table.status} = 'published' and ${table.publishedVersion} is not null and ${table.publishedAt} is not null and ${table.publishedVersion} between 1 and ${table.version}) or (${table.status} <> 'published' and ${table.publishedVersion} is null and ${table.publishedAt} is null)`,
+    ),
+    check(
+      "email_templates_react_length_check",
+      sql`${table.react} is null or char_length(${table.react}) between 1 and 524288`,
     ),
   ],
 );
@@ -653,11 +675,20 @@ export const contacts = pgTable(
   "contacts",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    audienceId: uuid("audience_id")
+    orgId: uuid("org_id")
       .notNull()
-      .references(() => audiences.id, { onDelete: "cascade" }),
+      .references(() => orgs.id, { onDelete: "cascade" }),
+    audienceId: uuid("audience_id").references(() => audiences.id, {
+      onDelete: "cascade",
+    }),
     email: text("email").notNull(),
     name: text("name"),
+    firstName: text("first_name"),
+    lastName: text("last_name"),
+    properties: bunJsonb("properties")
+      .$type<Record<string, string | number | boolean>>()
+      .default(sql`'{}'::jsonb`)
+      .notNull(),
     unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -672,6 +703,10 @@ export const contacts = pgTable(
       table.audienceId,
       table.email,
     ),
+    uniqueIndex("contacts_org_id_email_unique")
+      .on(table.orgId, sql`lower(${table.email})`)
+      .where(sql`${table.audienceId} is null`),
+    index("contacts_org_id_idx").on(table.orgId),
     index("contacts_audience_id_created_at_idx").on(
       table.audienceId,
       table.createdAt,
@@ -683,6 +718,213 @@ export const contacts = pgTable(
     check(
       "contacts_name_length_check",
       sql`${table.name} is null or char_length(btrim(${table.name})) between 1 and 200`,
+    ),
+    check(
+      "contacts_first_name_length_check",
+      sql`${table.firstName} is null or char_length(btrim(${table.firstName})) between 1 and 200`,
+    ),
+    check(
+      "contacts_last_name_length_check",
+      sql`${table.lastName} is null or char_length(btrim(${table.lastName})) between 1 and 200`,
+    ),
+    check(
+      "contacts_properties_object_check",
+      sql`jsonb_typeof(${table.properties}) = 'object'`,
+    ),
+  ],
+);
+
+export const segments = pgTable(
+  "segments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("segments_org_id_name_unique").on(
+      table.orgId,
+      sql`lower(${table.name})`,
+    ),
+    index("segments_org_id_created_at_idx").on(table.orgId, table.createdAt),
+    check(
+      "segments_name_length_check",
+      sql`char_length(btrim(${table.name})) between 1 and 120`,
+    ),
+  ],
+);
+
+export const topics = pgTable(
+  "topics",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    defaultSubscription: text("default_subscription").notNull(),
+    description: text("description"),
+    visibility: text("visibility").default("private").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("topics_org_id_name_unique").on(
+      table.orgId,
+      sql`lower(${table.name})`,
+    ),
+    index("topics_org_id_created_at_idx").on(table.orgId, table.createdAt),
+    check(
+      "topics_name_length_check",
+      sql`char_length(btrim(${table.name})) between 1 and 50`,
+    ),
+    check(
+      "topics_default_subscription_check",
+      sql`${table.defaultSubscription} in ('opt_in', 'opt_out')`,
+    ),
+    check(
+      "topics_description_length_check",
+      sql`${table.description} is null or char_length(${table.description}) between 1 and 200`,
+    ),
+    check(
+      "topics_visibility_check",
+      sql`${table.visibility} in ('public', 'private')`,
+    ),
+  ],
+);
+
+export const contactProperties = pgTable(
+  "contact_properties",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    type: text("type").notNull(),
+    fallbackValue: text("fallback_value"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("contact_properties_org_id_key_unique").on(
+      table.orgId,
+      sql`lower(${table.key})`,
+    ),
+    index("contact_properties_org_id_idx").on(table.orgId),
+    check(
+      "contact_properties_key_check",
+      sql`${table.key} ~ '^[A-Za-z0-9_]{1,50}$'`,
+    ),
+    check(
+      "contact_properties_type_check",
+      sql`${table.type} in ('string', 'number')`,
+    ),
+  ],
+);
+
+export const contactSegments = pgTable(
+  "contact_segments",
+  {
+    contactId: uuid("contact_id")
+      .notNull()
+      .references(() => contacts.id, { onDelete: "cascade" }),
+    segmentId: uuid("segment_id")
+      .notNull()
+      .references(() => segments.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("contact_segments_contact_id_segment_id_unique").on(
+      table.contactId,
+      table.segmentId,
+    ),
+    index("contact_segments_segment_id_idx").on(table.segmentId),
+  ],
+);
+
+export const contactTopics = pgTable(
+  "contact_topics",
+  {
+    contactId: uuid("contact_id")
+      .notNull()
+      .references(() => contacts.id, { onDelete: "cascade" }),
+    topicId: uuid("topic_id")
+      .notNull()
+      .references(() => topics.id, { onDelete: "cascade" }),
+    subscription: text("subscription").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("contact_topics_contact_id_topic_id_unique").on(
+      table.contactId,
+      table.topicId,
+    ),
+    index("contact_topics_topic_id_idx").on(table.topicId),
+    check(
+      "contact_topics_subscription_check",
+      sql`${table.subscription} in ('opt_in', 'opt_out')`,
+    ),
+  ],
+);
+
+export const contactImports = pgTable(
+  "contact_imports",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id, { onDelete: "cascade" }),
+    status: text("status").default("completed").notNull(),
+    fileName: text("file_name"),
+    totalRows: integer("total_rows").default(0).notNull(),
+    createdRows: integer("created_rows").default(0).notNull(),
+    updatedRows: integer("updated_rows").default(0).notNull(),
+    skippedRows: integer("skipped_rows").default(0).notNull(),
+    error: text("error"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("contact_imports_org_id_created_at_idx").on(
+      table.orgId,
+      table.createdAt,
+    ),
+    check(
+      "contact_imports_status_check",
+      sql`${table.status} in ('queued', 'in_progress', 'completed', 'failed')`,
     ),
   ],
 );
@@ -1255,6 +1497,7 @@ export const webhookEndpoints = pgTable(
       onDelete: "set null",
     }),
     url: text("url").notNull(),
+    enabled: boolean("enabled").default(true).notNull(),
     encryptedSecret: text("encrypted_secret").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -1265,7 +1508,7 @@ export const webhookEndpoints = pgTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex("webhook_endpoints_org_id_unique").on(table.orgId),
+    index("webhook_endpoints_org_id_idx").on(table.orgId),
     check(
       "webhook_endpoints_url_length_check",
       sql`char_length(${table.url}) between 1 and 2048`,
@@ -1352,8 +1595,236 @@ export const receivedEmails = pgTable(
   ],
 );
 
-export const webhookDeliveries = pgTable(
-  "webhook_deliveries",
+export const receivedEmailAttachments = pgTable(
+  "received_email_attachments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    receivedEmailId: uuid("received_email_id")
+      .notNull()
+      .references(() => receivedEmails.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    filename: text("filename").notNull(),
+    contentType: text("content_type").notNull(),
+    contentId: text("content_id"),
+    byteSize: integer("byte_size").notNull(),
+    contentSha256: text("content_sha256").notNull(),
+    storageKey: text("storage_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("received_email_attachments_storage_key_unique").on(
+      table.storageKey,
+    ),
+    uniqueIndex("received_email_attachments_email_id_position_unique").on(
+      table.receivedEmailId,
+      table.position,
+    ),
+    index("received_email_attachments_email_id_idx").on(table.receivedEmailId),
+    check(
+      "received_email_attachments_position_check",
+      sql`${table.position} between 0 and 99`,
+    ),
+    check(
+      "received_email_attachments_byte_size_check",
+      sql`${table.byteSize} between 1 and 10485760`,
+    ),
+    check(
+      "received_email_attachments_content_sha256_check",
+      sql`${table.contentSha256} ~ '^[0-9a-f]{64}$'`,
+    ),
+    check(
+      "received_email_attachments_filename_length_check",
+      sql`char_length(${table.filename}) between 1 and 255`,
+    ),
+    check(
+      "received_email_attachments_content_type_check",
+      sql`${table.contentType} ~ '^[A-Za-z0-9!#$&^_.+-]+/[A-Za-z0-9!#$&^_.+-]+$'`,
+    ),
+    check(
+      "received_email_attachments_content_id_check",
+      sql`${table.contentId} is null or (char_length(${table.contentId}) between 1 and 256 and ${table.contentId} !~ '[[:space:]<>,]')`,
+    ),
+  ],
+);
+
+export const customEvents = pgTable(
+  "custom_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    schema: bunJsonb("schema")
+      .$type<Record<string, "string" | "number" | "boolean" | "date"> | null>()
+      .default(sql`'null'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("custom_events_org_id_name_unique").on(
+      table.orgId,
+      sql`lower(${table.name})`,
+    ),
+    index("custom_events_org_id_created_at_idx").on(
+      table.orgId,
+      table.createdAt,
+    ),
+    check(
+      "custom_events_name_check",
+      sql`char_length(btrim(${table.name})) between 1 and 120 and ${table.name} !~ '^resend:'`,
+    ),
+  ],
+);
+
+export const customEventOccurrences = pgTable(
+  "custom_event_occurrences",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id, { onDelete: "cascade" }),
+    eventId: uuid("event_id").references(() => customEvents.id, {
+      onDelete: "set null",
+    }),
+    name: text("name").notNull(),
+    contactEmail: text("contact_email"),
+    payload: bunJsonb("payload")
+      .$type<Record<string, unknown>>()
+      .default(sql`'{}'::jsonb`)
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("custom_event_occurrences_org_id_name_created_at_idx").on(
+      table.orgId,
+      table.name,
+      table.createdAt,
+    ),
+    check(
+      "custom_event_occurrences_payload_object_check",
+      sql`jsonb_typeof(${table.payload}) = 'object'`,
+    ),
+  ],
+);
+
+export const automations = pgTable(
+  "automations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    status: text("status").default("disabled").notNull(),
+    triggerEvent: text("trigger_event").notNull(),
+    steps: bunJsonb("steps").$type<unknown[]>().default(sql`'[]'::jsonb`).notNull(),
+    connections: bunJsonb("connections").$type<unknown[]>().default(sql`'[]'::jsonb`).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("automations_org_id_created_at_idx").on(table.orgId, table.createdAt),
+    index("automations_org_id_trigger_event_idx").on(
+      table.orgId,
+      table.triggerEvent,
+    ),
+    check(
+      "automations_name_length_check",
+      sql`char_length(btrim(${table.name})) between 1 and 120`,
+    ),
+    check(
+      "automations_status_check",
+      sql`${table.status} in ('enabled', 'disabled')`,
+    ),
+    check(
+      "automations_steps_array_check",
+      sql`jsonb_typeof(${table.steps}) = 'array'`,
+    ),
+  ],
+);
+
+export const automationRuns = pgTable(
+  "automation_runs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id, { onDelete: "cascade" }),
+    automationId: uuid("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    occurrenceId: uuid("occurrence_id").references(
+      () => customEventOccurrences.id,
+      { onDelete: "set null" },
+    ),
+    status: text("status").default("completed").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("automation_runs_automation_id_created_at_idx").on(
+      table.automationId,
+      table.createdAt,
+    ),
+    check(
+      "automation_runs_status_check",
+      sql`${table.status} in ('completed', 'failed')`,
+    ),
+  ],
+);
+
+export const requestLogs = pgTable(
+  "request_logs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orgId: uuid("org_id").references(() => orgs.id, { onDelete: "cascade" }),
+    apiKeyId: uuid("api_key_id").references(() => apiKeys.id, {
+      onDelete: "set null",
+    }),
+    environment: text("environment"),
+    method: text("method").notNull(),
+    path: text("path").notNull(),
+    status: integer("status").notNull(),
+    durationMs: integer("duration_ms").notNull(),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("request_logs_org_id_created_at_idx").on(table.orgId, table.createdAt),
+    check(
+      "request_logs_method_check",
+      sql`${table.method} in ('GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS')`,
+    ),
+    check(
+      "request_logs_path_length_check",
+      sql`char_length(${table.path}) between 1 and 2048`,
+    ),
+  ],
+);
+
+export const webhookDeliveries = pgTable(  "webhook_deliveries",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     orgId: uuid("org_id")

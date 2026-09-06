@@ -25,6 +25,7 @@ type BroadcastTestQueue = (input: {
     apiKeyId: null;
     environment: "live";
     orgId: string;
+    scopes: null;
   };
 }) => Promise<{ id: string }>;
 
@@ -139,6 +140,7 @@ export async function queueBroadcastTestEmail(
       apiKeyId: null,
       environment: "live",
       orgId: input.orgId,
+      scopes: null,
     },
   });
 }

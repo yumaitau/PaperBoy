@@ -102,6 +102,7 @@ export async function createBroadcastAction(formData: FormData) {
         apiKeyId: null,
         environment: "live",
         orgId: organization.id,
+        scopes: null,
       },
     });
   } catch (error) {

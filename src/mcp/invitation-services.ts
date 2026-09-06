@@ -1,3 +1,4 @@
+import { requireKeyScope } from "@/lib/authorization";
 import {
   inviteAndEmailOrganizationMember,
   listOrganizationInvitationsForActor,
@@ -5,16 +6,20 @@ import {
 import type { PaperBoyMcpInvitationServices } from "@/mcp/invitation-tools";
 
 export const paperBoyMcpInvitationServices: PaperBoyMcpInvitationServices = {
-  invite: (principal, input) =>
-    inviteAndEmailOrganizationMember({
+  invite: (principal, input) => {
+    requireKeyScope(principal.scopes, "members.invite");
+    return inviteAndEmailOrganizationMember({
       actorUserId: principal.actorUserId,
       email: input.email,
       orgId: principal.orgId,
       role: input.role,
-    }),
-  list: (principal) =>
-    listOrganizationInvitationsForActor({
+    });
+  },
+  list: (principal) => {
+    requireKeyScope(principal.scopes, "members.read");
+    return listOrganizationInvitationsForActor({
       actorUserId: principal.actorUserId,
       orgId: principal.orgId,
-    }),
+    });
+  },
 };

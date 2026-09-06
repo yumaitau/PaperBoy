@@ -211,6 +211,48 @@
       "when": 1788593850001,
       "tag": "0029_bitter_hiroim",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1788595072703,
+      "tag": "0030_noisy_mister_sinister",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1788602044427,
+      "tag": "0031_api-key-scopes",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1788603750612,
+      "tag": "0032_segments-topics",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1788613355203,
+      "tag": "0033_webhook-endpoints",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1788614073596,
+      "tag": "0034_received-attachments",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1788614467200,
+      "tag": "0035_automations-events-logs",
+      "breakpoints": true
     }
   ]
 }

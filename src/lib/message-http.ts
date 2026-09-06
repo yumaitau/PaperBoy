@@ -1,10 +1,20 @@
 import type { ApiKeyPrincipal } from "@/lib/api-key-auth";
 import { AuthorizationError } from "@/lib/authorization";
+import { EmailError } from "@/lib/email-core";
+import {
+  EmailMetricsError,
+  type EmailMetricsResult,
+} from "@/lib/email-metrics";
 import type { MessageEventRecord } from "@/lib/message-event-core";
 import type { MessageDetailRecord } from "@/lib/message-events";
 import type { MessageDeliveryOverviewRecord } from "@/lib/message-status-core";
 import { MessageStatusError } from "@/lib/message-status-core";
 import { MessageLifecycleError } from "@/lib/message-lifecycle";
+import {
+  ShareConfigurationError,
+  type SharedEmailRecord,
+} from "@/lib/message-sharing";
+import type { MessageAttachmentRecord } from "@/lib/message-sharing";
 
 export type MessageHttpServices = {
   cancel: (
@@ -28,6 +38,30 @@ export type MessageHttpServices = {
     principal: ApiKeyPrincipal,
     messageId: string,
   ) => Promise<MessageEventRecord[]>;
+  listAttachments: (
+    principal: ApiKeyPrincipal,
+    messageId: string,
+  ) => Promise<MessageAttachmentRecord[]>;
+  getAttachment: (
+    principal: ApiKeyPrincipal,
+    messageId: string,
+    attachmentId: string,
+  ) => Promise<MessageAttachmentRecord>;
+  attachmentDownloadUrl: (
+    principal: ApiKeyPrincipal,
+    messageId: string,
+    attachmentId: string,
+    origin: string,
+  ) => Promise<{ expiresAt: Date; url: string }>;
+  share: (
+    principal: ApiKeyPrincipal,
+    messageId: string,
+    input: { expiresIn?: unknown; origin: string },
+  ) => Promise<{ expiresAt: Date; id: string; url: string }>;
+  metrics: (
+    principal: ApiKeyPrincipal,
+    query: Record<string, string>,
+  ) => Promise<EmailMetricsResult & { data: { data: { metric: string; value: number }[]; dimensions: Record<string, string | null> }[] }>;
   reschedule: (
     principal: ApiKeyPrincipal,
     messageId: string,
@@ -95,6 +129,57 @@ function failure(error: unknown): Response {
         },
       },
       403,
+    );
+  }
+
+  if (error instanceof EmailError) {
+    return json(
+      {
+        error: {
+          code: "validation_error",
+          fields: error.issues,
+          message: "Correct the invalid email fields and try again.",
+        },
+      },
+      422,
+    );
+  }
+
+  if (error instanceof EmailMetricsError) {
+    if (error.code === "MEMBERSHIP_REQUIRED") {
+      return json(
+        {
+          error: {
+            code: "membership_required",
+            message: "Create a new API key from a current organization member.",
+          },
+        },
+        403,
+      );
+    }
+
+    return json(
+      {
+        error: {
+          code: "validation_error",
+          fields: error.issues,
+          message: "Correct the invalid metrics fields and try again.",
+        },
+      },
+      422,
+    );
+  }
+
+  if (error instanceof ShareConfigurationError) {
+    return json(
+      {
+        error: {
+          code: "share_unavailable",
+          message:
+            "The operator must configure PAPERBOY_SHARE_SIGNING_KEY to enable share links.",
+        },
+      },
+      503,
     );
   }
 
@@ -395,5 +480,194 @@ export async function handleListMessageEventsRequest(
     return json({ data: events.map(serializeMessageEvent) }, 200);
   } catch (error) {
     return failure(error);
+  }
+}
+
+function serializeAttachment(
+  attachment: MessageAttachmentRecord,
+  downloadUrl: string,
+) {
+  return {
+    content_id: attachment.contentId,
+    content_type: attachment.contentType,
+    download_url: downloadUrl,
+    filename: attachment.filename,
+    id: attachment.id,
+  };
+}
+
+export async function handleShareEmailRequest(
+  request: Request,
+  messageId: string,
+  dependencies: MessageHttpDependencies,
+): Promise<Response> {
+  const authenticated = await principal(request, dependencies);
+
+  if (authenticated instanceof Response) {
+    return authenticated;
+  }
+
+  let payload: unknown = {};
+
+  try {
+    const text = await request.text();
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    return json(
+      {
+        error: {
+          code: "invalid_json",
+          message: "Request body must be valid JSON.",
+        },
+      },
+      400,
+    );
+  }
+
+  try {
+    const origin = new URL(request.url).origin;
+    const expiresIn =
+      payload && typeof payload === "object" && !Array.isArray(payload)
+        ? (payload as Record<string, unknown>)["expires_in"]
+        : undefined;
+    const shared = await dependencies.services.share(authenticated, messageId, {
+      expiresIn,
+      origin,
+    });
+    return json(
+      {
+        expires_at: shared.expiresAt.toISOString(),
+        id: shared.id,
+        url: shared.url,
+      },
+      200,
+    );
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function handleListMessageAttachmentsRequest(
+  request: Request,
+  messageId: string,
+  dependencies: MessageHttpDependencies,
+): Promise<Response> {
+  const authenticated = await principal(request, dependencies);
+
+  if (authenticated instanceof Response) {
+    return authenticated;
+  }
+
+  try {
+    const origin = new URL(request.url).origin;
+    const attachments = await dependencies.services.listAttachments(
+      authenticated,
+      messageId,
+    );
+    const data = await Promise.all(
+      attachments.map(async (attachment) => {
+        const download = await dependencies.services.attachmentDownloadUrl(
+          authenticated,
+          messageId,
+          attachment.id,
+          origin,
+        );
+        return serializeAttachment(attachment, download.url);
+      }),
+    );
+    return json({ data, object: "list" }, 200);
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function handleGetMessageAttachmentRequest(
+  request: Request,
+  messageId: string,
+  attachmentId: string,
+  dependencies: MessageHttpDependencies,
+): Promise<Response> {
+  const authenticated = await principal(request, dependencies);
+
+  if (authenticated instanceof Response) {
+    return authenticated;
+  }
+
+  try {
+    const origin = new URL(request.url).origin;
+    const attachment = await dependencies.services.getAttachment(
+      authenticated,
+      messageId,
+      attachmentId,
+    );
+    const download = await dependencies.services.attachmentDownloadUrl(
+      authenticated,
+      messageId,
+      attachmentId,
+      origin,
+    );
+    return json(serializeAttachment(attachment, download.url), 200);
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function handleGetEmailMetricsRequest(
+  request: Request,
+  dependencies: MessageHttpDependencies,
+): Promise<Response> {
+  const authenticated = await principal(request, dependencies);
+
+  if (authenticated instanceof Response) {
+    return authenticated;
+  }
+
+  try {
+    const query = Object.fromEntries(new URL(request.url).searchParams.entries());
+    const result = await dependencies.services.metrics(authenticated, query);
+    return json(
+      {
+        data: result.data,
+        end_date: result.endDate.toISOString(),
+        granularity: result.granularity,
+        start_date: result.startDate.toISOString(),
+        timezone: result.timezone,
+        totals: result.totals,
+      },
+      200,
+    );
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function handleGetSharedEmailRequest(
+  token: string,
+  lookup: (token: string) => Promise<SharedEmailRecord>,
+): Promise<Response> {
+  try {
+    const shared = await lookup(token);
+    return json(
+      {
+        expires_at: shared.expiresAt.toISOString(),
+        from: shared.from,
+        html: shared.html,
+        id: shared.id,
+        subject: shared.subject,
+        text: shared.text,
+        to: shared.to,
+      },
+      200,
+    );
+  } catch {
+    return json(
+      {
+        error: {
+          code: "not_found",
+          message: "This share link is invalid or expired.",
+        },
+      },
+      404,
+    );
   }
 }

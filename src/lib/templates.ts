@@ -26,10 +26,15 @@ const templateSelection = {
   html: emailTemplates.html,
   id: emailTemplates.id,
   name: emailTemplates.name,
+  publishedAt: emailTemplates.publishedAt,
+  publishedVersion: emailTemplates.publishedVersion,
+  react: emailTemplates.react,
   requiredVariables: emailTemplates.requiredVariables,
+  status: emailTemplates.status,
   subject: emailTemplates.subject,
   text: emailTemplates.textBody,
   updatedAt: emailTemplates.updatedAt,
+  version: emailTemplates.version,
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -101,9 +106,12 @@ export async function createTemplate(input: {
           html: definition.html,
           name: definition.name,
           orgId: input.orgId,
+          react: definition.react,
           requiredVariables: definition.requiredVariables,
+          status: "draft",
           subject: definition.subject,
           textBody: definition.text,
+          version: 1,
         })
         .returning(templateSelection);
 
@@ -210,10 +218,12 @@ export async function updateTemplate(input: {
         .set({
           html: definition.html,
           name: definition.name,
+          react: definition.react,
           requiredVariables: definition.requiredVariables,
           subject: definition.subject,
           textBody: definition.text,
           updatedAt: new Date(),
+          version: current.version + 1,
         })
         .where(
           and(
@@ -235,6 +245,144 @@ export async function updateTemplate(input: {
     }
 
     throw error;
+  }
+}
+
+export async function publishTemplate(input: {
+  actorUserId: string;
+  now?: Date;
+  orgId: string;
+  templateId: string;
+}): Promise<TemplateRecord> {
+  requireTemplateId(input.templateId);
+  const now = input.now ?? new Date();
+
+  return db.transaction(async (tx) => {
+    const [current] = await tx
+      .select({ ...templateSelection, role: orgMembers.role })
+      .from(emailTemplates)
+      .innerJoin(
+        orgMembers,
+        and(
+          eq(orgMembers.orgId, emailTemplates.orgId),
+          eq(orgMembers.userId, input.actorUserId),
+        ),
+      )
+      .where(
+        and(
+          eq(emailTemplates.id, input.templateId),
+          eq(emailTemplates.orgId, input.orgId),
+        ),
+      )
+      .for("update");
+
+    if (!current || !isOrgRole(current.role)) {
+      throw new TemplateError("TEMPLATE_NOT_FOUND");
+    }
+
+    requirePermission(current.role, "templates.update");
+    const { role: _role, ...template } = current;
+    if (template.status === "published") {
+      return template;
+    }
+
+    const [published] = await tx
+      .update(emailTemplates)
+      .set({
+        publishedAt: now,
+        publishedVersion: template.version,
+        status: "published",
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(emailTemplates.id, input.templateId),
+          eq(emailTemplates.orgId, input.orgId),
+        ),
+      )
+      .returning(templateSelection);
+
+    if (!published) {
+      throw new TemplateError("TEMPLATE_NOT_FOUND");
+    }
+
+    return published;
+  });
+}
+
+export async function duplicateTemplate(input: {
+  actorUserId: string;
+  orgId: string;
+  templateId: string;
+}): Promise<TemplateRecord> {
+  requireTemplateId(input.templateId);
+  const source = await getTemplate(input);
+
+  try {
+    return await db.transaction(async (tx) => {
+      const [membership] = await tx
+        .select({ role: orgMembers.role })
+        .from(orgMembers)
+        .where(
+          and(
+            eq(orgMembers.orgId, input.orgId),
+            eq(orgMembers.userId, input.actorUserId),
+          ),
+        )
+        .for("update");
+
+      if (!membership || !isOrgRole(membership.role)) {
+        throw new TemplateError("MEMBERSHIP_REQUIRED");
+      }
+
+      requirePermission(membership.role, "templates.create");
+
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        const name =
+          attempt === 0 ? `Copy of ${source.name}` : `Copy ${attempt + 1} of ${source.name}`;
+        try {
+          const [created] = await tx
+            .insert(emailTemplates)
+            .values({
+              html: source.html,
+              name: name.slice(0, 120),
+              orgId: input.orgId,
+              react: source.react,
+              requiredVariables: source.requiredVariables,
+              status: "draft",
+              subject: source.subject,
+              textBody: source.text,
+              version: 1,
+            })
+            .returning(templateSelection);
+
+          if (!created) {
+            throw new TemplateError("TEMPLATE_NOT_FOUND");
+          }
+
+          return created;
+        } catch (error) {
+          if (isUniqueViolation(error) && attempt < 9) continue;
+          throw error;
+        }
+      }
+
+      throw new TemplateError("TEMPLATE_EXISTS");
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw new TemplateError("TEMPLATE_EXISTS");
+    }
+
+    throw error;
+  }
+}
+
+export function requirePublishedTemplate(template: {
+  status: string;
+}): void {
+  if (template.status !== "published") {
+    throw new TemplateError("TEMPLATE_NOT_PUBLISHED");
   }
 }
 
@@ -294,6 +442,7 @@ async function renderStoredTemplate(input: {
     .select({
       html: emailTemplates.html,
       requiredVariables: emailTemplates.requiredVariables,
+      status: emailTemplates.status,
       subject: emailTemplates.subject,
       text: emailTemplates.textBody,
     })
@@ -309,6 +458,8 @@ async function renderStoredTemplate(input: {
   if (!template) {
     throw new TemplateError("TEMPLATE_NOT_FOUND");
   }
+
+  requirePublishedTemplate(template);
 
   return renderTemplateForSend(template, input.data);
 }

@@ -1,0 +1,9 @@
+ALTER TABLE "email_templates" DROP CONSTRAINT "email_templates_react_length_check";
+ALTER TABLE "email_templates" DROP CONSTRAINT "email_templates_published_state_check";
+ALTER TABLE "email_templates" DROP CONSTRAINT "email_templates_version_check";
+ALTER TABLE "email_templates" DROP CONSTRAINT "email_templates_status_check";
+ALTER TABLE "email_templates" DROP COLUMN "published_at";
+ALTER TABLE "email_templates" DROP COLUMN "published_version";
+ALTER TABLE "email_templates" DROP COLUMN "version";
+ALTER TABLE "email_templates" DROP COLUMN "status";
+ALTER TABLE "email_templates" DROP COLUMN "react";

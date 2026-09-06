@@ -1,10 +1,12 @@
-import { and, asc, count, desc, eq, inArray, lte } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   apiKeys,
   broadcastRecipients,
   broadcasts,
+  contacts,
   emailSuppressions,
+  events,
   orgMembers,
 } from "@/db/schema";
 import type { ApiKeyPrincipal } from "@/lib/api-key-auth";
@@ -33,7 +35,7 @@ import {
 import { RateLimitError } from "@/lib/rate-limit-core";
 import { requestBroadcastJob } from "@/lib/job-queue";
 import { TemplateError, renderTemplateForSend } from "@/lib/template-core";
-import { getTemplate } from "@/lib/templates";
+import { getTemplate, requirePublishedTemplate } from "@/lib/templates";
 import {
   createUnsubscribeUrl,
   withUnsubscribeFooter,
@@ -518,6 +520,7 @@ export async function processBroadcast(
           apiKeyId: broadcast.apiKeyId,
           environment: broadcast.environment,
           orgId: broadcast.orgId,
+          scopes: null,
         },
       });
 
@@ -583,6 +586,7 @@ export async function createBroadcast(
       orgId: input.principal.orgId,
     }),
   ]);
+  requirePublishedTemplate(template);
   if (audience.length === 0) throw new AudienceError("AUDIENCE_EMPTY");
   const unsubscribeUrl =
     dependencies.unsubscribeUrl ??
@@ -712,6 +716,7 @@ export async function updateScheduledBroadcast(
       : null,
   ]);
   if (audience && audience.length === 0) throw new AudienceError("AUDIENCE_EMPTY");
+  if (template) requirePublishedTemplate(template);
 
   const unsubscribeUrl =
     dependencies.unsubscribeUrl ??
@@ -1044,4 +1049,422 @@ export async function cancelBroadcast(input: {
 }): Promise<BroadcastRecord> {
   await setBroadcastStatus({ ...input, target: "cancelled" });
   return getBroadcast(input);
+}
+
+export async function deleteBroadcast(input: {
+  actorUserId: string | null;
+  broadcastId: string;
+  orgId: string;
+}): Promise<void> {
+  requireBroadcastId(input.broadcastId);
+  await requireOrganizationPermission({
+    actorUserId: input.actorUserId,
+    orgId: input.orgId,
+    permission: "broadcasts.control",
+  });
+
+  const current = await readBroadcastRow(input);
+
+  if (current.status !== "scheduled") {
+    throw new BroadcastError("INVALID_TRANSITION");
+  }
+
+  const deleted = await db
+    .delete(broadcasts)
+    .where(
+      and(eq(broadcasts.id, input.broadcastId), eq(broadcasts.orgId, input.orgId)),
+    )
+    .returning({ id: broadcasts.id });
+
+  if (deleted.length !== 1) {
+    throw new BroadcastError("BROADCAST_NOT_FOUND");
+  }
+}
+
+const RFC3339_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+
+export async function sendBroadcast(
+  input: {
+    actorUserId: string | null;
+    broadcastId: string;
+    orgId: string;
+    payload: unknown;
+  },
+  dependencies: Pick<ProcessBroadcastDependencies, "now"> = {},
+): Promise<BroadcastRecord> {
+  requireBroadcastId(input.broadcastId);
+  await requireOrganizationPermission({
+    actorUserId: input.actorUserId,
+    orgId: input.orgId,
+    permission: "broadcasts.control",
+  });
+
+  let scheduledAt: Date | null = null;
+
+  if (
+    input.payload !== undefined &&
+    input.payload !== null &&
+    (typeof input.payload !== "object" ||
+      Array.isArray(input.payload) ||
+      Object.keys(input.payload).some((field) => field !== "scheduled_at"))
+  ) {
+    throw new BroadcastError("VALIDATION_ERROR", [
+      { field: "body", message: "Only scheduled_at is supported." },
+    ]);
+  }
+
+  const raw =
+    input.payload &&
+    typeof input.payload === "object" &&
+    !Array.isArray(input.payload)
+      ? (input.payload as Record<string, unknown>)["scheduled_at"]
+      : undefined;
+
+  if (raw !== undefined && raw !== null) {
+    if (typeof raw !== "string" || !RFC3339_PATTERN.test(raw)) {
+      throw new BroadcastError("VALIDATION_ERROR", [
+        {
+          field: "scheduled_at",
+          message: "Use an RFC 3339 timestamp with an explicit UTC offset.",
+        },
+      ]);
+    }
+
+    scheduledAt = new Date(raw);
+
+    if (Number.isNaN(scheduledAt.getTime())) {
+      throw new BroadcastError("VALIDATION_ERROR", [
+        {
+          field: "scheduled_at",
+          message: "Use an RFC 3339 timestamp with an explicit UTC offset.",
+        },
+      ]);
+    }
+  }
+
+  const now = dependencies.now?.() ?? new Date();
+
+  if (scheduledAt && scheduledAt <= now) {
+    throw new BroadcastError("VALIDATION_ERROR", [
+      { field: "scheduled_at", message: "Schedule broadcasts in the future." },
+    ]);
+  }
+
+  const current = await readBroadcastRow(input);
+
+  if (current.status !== "scheduled" && current.status !== "paused") {
+    throw new BroadcastError("INVALID_TRANSITION");
+  }
+
+  await db
+    .update(broadcasts)
+    .set({
+      pausedAt: null,
+      scheduledFor: scheduledAt,
+      status: scheduledAt ? "scheduled" : "running",
+      updatedAt: now,
+    })
+    .where(
+      and(eq(broadcasts.id, input.broadcastId), eq(broadcasts.orgId, input.orgId)),
+    );
+
+  requestBroadcastJob({
+    broadcastId: input.broadcastId,
+    orgId: input.orgId,
+    runAt: scheduledAt ?? now,
+  });
+
+  return getBroadcast(input);
+}
+
+export const BROADCAST_RECIPIENT_EVENT_TYPES = [
+  "sent",
+  "delivered",
+  "opened",
+  "clicked",
+  "bounced",
+  "complained",
+  "unsubscribed",
+  "suppressed",
+] as const;
+
+export type BroadcastRecipientEventType =
+  (typeof BROADCAST_RECIPIENT_EVENT_TYPES)[number];
+
+export type BroadcastRecipientView = {
+  bouncedAt: Date | null;
+  clickedAt: Date | null;
+  complainedAt: Date | null;
+  contactId: string | null;
+  deliveredAt: Date | null;
+  email: string;
+  messageId: string | null;
+  openedAt: Date | null;
+  position: number;
+  sentAt: Date | null;
+  status: BroadcastRecipientStatus;
+  unsubscribed: boolean;
+};
+
+function recipientEventTypes(view: {
+  events: Map<string, { createdAt: Date; data: Record<string, unknown> }>;
+  messageId: string | null;
+  status: BroadcastRecipientStatus;
+  unsubscribed: boolean;
+}): Set<BroadcastRecipientEventType> {
+  const types = new Set<BroadcastRecipientEventType>();
+
+  if (view.messageId || view.status === "queued" || view.status === "processing") {
+    types.add("sent");
+  }
+  if (view.events.has("delivered")) types.add("delivered");
+  if (view.events.has("opened")) types.add("opened");
+  if (view.events.has("clicked")) types.add("clicked");
+  if (view.events.has("bounced")) types.add("bounced");
+  if (view.events.has("complained")) types.add("complained");
+  if (view.unsubscribed) types.add("unsubscribed");
+  if (view.status === "suppressed") types.add("suppressed");
+
+  return types;
+}
+
+export async function listBroadcastRecipients(input: {
+  actorUserId: string | null;
+  bounceType?: string | null;
+  broadcastId: string;
+  email?: string | null;
+  limit?: number;
+  orgId: string;
+  type?: string | null;
+}): Promise<BroadcastRecipientView[]> {
+  requireBroadcastId(input.broadcastId);
+  await requireOrganizationPermission({
+    actorUserId: input.actorUserId,
+    orgId: input.orgId,
+    permission: "broadcasts.read",
+  });
+  await readBroadcastRow({ broadcastId: input.broadcastId, orgId: input.orgId });
+
+  const eventType =
+    input.type !== undefined && input.type !== null
+      ? (BROADCAST_RECIPIENT_EVENT_TYPES as readonly string[]).includes(input.type)
+        ? (input.type as BroadcastRecipientEventType)
+        : null
+      : undefined;
+
+  if (input.type !== undefined && input.type !== null && !eventType) {
+    throw new BroadcastError("VALIDATION_ERROR", [
+      {
+        field: "type",
+        message: `Must be one of ${BROADCAST_RECIPIENT_EVENT_TYPES.join(", ")}.`,
+      },
+    ]);
+  }
+
+  const bounceType = (input.bounceType ?? "").trim().toLowerCase();
+  if (bounceType && !["permanent", "transient", "undetermined"].includes(bounceType)) {
+    throw new BroadcastError("VALIDATION_ERROR", [
+      {
+        field: "bounce_type",
+        message: "Must be permanent, transient, or undetermined.",
+      },
+    ]);
+  }
+  if (bounceType && eventType && eventType !== "bounced") {
+    throw new BroadcastError("VALIDATION_ERROR", [
+      { field: "bounce_type", message: "Only applies when type is bounced." },
+    ]);
+  }
+
+  const limit = Math.max(1, Math.min(input.limit ?? 100, 100));
+  const rows = await db
+    .select({
+      contactId: broadcastRecipients.contactId,
+      email: broadcastRecipients.email,
+      messageId: broadcastRecipients.messageId,
+      position: broadcastRecipients.position,
+      processedAt: broadcastRecipients.processedAt,
+      status: broadcastRecipients.status,
+    })
+    .from(broadcastRecipients)
+    .where(
+      and(
+        eq(broadcastRecipients.broadcastId, input.broadcastId),
+        ...(input.email ? [ilike(broadcastRecipients.email, `%${input.email}%`)] : []),
+      ),
+    )
+    .orderBy(asc(broadcastRecipients.position))
+    .limit(eventType ? 1000 : limit);
+
+  const messageIds = [...new Set(rows.map((row) => row.messageId).filter((id) => id !== null))] as string[];
+  const eventRows =
+    messageIds.length > 0
+      ? await db
+          .select({
+            createdAt: events.createdAt,
+            data: events.data,
+            messageId: events.messageId,
+            type: events.type,
+          })
+          .from(events)
+          .where(inArray(events.messageId, messageIds))
+      : [];
+
+  const eventsByMessage = new Map<string, Map<string, { createdAt: Date; data: Record<string, unknown> }>>();
+  for (const event of eventRows) {
+    if (!eventsByMessage.has(event.messageId)) {
+      eventsByMessage.set(event.messageId, new Map());
+    }
+    eventsByMessage.get(event.messageId)?.set(event.type, {
+      createdAt: event.createdAt,
+      data: event.data,
+    });
+  }
+
+  const emails = [...new Set(rows.map((row) => row.email))];
+  const suppressionRows =
+    emails.length > 0
+      ? await db
+          .select({ email: emailSuppressions.email })
+          .from(emailSuppressions)
+          .where(
+            and(
+              eq(emailSuppressions.orgId, input.orgId),
+              eq(emailSuppressions.reason, "unsubscribed"),
+              inArray(emailSuppressions.email, emails),
+            ),
+          )
+      : [];
+  const unsubscribedEmails = new Set(suppressionRows.map((row) => row.email));
+
+  const views = rows.map((row): BroadcastRecipientView & { types: Set<BroadcastRecipientEventType> } => {
+    const messageEvents = row.messageId
+      ? (eventsByMessage.get(row.messageId) ?? new Map())
+      : new Map<string, { createdAt: Date; data: Record<string, unknown> }>();
+    const unsubscribed = unsubscribedEmails.has(row.email);
+    const view = {
+      bouncedAt: messageEvents.get("bounced")?.createdAt ?? null,
+      clickedAt: messageEvents.get("clicked")?.createdAt ?? null,
+      complainedAt: messageEvents.get("complained")?.createdAt ?? null,
+      contactId: row.contactId,
+      deliveredAt: messageEvents.get("delivered")?.createdAt ?? null,
+      email: row.email,
+      messageId: row.messageId,
+      openedAt: messageEvents.get("opened")?.createdAt ?? null,
+      position: row.position,
+      sentAt: row.processedAt,
+      status: row.status,
+      unsubscribed,
+    };
+
+    return {
+      ...view,
+      types: recipientEventTypes({
+        events: messageEvents,
+        messageId: row.messageId,
+        status: row.status,
+        unsubscribed,
+      }),
+    };
+  });
+
+  const filtered = views.filter((view) => {
+    if (eventType && !view.types.has(eventType)) return false;
+    if (bounceType) {
+      const data = view.messageId
+        ? (eventsByMessage.get(view.messageId)?.get("bounced")?.data ?? null)
+        : null;
+      const actual = String(
+        (data as Record<string, unknown> | null)?.["bounce_type"] ?? "",
+      ).toLowerCase();
+      const normalized =
+        actual === "permanent" ? "permanent" : actual === "transient" ? "transient" : "undetermined";
+      if (normalized !== bounceType) return false;
+    }
+    return true;
+  });
+
+  return filtered.slice(0, limit).map(({ types: _types, ...view }) => view);
+}
+
+function extractLinks(html: string | null, text: string | null): string[] {
+  const links = new Set<string>();
+
+  if (html) {
+    for (const match of html.matchAll(/href\s*=\s*"(https?:[^"]+)"/gi)) {
+      links.add(match[1]);
+    }
+    for (const match of html.matchAll(/href\s*=\s*'(https?:[^']+)'/gi)) {
+      links.add(match[1]);
+    }
+  }
+
+  if (text) {
+    for (const match of text.matchAll(/https?:\/\/[^\s<>"')]+/gi)) {
+      links.add(match[0].replace(/[.,;!?]+$/, ""));
+    }
+  }
+
+  return [...links];
+}
+
+export type BroadcastClickedLink = {
+  clickCount: number;
+  uniqueClicks: number;
+  url: string;
+};
+
+export async function listBroadcastClickedLinks(input: {
+  actorUserId: string | null;
+  broadcastId: string;
+  limit?: number;
+  orgId: string;
+}): Promise<BroadcastClickedLink[]> {
+  requireBroadcastId(input.broadcastId);
+  await requireOrganizationPermission({
+    actorUserId: input.actorUserId,
+    orgId: input.orgId,
+    permission: "broadcasts.read",
+  });
+  const broadcast = await readBroadcastRow({
+    broadcastId: input.broadcastId,
+    orgId: input.orgId,
+  });
+
+  const limit = Math.max(1, Math.min(input.limit ?? 100, 100));
+  const links = extractLinks(broadcast.templateHtml, broadcast.templateText).slice(0, limit);
+
+  if (links.length === 0) {
+    return [];
+  }
+
+  const recipientRows = await db
+    .select({ messageId: broadcastRecipients.messageId })
+    .from(broadcastRecipients)
+    .where(eq(broadcastRecipients.broadcastId, input.broadcastId));
+
+  const messageIds = [...new Set(recipientRows.map((row) => row.messageId).filter((id) => id !== null))] as string[];
+
+  if (messageIds.length === 0) {
+    return links.map((url) => ({ clickCount: 0, uniqueClicks: 0, url }));
+  }
+
+  const clickRows = await db
+    .select({ data: events.data, messageId: events.messageId })
+    .from(events)
+    .where(and(inArray(events.messageId, messageIds), eq(events.type, "clicked")));
+
+  const counts = new Map<string, Set<string>>();
+  for (const row of clickRows) {
+    const url = String((row.data as Record<string, unknown>)?.["url"] ?? "");
+    if (!url) continue;
+    if (!counts.has(url)) counts.set(url, new Set());
+    counts.get(url)?.add(row.messageId);
+  }
+
+  return links.map((url) => {
+    const messages = counts.get(url);
+    const count = messages?.size ?? 0;
+    return { clickCount: count, uniqueClicks: count, url };
+  });
 }

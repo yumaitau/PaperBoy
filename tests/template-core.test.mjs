@@ -211,6 +211,33 @@ test("partial updates preserve omitted fields and can clear one body format", ()
   );
 });
 
+test("react source is optional but bounded at 512 KiB", () => {
+  const withReact = parseCreateTemplateInput({
+    name: "React welcome",
+    react: "export default function Email() { return <p>Hello</p>; }",
+    subject: "Welcome",
+    text: "Hello",
+  });
+
+  assert.equal(
+    withReact.react,
+    "export default function Email() { return <p>Hello</p>; }",
+  );
+
+  assert.throws(
+    () =>
+      parseCreateTemplateInput({
+        name: "Too large",
+        react: "x".repeat(512 * 1024 + 1),
+        subject: "Hello",
+        text: "Body",
+      }),
+    (error) =>
+      error instanceof TemplateError &&
+      error.issues.some((issue) => issue.field === "react"),
+  );
+});
+
 test("Cloudflare Email Sending receives required, rendered provider-neutral content", () => {
   const rendered = renderTemplateForSend(
     {

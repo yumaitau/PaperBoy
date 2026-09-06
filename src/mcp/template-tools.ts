@@ -5,6 +5,7 @@ import { AuthorizationError } from "@/lib/authorization";
 import {
   MAX_TEMPLATE_BODY_LENGTH,
   MAX_TEMPLATE_NAME_LENGTH,
+  MAX_TEMPLATE_REACT_LENGTH,
   MAX_TEMPLATE_SUBJECT_LENGTH,
   TemplateError,
   type TemplatePreview,
@@ -20,6 +21,8 @@ export const PAPERBOY_TEMPLATE_MCP_TOOL_NAMES = [
   "paperboy_update_template",
   "paperboy_delete_template",
   "paperboy_preview_template",
+  "paperboy_publish_template",
+  "paperboy_duplicate_template",
 ] as const;
 
 export const PAPERBOY_TEMPLATE_MCP_TOOL_DEFINITIONS = [
@@ -65,6 +68,20 @@ export const PAPERBOY_TEMPLATE_MCP_TOOL_DEFINITIONS = [
     name: PAPERBOY_TEMPLATE_MCP_TOOL_NAMES[5],
     schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
   },
+  {
+    description:
+      "Publish a draft template so sends and broadcasts can use it. Already-published templates return unchanged.",
+    mutating: true,
+    name: PAPERBOY_TEMPLATE_MCP_TOOL_NAMES[6],
+    schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
+  },
+  {
+    description:
+      "Duplicate a template as a new draft named Copy of the original.",
+    mutating: true,
+    name: PAPERBOY_TEMPLATE_MCP_TOOL_NAMES[7],
+    schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
+  },
 ] as const;
 
 export type PaperBoyMcpTemplateServices = {
@@ -91,11 +108,20 @@ export type PaperBoyMcpTemplateServices = {
     templateId: string,
     payload: unknown,
   ) => Promise<TemplateRecord>;
+  publish: (
+    principal: ApiKeyPrincipal,
+    templateId: string,
+  ) => Promise<TemplateRecord>;
+  duplicate: (
+    principal: ApiKeyPrincipal,
+    templateId: string,
+  ) => Promise<TemplateRecord>;
 };
 
 const templateFields = {
   html: z.string().max(MAX_TEMPLATE_BODY_LENGTH).nullable().optional(),
   name: z.string().min(1).max(MAX_TEMPLATE_NAME_LENGTH),
+  react: z.string().max(MAX_TEMPLATE_REACT_LENGTH).nullable().optional(),
   requiredVariables: z.array(z.string().min(1).max(256)).max(100).optional(),
   subject: z.string().min(1).max(MAX_TEMPLATE_SUBJECT_LENGTH),
   text: z.string().max(MAX_TEMPLATE_BODY_LENGTH).nullable().optional(),
@@ -113,6 +139,7 @@ const updateTemplateInputSchema = z
   .object({
     html: templateFields.html,
     name: templateFields.name.optional(),
+    react: templateFields.react,
     requiredVariables: templateFields.requiredVariables,
     subject: templateFields.subject.optional(),
     templateId: z.string().uuid(),
@@ -155,10 +182,15 @@ const templateOutputSchema = z.object({
   html: z.string().nullable(),
   id: z.string().uuid(),
   name: z.string(),
+  publishedAt: z.iso.datetime({ offset: true }).nullable(),
+  publishedVersion: z.number().int().min(1).nullable(),
+  react: z.string().nullable(),
   requiredVariables: z.array(z.string()),
+  status: z.enum(["draft", "published"]),
   subject: z.string(),
   text: z.string().nullable(),
   updatedAt: z.iso.datetime({ offset: true }),
+  version: z.number().int().min(1),
 });
 
 const responseMetadata = {
@@ -206,10 +238,17 @@ function serializeTemplate(template: TemplateRecord) {
     html: template.html,
     id: template.id,
     name: template.name,
+    publishedAt: template.publishedAt
+      ? protocolTimestamp(template.publishedAt)
+      : null,
+    publishedVersion: template.publishedVersion,
+    react: template.react,
     requiredVariables: template.requiredVariables,
+    status: template.status,
     subject: template.subject,
     text: template.text,
     updatedAt: protocolTimestamp(template.updatedAt),
+    version: template.version,
   };
 }
 
@@ -488,6 +527,74 @@ export function registerPaperBoyTemplateTools(input: {
           subject: preview.subject,
           templateId,
           text: preview.text,
+        });
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  input.server.registerTool(
+    PAPERBOY_TEMPLATE_MCP_TOOL_NAMES[6],
+    {
+      annotations: {
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+        readOnlyHint: false,
+      },
+      description: PAPERBOY_TEMPLATE_MCP_TOOL_DEFINITIONS[6].description,
+      inputSchema: templateIdInputSchema,
+      outputSchema: templateResponseOutputSchema,
+      title: "Publish a PaperBoy template",
+      _meta: { "paperboy/schemaVersion": PAPERBOY_MCP_SCHEMA_VERSION },
+    },
+    async ({ templateId }) => {
+      const principal = await input.authorize();
+
+      if (!principal) {
+        return unauthorizedResult();
+      }
+
+      try {
+        const template = await input.services.publish(principal, templateId);
+        return successResult({
+          ...metadata(),
+          template: serializeTemplate(template),
+        });
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  input.server.registerTool(
+    PAPERBOY_TEMPLATE_MCP_TOOL_NAMES[7],
+    {
+      annotations: {
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false,
+        readOnlyHint: false,
+      },
+      description: PAPERBOY_TEMPLATE_MCP_TOOL_DEFINITIONS[7].description,
+      inputSchema: templateIdInputSchema,
+      outputSchema: templateResponseOutputSchema,
+      title: "Duplicate a PaperBoy template",
+      _meta: { "paperboy/schemaVersion": PAPERBOY_MCP_SCHEMA_VERSION },
+    },
+    async ({ templateId }) => {
+      const principal = await input.authorize();
+
+      if (!principal) {
+        return unauthorizedResult();
+      }
+
+      try {
+        const template = await input.services.duplicate(principal, templateId);
+        return successResult({
+          ...metadata(),
+          template: serializeTemplate(template),
         });
       } catch (error) {
         return errorResult(error);

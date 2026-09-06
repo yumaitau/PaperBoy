@@ -40,7 +40,7 @@ export type AudienceRecord = {
 };
 
 export type ContactRecord = {
-  audienceId: string;
+  audienceId: string | null;
   createdAt: Date;
   email: string;
   id: string;
@@ -259,6 +259,14 @@ function parseCsvRows(csv: string): string[][] {
   }
   if (field.length > 0 || row.length > 0 || afterQuote) finishRow();
   return rows;
+}
+
+export function parseCsvTable(value: string): string[][] {
+  if (Buffer.byteLength(value, "utf8") > MAX_CONTACT_CSV_BYTES) {
+    throw new AudienceError("CSV_TOO_LARGE");
+  }
+
+  return parseCsvRows(value.replace(/^\uFEFF/, ""));
 }
 
 export function parseContactCsv(value: string): ContactCsvImport {

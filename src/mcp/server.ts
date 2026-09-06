@@ -86,6 +86,36 @@ import {
   registerPaperBoyWebhookTools,
   type PaperBoyMcpWebhookServices,
 } from "@/mcp/webhook-tools";
+import {
+  PAPERBOY_API_KEY_MCP_TOOL_DEFINITIONS,
+  PAPERBOY_API_KEY_MCP_TOOL_NAMES,
+  registerPaperBoyApiKeyTools,
+  type PaperBoyMcpApiKeyServices,
+} from "@/mcp/api-key-tools";
+import {
+  PAPERBOY_SEGMENT_MCP_TOOL_DEFINITIONS,
+  PAPERBOY_SEGMENT_MCP_TOOL_NAMES,
+  registerPaperBoySegmentTools,
+  type PaperBoyMcpSegmentServices,
+} from "@/mcp/segment-tools";
+import {
+  PAPERBOY_EVENT_MCP_TOOL_DEFINITIONS,
+  PAPERBOY_EVENT_MCP_TOOL_NAMES,
+  registerPaperBoyEventTools,
+  type PaperBoyMcpEventServices,
+} from "@/mcp/event-tools";
+import {
+  PAPERBOY_AUTOMATION_MCP_TOOL_DEFINITIONS,
+  PAPERBOY_AUTOMATION_MCP_TOOL_NAMES,
+  registerPaperBoyAutomationTools,
+  type PaperBoyMcpAutomationServices,
+} from "@/mcp/automation-tools";
+import {
+  PAPERBOY_LOG_MCP_TOOL_DEFINITIONS,
+  PAPERBOY_LOG_MCP_TOOL_NAMES,
+  registerPaperBoyLogTools,
+  type PaperBoyMcpLogServices,
+} from "@/mcp/log-tools";
 
 export { PAPERBOY_MCP_SCHEMA_VERSION, PAPERBOY_MCP_VERSION };
 
@@ -105,6 +135,11 @@ export const PAPERBOY_MCP_TOOL_NAMES = [
   ...PAPERBOY_TEMPLATE_MCP_TOOL_NAMES,
   ...PAPERBOY_BROADCAST_MCP_TOOL_NAMES,
   ...PAPERBOY_DOMAIN_MCP_TOOL_NAMES,
+  ...PAPERBOY_API_KEY_MCP_TOOL_NAMES,
+  ...PAPERBOY_SEGMENT_MCP_TOOL_NAMES,
+  ...PAPERBOY_EVENT_MCP_TOOL_NAMES,
+  ...PAPERBOY_AUTOMATION_MCP_TOOL_NAMES,
+  ...PAPERBOY_LOG_MCP_TOOL_NAMES,
 ] as const;
 
 export const PAPERBOY_MCP_RESOURCE_URIS = [
@@ -140,6 +175,11 @@ type PaperBoyMcpDependencies = {
   suppressions: PaperBoyMcpSuppressionServices;
   templates: PaperBoyMcpTemplateServices;
   webhooks: PaperBoyMcpWebhookServices;
+  apiKeys: PaperBoyMcpApiKeyServices;
+  segments: PaperBoyMcpSegmentServices;
+  events: PaperBoyMcpEventServices;
+  automations: PaperBoyMcpAutomationServices;
+  logs: PaperBoyMcpLogServices;
 };
 
 const emptyInputSchema = z.object({}).strict();
@@ -213,6 +253,11 @@ const toolDefinitions = [
   ...PAPERBOY_TEMPLATE_MCP_TOOL_DEFINITIONS,
   ...PAPERBOY_BROADCAST_MCP_TOOL_DEFINITIONS,
   ...PAPERBOY_DOMAIN_MCP_TOOL_DEFINITIONS,
+  ...PAPERBOY_API_KEY_MCP_TOOL_DEFINITIONS,
+  ...PAPERBOY_SEGMENT_MCP_TOOL_DEFINITIONS,
+  ...PAPERBOY_EVENT_MCP_TOOL_DEFINITIONS,
+  ...PAPERBOY_AUTOMATION_MCP_TOOL_DEFINITIONS,
+  ...PAPERBOY_LOG_MCP_TOOL_DEFINITIONS,
 ] as const;
 
 const resourceDefinitions = [
@@ -684,6 +729,41 @@ export function createPaperBoyMcpServer(
     now,
     server,
     services: dependencies.domains,
+  });
+
+  registerPaperBoyApiKeyTools({
+    authorize: dependencies.authorize,
+    now,
+    server,
+    services: dependencies.apiKeys,
+  });
+
+  registerPaperBoySegmentTools({
+    authorize: dependencies.authorize,
+    now,
+    server,
+    services: dependencies.segments,
+  });
+
+  registerPaperBoyEventTools({
+    authorize: dependencies.authorize,
+    now,
+    server,
+    services: dependencies.events,
+  });
+
+  registerPaperBoyAutomationTools({
+    authorize: dependencies.authorize,
+    now,
+    server,
+    services: dependencies.automations,
+  });
+
+  registerPaperBoyLogTools({
+    authorize: dependencies.authorize,
+    now,
+    server,
+    services: dependencies.logs,
   });
 
   return server;

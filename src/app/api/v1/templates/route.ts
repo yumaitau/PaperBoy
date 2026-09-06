@@ -1,4 +1,5 @@
 import { authenticateApiRequest } from "@/lib/api-key-request";
+import { withApiLog } from "@/lib/request-logs";
 import { templateApiServices } from "@/lib/template-api-services";
 import {
   handleCreateTemplateRequest,
@@ -11,9 +12,9 @@ const dependencies = {
 };
 
 export async function GET(request: Request) {
-  return handleListTemplatesRequest(request, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleListTemplatesRequest(request, scoped));
 }
 
 export async function POST(request: Request) {
-  return handleCreateTemplateRequest(request, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleCreateTemplateRequest(request, scoped));
 }

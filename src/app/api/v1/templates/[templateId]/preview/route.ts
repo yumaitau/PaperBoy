@@ -1,4 +1,5 @@
 import { authenticateApiRequest } from "@/lib/api-key-request";
+import { withApiLog } from "@/lib/request-logs";
 import { templateApiServices } from "@/lib/template-api-services";
 import { handlePreviewTemplateRequest } from "@/lib/template-http";
 
@@ -16,5 +17,5 @@ export async function POST(
   context: TemplatePreviewRouteContext,
 ) {
   const { templateId } = await context.params;
-  return handlePreviewTemplateRequest(request, templateId, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handlePreviewTemplateRequest(request, templateId, scoped));
 }

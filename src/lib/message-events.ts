@@ -105,36 +105,38 @@ export async function insertMessageEvent(
       .from(orgs)
       .where(eq(orgs.id, message.orgId))
       .for("share");
-    const [endpoint] = await tx
+    const endpoints = await tx
       .select({
         encryptedSecret: webhookEndpoints.encryptedSecret,
         id: webhookEndpoints.id,
         url: webhookEndpoints.url,
       })
       .from(webhookEndpoints)
-      .where(eq(webhookEndpoints.orgId, message.orgId))
-      .limit(1);
+      .where(
+        and(
+          eq(webhookEndpoints.orgId, message.orgId),
+          eq(webhookEndpoints.enabled, true),
+        ),
+      );
 
-    if (!endpoint) {
-      return event;
-    }
-
-    await tx.insert(webhookDeliveries).values({
-      body: webhookEventBody({
+    for (const endpoint of endpoints) {
+      await tx.insert(webhookDeliveries).values({
+        body: webhookEventBody({
+          createdAt: event.createdAt,
+          environment: message.environment === "live" ? "live" : "test",
+          messageId: event.messageId,
+          type: event.type,
+        }),
         createdAt: event.createdAt,
-        environment: message.environment === "live" ? "live" : "test",
-        messageId: event.messageId,
-        type: event.type,
-      }),
-      createdAt: event.createdAt,
-      encryptedSecret: endpoint.encryptedSecret,
-      endpointId: endpoint.id,
-      eventId: event.id,
-      nextAttemptAt: event.createdAt,
-      orgId: message.orgId,
-      updatedAt: event.createdAt,
-      url: endpoint.url,
-    });
+        encryptedSecret: endpoint.encryptedSecret,
+        endpointId: endpoint.id,
+        eventId: event.id,
+        nextAttemptAt: event.createdAt,
+        orgId: message.orgId,
+        updatedAt: event.createdAt,
+        url: endpoint.url,
+      });
+    }
   }
 
   return event;

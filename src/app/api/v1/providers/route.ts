@@ -1,4 +1,5 @@
 import { authenticateApiRequest } from "@/lib/api-key-request";
+import { withApiLog } from "@/lib/request-logs";
 import { outboundProviderApiServices } from "@/lib/outbound-provider-api-services";
 import {
   handleGetOutboundProvidersRequest,
@@ -11,9 +12,9 @@ const dependencies = {
 };
 
 export function GET(request: Request) {
-  return handleGetOutboundProvidersRequest(request, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleGetOutboundProvidersRequest(request, scoped));
 }
 
 export function PATCH(request: Request) {
-  return handleUpdateOutboundProvidersRequest(request, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleUpdateOutboundProvidersRequest(request, scoped));
 }

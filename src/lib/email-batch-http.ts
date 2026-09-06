@@ -1,4 +1,5 @@
 import type { ApiKeyPrincipal } from "@/lib/api-key-auth";
+import { isKeyScopeGranted } from "@/lib/authorization";
 import {
   describeEmailFailure,
   emailJson,
@@ -44,6 +45,19 @@ export async function handleSendEmailBatchRequest(
       },
       401,
       { "WWW-Authenticate": 'Bearer realm="PaperBoy"' },
+    );
+  }
+
+  if (!isKeyScopeGranted(principal.scopes, "messages.send")) {
+    return emailJson(
+      {
+        error: {
+          code: "forbidden",
+          message:
+            "This API key is not granted the messages.send scope required to send email.",
+        },
+      },
+      403,
     );
   }
 

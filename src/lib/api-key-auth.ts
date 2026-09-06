@@ -7,12 +7,17 @@ import {
   verifyApiKeyHash,
   type ApiKeyEnvironment,
 } from "@/lib/api-key-crypto";
+import {
+  ORG_PERMISSIONS,
+  type OrgPermission,
+} from "@/lib/authorization";
 
 export type ApiKeyPrincipal = {
   actorUserId: string | null;
   apiKeyId: string;
   environment: ApiKeyEnvironment;
   orgId: string;
+  scopes: OrgPermission[] | null;
 };
 
 export async function authenticateApiKey(
@@ -32,6 +37,7 @@ export async function authenticateApiKey(
       keyHash: apiKeys.keyHash,
       orgId: apiKeys.orgId,
       revokedAt: apiKeys.revokedAt,
+      scopes: apiKeys.scopes,
     })
     .from(apiKeys)
     .where(eq(apiKeys.keyId, parsed.keyId))
@@ -68,5 +74,30 @@ export async function authenticateApiKey(
     apiKeyId: candidate.id,
     environment: candidate.environment,
     orgId: candidate.orgId,
+    scopes: normalizeScopes(candidate.scopes),
   };
+}
+
+const KNOWN_PERMISSIONS = new Set<string>(ORG_PERMISSIONS);
+
+function normalizeScopes(value: unknown): OrgPermission[] | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const scopes: OrgPermission[] = [];
+
+  for (const entry of value) {
+    if (typeof entry !== "string" || !KNOWN_PERMISSIONS.has(entry)) {
+      return null;
+    }
+
+    scopes.push(entry as OrgPermission);
+  }
+
+  return scopes;
 }

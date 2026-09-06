@@ -30,10 +30,13 @@ export type WebhookDeliveryStatus =
 
 export type WebhookErrorCode =
   | "CONFIGURATION_INVALID"
+  | "ENDPOINT_DISABLED"
+  | "EVENT_NOT_FOUND"
   | "INVALID_INPUT"
   | "INVALID_URL"
   | "MEMBERSHIP_REQUIRED"
-  | "SECRET_UNAVAILABLE";
+  | "SECRET_UNAVAILABLE"
+  | "WEBHOOK_NOT_FOUND";
 
 export class WebhookError extends Error {
   constructor(readonly code: WebhookErrorCode) {

@@ -1,6 +1,6 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { audiences, contacts, emailSuppressions } from "@/db/schema";
+import { contacts, emailSuppressions } from "@/db/schema";
 import { verifyUnsubscribeToken } from "@/lib/unsubscribe-core";
 
 export class UnsubscribeError extends Error {
@@ -29,24 +29,14 @@ export async function unsubscribe(input: {
   return db.transaction(async (tx) => {
     const [target] = await tx
       .select({
-        audienceId: contacts.audienceId,
         email: contacts.email,
+        orgId: contacts.orgId,
         unsubscribedAt: contacts.unsubscribedAt,
       })
       .from(contacts)
       .where(eq(contacts.id, contactId))
       .for("update");
     if (!target) throw new UnsubscribeError();
-    const [audience] = await tx
-      .select({ orgId: audiences.orgId })
-      .from(audiences)
-      .where(eq(audiences.id, target.audienceId))
-      .limit(1);
-    if (!audience) throw new UnsubscribeError();
-    const organizationAudiences = await tx
-      .select({ id: audiences.id })
-      .from(audiences)
-      .where(eq(audiences.orgId, audience.orgId));
 
     await tx
       .update(contacts)
@@ -56,10 +46,7 @@ export async function unsubscribe(input: {
       })
       .where(
         and(
-          inArray(
-            contacts.audienceId,
-            organizationAudiences.map((row) => row.id),
-          ),
+          eq(contacts.orgId, target.orgId),
           eq(contacts.email, target.email),
         ),
       );
@@ -68,7 +55,7 @@ export async function unsubscribe(input: {
       .values({
         createdAt: now,
         email: target.email,
-        orgId: audience.orgId,
+        orgId: target.orgId,
         reason: "unsubscribed",
         updatedAt: now,
       })

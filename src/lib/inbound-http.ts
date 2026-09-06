@@ -9,7 +9,10 @@ import {
   isDiscardedInboundEmail,
   type DiscardedInboundEmail,
 } from "@/lib/inbound-core";
-import type { ReceivedEmailRecord } from "@/lib/inbound";
+import type {
+  ReceivedEmailAttachmentRecord,
+  ReceivedEmailRecord,
+} from "@/lib/inbound";
 import { MessageStatusError } from "@/lib/message-status-core";
 
 export type InboundHttpDependencies = {
@@ -18,6 +21,15 @@ export type InboundHttpDependencies = {
     principal: ApiKeyPrincipal,
     receivedEmailId: string,
   ) => Promise<ReceivedEmailRecord>;
+  listAttachments?: (
+    principal: ApiKeyPrincipal,
+    receivedEmailId: string,
+  ) => Promise<ReceivedEmailAttachmentRecord[]>;
+  getAttachment?: (
+    principal: ApiKeyPrincipal,
+    receivedEmailId: string,
+    attachmentId: string,
+  ) => Promise<ReceivedEmailAttachmentRecord>;
   receive?: (
     principal: ApiKeyPrincipal,
     payload: unknown,
@@ -136,6 +148,119 @@ export async function handleGetReceivedEmailRequest(
       });
     const email = await get(principal, receivedEmailId);
     return emailJson(inboundEmailApiBody(email), 200);
+  } catch (error) {
+    return inboundFailure(error);
+  }
+}
+
+function serializeReceivedAttachment(
+  attachment: ReceivedEmailAttachmentRecord,
+  downloadUrl: string,
+) {
+  return {
+    content_id: attachment.contentId,
+    content_type: attachment.contentType,
+    download_url: downloadUrl,
+    filename: attachment.filename,
+    id: attachment.id,
+  };
+}
+
+async function receivedAttachmentUrl(
+  principal: ApiKeyPrincipal,
+  receivedEmailId: string,
+  attachmentId: string,
+  origin: string,
+): Promise<string> {
+  const { receivedAttachmentDownloadUrl: downloadUrl } = await import(
+    "@/lib/message-sharing"
+  );
+  return (
+    await downloadUrl({
+      attachmentId,
+      baseUrl: origin,
+      environment: principal.environment,
+      orgId: principal.orgId,
+      receivedEmailId,
+    })
+  ).url;
+}
+
+export async function handleListReceivedEmailAttachmentsRequest(
+  request: Request,
+  receivedEmailId: string,
+  dependencies: InboundHttpDependencies,
+): Promise<Response> {
+  const principal = await dependencies.authenticate(request);
+  if (!principal) return unauthorized();
+
+  try {
+    const list =
+      dependencies.listAttachments ??
+      (async (actor, id) => {
+        const { listReceivedEmailAttachments } = await import("@/lib/inbound");
+        return listReceivedEmailAttachments({
+          environment: actor.environment,
+          orgId: actor.orgId,
+          receivedEmailId: id,
+        });
+      });
+    const attachments = await list(principal, receivedEmailId);
+    const origin = new URL(request.url).origin;
+    const data = await Promise.all(
+      attachments.map(async (attachment) =>
+        serializeReceivedAttachment(
+          attachment,
+          await receivedAttachmentUrl(
+            principal,
+            receivedEmailId,
+            attachment.id,
+            origin,
+          ),
+        ),
+      ),
+    );
+    return emailJson({ data, object: "list" }, 200);
+  } catch (error) {
+    return inboundFailure(error);
+  }
+}
+
+export async function handleGetReceivedEmailAttachmentRequest(
+  request: Request,
+  receivedEmailId: string,
+  attachmentId: string,
+  dependencies: InboundHttpDependencies,
+): Promise<Response> {
+  const principal = await dependencies.authenticate(request);
+  if (!principal) return unauthorized();
+
+  try {
+    const get =
+      dependencies.getAttachment ??
+      (async (actor, id, attachment) => {
+        const { getReceivedEmailAttachment } = await import("@/lib/inbound");
+        return getReceivedEmailAttachment({
+          attachmentId: attachment,
+          environment: actor.environment,
+          orgId: actor.orgId,
+          receivedEmailId: id,
+        });
+      });
+    const attachment = await get(principal, receivedEmailId, attachmentId);
+    const origin = new URL(request.url).origin;
+    return emailJson(
+      serializeReceivedAttachment(
+        attachment,
+        await receivedAttachmentUrl(
+          principal,
+          receivedEmailId,
+          attachment.id,
+          origin,
+        ),
+      ),
+      200,
+    );
   } catch (error) {
     return inboundFailure(error);
   }

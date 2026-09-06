@@ -7,7 +7,11 @@ import {
   BroadcastError,
   MAX_BROADCAST_NAME_LENGTH,
 } from "@/lib/broadcast-core";
-import type { BroadcastRecord } from "@/lib/broadcasts";
+import type {
+  BroadcastClickedLink,
+  BroadcastRecord,
+  BroadcastRecipientView,
+} from "@/lib/broadcasts";
 import { protocolTimestamp } from "@/lib/time";
 import {
   MAX_TEMPLATE_BODY_LENGTH,
@@ -25,6 +29,10 @@ export const PAPERBOY_BROADCAST_MCP_TOOL_NAMES = [
   "paperboy_resume_broadcast",
   "paperboy_cancel_broadcast",
   "paperboy_update_broadcast",
+  "paperboy_delete_broadcast",
+  "paperboy_send_broadcast",
+  "paperboy_list_broadcast_recipients",
+  "paperboy_list_broadcast_clicked_links",
 ] as const;
 
 export const PAPERBOY_BROADCAST_MCP_TOOL_DEFINITIONS = [
@@ -75,6 +83,34 @@ export const PAPERBOY_BROADCAST_MCP_TOOL_DEFINITIONS = [
     name: PAPERBOY_BROADCAST_MCP_TOOL_NAMES[6],
     schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
   },
+  {
+    description:
+      "Delete a scheduled broadcast that has not started sending. Running, completed, and cancelled broadcasts cannot be deleted.",
+    mutating: true,
+    name: PAPERBOY_BROADCAST_MCP_TOOL_NAMES[7],
+    schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
+  },
+  {
+    description:
+      "Start a scheduled or paused broadcast now, or reschedule it with scheduled_at.",
+    mutating: true,
+    name: PAPERBOY_BROADCAST_MCP_TOOL_NAMES[8],
+    schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
+  },
+  {
+    description:
+      "List one broadcast's recipients, optionally filtered by event type, email, or bounce type.",
+    mutating: false,
+    name: PAPERBOY_BROADCAST_MCP_TOOL_NAMES[9],
+    schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
+  },
+  {
+    description:
+      "List the links in one broadcast's template with click counts.",
+    mutating: false,
+    name: PAPERBOY_BROADCAST_MCP_TOOL_NAMES[10],
+    schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
+  },
 ] as const;
 
 export type PaperBoyMcpBroadcastServices = {
@@ -104,6 +140,24 @@ export type PaperBoyMcpBroadcastServices = {
     broadcastId: string,
     payload: unknown,
   ) => Promise<BroadcastRecord>;
+  delete: (
+    principal: ApiKeyPrincipal,
+    broadcastId: string,
+  ) => Promise<void>;
+  send: (
+    principal: ApiKeyPrincipal,
+    broadcastId: string,
+    payload: unknown,
+  ) => Promise<BroadcastRecord>;
+  listRecipients: (
+    principal: ApiKeyPrincipal,
+    broadcastId: string,
+    filter: { bounceType?: string; email?: string; limit?: number; type?: string },
+  ) => Promise<BroadcastRecipientView[]>;
+  listClickedLinks: (
+    principal: ApiKeyPrincipal,
+    broadcastId: string,
+  ) => Promise<BroadcastClickedLink[]>;
 };
 
 const createBroadcastInputSchema = z
@@ -195,6 +249,96 @@ const broadcastsOutputSchema = z.object({
   broadcasts: z.array(broadcastSchema),
   ...metadataSchema,
 });
+
+const recipientSchema = z.object({
+  bouncedAt: z.iso.datetime({ offset: true }).nullable(),
+  clickedAt: z.iso.datetime({ offset: true }).nullable(),
+  complainedAt: z.iso.datetime({ offset: true }).nullable(),
+  contactId: z.string().uuid().nullable(),
+  deliveredAt: z.iso.datetime({ offset: true }).nullable(),
+  email: z.string(),
+  messageId: z.string().uuid().nullable(),
+  openedAt: z.iso.datetime({ offset: true }).nullable(),
+  position: z.number().int().nonnegative(),
+  sentAt: z.iso.datetime({ offset: true }).nullable(),
+  status: z.string(),
+  unsubscribed: z.boolean(),
+});
+
+const clickedLinkSchema = z.object({
+  clickCount: z.number().int().nonnegative(),
+  uniqueClicks: z.number().int().nonnegative(),
+  url: z.string(),
+});
+
+const recipientsOutputSchema = z.object({
+  recipients: z.array(recipientSchema),
+  ...metadataSchema,
+});
+
+const clickedLinksOutputSchema = z.object({
+  clickedLinks: z.array(clickedLinkSchema),
+  ...metadataSchema,
+});
+
+const deleteBroadcastOutputSchema = z.object({
+  deleted: z.literal(true),
+  broadcastId: z.string().uuid(),
+  ...metadataSchema,
+});
+
+const sendBroadcastInputSchema = z
+  .object({
+    broadcastId: z.string().uuid(),
+    scheduledAt: z.iso.datetime({ offset: true }).optional(),
+  })
+  .strict();
+
+const recipientsInputSchema = z
+  .object({
+    bounceType: z.enum(["permanent", "transient", "undetermined"]).optional(),
+    broadcastId: z.string().uuid(),
+    email: z.string().min(1).max(254).optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+    type: z
+      .enum([
+        "sent",
+        "delivered",
+        "opened",
+        "clicked",
+        "bounced",
+        "complained",
+        "unsubscribed",
+        "suppressed",
+      ])
+      .optional(),
+  })
+  .strict();
+
+function serializeRecipient(view: BroadcastRecipientView) {
+  return {
+    bouncedAt: view.bouncedAt ? protocolTimestamp(view.bouncedAt) : null,
+    clickedAt: view.clickedAt ? protocolTimestamp(view.clickedAt) : null,
+    complainedAt: view.complainedAt ? protocolTimestamp(view.complainedAt) : null,
+    contactId: view.contactId,
+    deliveredAt: view.deliveredAt ? protocolTimestamp(view.deliveredAt) : null,
+    email: view.email,
+    messageId: view.messageId,
+    openedAt: view.openedAt ? protocolTimestamp(view.openedAt) : null,
+    position: view.position,
+    sentAt: view.sentAt ? protocolTimestamp(view.sentAt) : null,
+    status: view.status,
+    unsubscribed: view.unsubscribed,
+  };
+}
+
+function serializeClickedLink(link: BroadcastClickedLink) {
+  return {
+    clickCount: link.clickCount,
+    uniqueClicks: link.uniqueClicks,
+    url: link.url,
+  };
+}
 
 function serialize(record: BroadcastRecord) {
   return {
@@ -477,6 +621,152 @@ export function registerPaperBoyBroadcastTools(input: {
           payload,
         );
         return successResult({ broadcast: serialize(record), ...metadata() });
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  input.server.registerTool(
+    PAPERBOY_BROADCAST_MCP_TOOL_NAMES[7],
+    {
+      annotations: {
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: false,
+        readOnlyHint: false,
+      },
+      description: PAPERBOY_BROADCAST_MCP_TOOL_DEFINITIONS[7].description,
+      inputSchema: cancelBroadcastInputSchema,
+      outputSchema: deleteBroadcastOutputSchema,
+      title: "Delete a scheduled PaperBoy broadcast",
+      _meta: { "paperboy/schemaVersion": PAPERBOY_MCP_SCHEMA_VERSION },
+    },
+    async ({ broadcastId }: { broadcastId: string }) => {
+      const authenticated = await principal();
+      if (!authenticated) return unauthorizedResult();
+
+      try {
+        await input.services.delete(authenticated, broadcastId);
+        return successResult({
+          broadcastId,
+          deleted: true as const,
+          ...metadata(),
+        });
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  input.server.registerTool(
+    PAPERBOY_BROADCAST_MCP_TOOL_NAMES[8],
+    {
+      annotations: {
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false,
+        readOnlyHint: false,
+      },
+      description: PAPERBOY_BROADCAST_MCP_TOOL_DEFINITIONS[8].description,
+      inputSchema: sendBroadcastInputSchema,
+      outputSchema: broadcastOutputSchema,
+      title: "Send a PaperBoy broadcast",
+      _meta: { "paperboy/schemaVersion": PAPERBOY_MCP_SCHEMA_VERSION },
+    },
+    async ({
+      broadcastId,
+      scheduledAt,
+    }: {
+      broadcastId: string;
+      scheduledAt?: string;
+    }) => {
+      const authenticated = await principal();
+      if (!authenticated) return unauthorizedResult();
+
+      try {
+        const record = await input.services.send(authenticated, broadcastId, {
+          ...(scheduledAt === undefined ? {} : { scheduled_at: scheduledAt }),
+        });
+        return successResult({ broadcast: serialize(record), ...metadata() });
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  input.server.registerTool(
+    PAPERBOY_BROADCAST_MCP_TOOL_NAMES[9],
+    {
+      annotations: {
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+        readOnlyHint: true,
+      },
+      description: PAPERBOY_BROADCAST_MCP_TOOL_DEFINITIONS[9].description,
+      inputSchema: recipientsInputSchema,
+      outputSchema: recipientsOutputSchema,
+      title: "List a PaperBoy broadcast's recipients",
+      _meta: { "paperboy/schemaVersion": PAPERBOY_MCP_SCHEMA_VERSION },
+    },
+    async ({
+      broadcastId,
+      ...filter
+    }: {
+      broadcastId: string;
+      bounceType?: "permanent" | "transient" | "undetermined";
+      email?: string;
+      limit?: number;
+      type?: string;
+    }) => {
+      const authenticated = await principal();
+      if (!authenticated) return unauthorizedResult();
+
+      try {
+        const recipients = await input.services.listRecipients(
+          authenticated,
+          broadcastId,
+          filter,
+        );
+        return successResult({
+          recipients: recipients.map(serializeRecipient),
+          ...metadata(),
+        });
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  input.server.registerTool(
+    PAPERBOY_BROADCAST_MCP_TOOL_NAMES[10],
+    {
+      annotations: {
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+        readOnlyHint: true,
+      },
+      description: PAPERBOY_BROADCAST_MCP_TOOL_DEFINITIONS[10].description,
+      inputSchema: broadcastIdInputSchema,
+      outputSchema: clickedLinksOutputSchema,
+      title: "List a PaperBoy broadcast's clicked links",
+      _meta: { "paperboy/schemaVersion": PAPERBOY_MCP_SCHEMA_VERSION },
+    },
+    async ({ broadcastId }: { broadcastId: string }) => {
+      const authenticated = await principal();
+      if (!authenticated) return unauthorizedResult();
+
+      try {
+        const clickedLinks = await input.services.listClickedLinks(
+          authenticated,
+          broadcastId,
+        );
+        return successResult({
+          clickedLinks: clickedLinks.map(serializeClickedLink),
+          ...metadata(),
+        });
       } catch (error) {
         return errorResult(error);
       }

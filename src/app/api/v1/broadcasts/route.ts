@@ -1,4 +1,5 @@
 import { authenticateApiRequest } from "@/lib/api-key-request";
+import { withApiLog } from "@/lib/request-logs";
 import { broadcastApiServices } from "@/lib/broadcast-api-services";
 import {
   handleCreateBroadcastRequest,
@@ -11,9 +12,9 @@ const dependencies = {
 };
 
 export async function GET(request: Request) {
-  return handleListBroadcastsRequest(request, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleListBroadcastsRequest(request, scoped));
 }
 
 export async function POST(request: Request) {
-  return handleCreateBroadcastRequest(request, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleCreateBroadcastRequest(request, scoped));
 }

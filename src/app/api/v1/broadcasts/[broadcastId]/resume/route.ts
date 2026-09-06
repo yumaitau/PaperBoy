@@ -1,4 +1,5 @@
 import { authenticateApiRequest } from "@/lib/api-key-request";
+import { withApiLog } from "@/lib/request-logs";
 import { broadcastApiServices } from "@/lib/broadcast-api-services";
 import { handleResumeBroadcastRequest } from "@/lib/broadcast-http";
 
@@ -13,5 +14,5 @@ const dependencies = {
 
 export async function POST(request: Request, context: BroadcastRouteContext) {
   const { broadcastId } = await context.params;
-  return handleResumeBroadcastRequest(request, broadcastId, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleResumeBroadcastRequest(request, broadcastId, scoped));
 }

@@ -1,4 +1,5 @@
 import { authenticateApiRequest } from "@/lib/api-key-request";
+import { withApiLog } from "@/lib/request-logs";
 import { audienceApiServices } from "@/lib/audience-api-services";
 import {
   handleCreateAudienceRequest,
@@ -8,9 +9,9 @@ import {
 const dependencies = { authenticate: authenticateApiRequest, services: audienceApiServices };
 
 export async function GET(request: Request) {
-  return handleListAudiencesRequest(request, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleListAudiencesRequest(request, scoped));
 }
 
 export async function POST(request: Request) {
-  return handleCreateAudienceRequest(request, dependencies);
+  return withApiLog(request, dependencies, async (scoped) => handleCreateAudienceRequest(request, scoped));
 }

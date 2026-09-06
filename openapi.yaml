@@ -35,6 +35,22 @@ tags:
     description: Read and override organization live and test send caps.
   - name: Templates
     description: Store and preview organization email templates.
+  - name: Segments
+    description: Group contacts into named segments.
+  - name: Topics
+    description: Manage topic subscriptions for contacts.
+  - name: Contacts
+    description: Manage organization contacts and imports.
+  - name: Contact properties
+    description: Define custom contact property keys.
+  - name: Events
+    description: Define and send custom events for automations.
+  - name: Automations
+    description: Run event-triggered automation workflows.
+  - name: Logs
+    description: Inspect API request logs.
+  - name: API keys
+    description: Manage scoped organization API keys.
   - name: Audiences
     description: Manage permission-based audiences and contacts.
   - name: Broadcasts
@@ -58,6 +74,18 @@ x-paperboy-mcp:
     ingestOutboundProviderEvent: paperboy_ingest_outbound_provider_event
     getWebhook: paperboy_get_webhook
     configureWebhook: paperboy_configure_webhook
+    shareEmail: paperboy_share_email
+    listEmailAttachments: paperboy_list_email_attachments
+    getEmailAttachment: paperboy_get_email_attachment
+    getEmailMetrics: paperboy_get_email_metrics
+    listWebhooks: paperboy_list_webhooks
+    createWebhook: paperboy_create_webhook
+    updateWebhook: paperboy_update_webhook
+    deleteWebhook: paperboy_delete_webhook
+    listWebhookEvents: paperboy_list_webhook_events
+    getWebhookEvent: paperboy_get_webhook_event
+    replayWebhookEvent: paperboy_replay_webhook_event
+    listWebhookEventAttempts: paperboy_list_webhook_event_attempts
     getRateLimits: paperboy_get_rate_limits
     updateRateLimits: paperboy_update_rate_limits
     listTemplates: paperboy_list_templates
@@ -66,6 +94,58 @@ x-paperboy-mcp:
     updateTemplate: paperboy_update_template
     deleteTemplate: paperboy_delete_template
     previewTemplate: paperboy_preview_template
+    publishTemplate: paperboy_publish_template
+    duplicateTemplate: paperboy_duplicate_template
+    listApiKeys: paperboy_list_api_keys
+    createApiKey: paperboy_create_api_key
+    getApiKey: paperboy_get_api_key
+    updateApiKey: paperboy_update_api_key
+    revokeApiKey: paperboy_revoke_api_key
+    listSegments: paperboy_list_segments
+    createSegment: paperboy_create_segment
+    getSegment: paperboy_get_segment
+    updateSegment: paperboy_update_segment
+    deleteSegment: paperboy_delete_segment
+    listTopics: paperboy_list_topics
+    createTopic: paperboy_create_topic
+    getTopic: paperboy_get_topic
+    updateTopic: paperboy_update_topic
+    deleteTopic: paperboy_delete_topic
+    listContactProperties: paperboy_list_contact_properties
+    createContactProperty: paperboy_create_contact_property
+    getContactProperty: paperboy_get_contact_property
+    updateContactProperty: paperboy_update_contact_property
+    deleteContactProperty: paperboy_delete_contact_property
+    listOrgContacts: paperboy_list_org_contacts
+    createOrgContact: paperboy_create_org_contact
+    getOrgContact: paperboy_get_org_contact
+    updateOrgContact: paperboy_update_org_contact
+    deleteOrgContact: paperboy_delete_org_contact
+    listContactSegments: paperboy_list_contact_segments
+    addContactToSegment: paperboy_add_contact_to_segment
+    removeContactFromSegment: paperboy_remove_contact_from_segment
+    listContactTopics: paperboy_list_contact_topics
+    updateContactTopics: paperboy_update_contact_topics
+    createContactImport: paperboy_create_contact_import
+    listContactImports: paperboy_list_contact_imports
+    getContactImport: paperboy_get_contact_import
+    listAutomations: paperboy_list_automations
+    createAutomation: paperboy_create_automation
+    getAutomation: paperboy_get_automation
+    updateAutomation: paperboy_update_automation
+    deleteAutomation: paperboy_delete_automation
+    duplicateAutomation: paperboy_duplicate_automation
+    stopAutomation: paperboy_stop_automation
+    listAutomationRuns: paperboy_list_automation_runs
+    getAutomationRun: paperboy_get_automation_run
+    listEvents: paperboy_list_events
+    createEvent: paperboy_create_event
+    getEvent: paperboy_get_event
+    updateEvent: paperboy_update_event
+    deleteEvent: paperboy_delete_event
+    sendEvent: paperboy_send_event
+    listLogs: paperboy_list_logs
+    getLog: paperboy_get_log
     listAudiences: paperboy_list_audiences
     createAudience: paperboy_create_audience
     getAudience: paperboy_get_audience
@@ -83,6 +163,10 @@ x-paperboy-mcp:
     updateBroadcast: paperboy_update_broadcast
     pauseBroadcast: paperboy_pause_broadcast
     resumeBroadcast: paperboy_resume_broadcast
+    deleteBroadcast: paperboy_delete_broadcast
+    sendBroadcast: paperboy_send_broadcast
+    listBroadcastRecipients: paperboy_list_broadcast_recipients
+    listBroadcastClickedLinks: paperboy_list_broadcast_clicked_links
     cancelBroadcast: paperboy_cancel_broadcast
     listSuppressions: paperboy_list_suppressions
     createSuppression: paperboy_create_suppression
@@ -291,6 +375,53 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/v1/received-emails/{emailId}/attachments:
+    parameters:
+      - $ref: '#/components/parameters/EmailId'
+    get:
+      operationId: listReceivedEmailAttachments
+      tags: [Emails]
+      summary: List one inbound email's attachments
+      responses:
+        '200':
+          description: Attachment metadata with signed download URLs.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetrievedEmailAttachmentListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/received-emails/{emailId}/attachments/{attachmentId}:
+    parameters:
+      - $ref: '#/components/parameters/EmailId'
+      - $ref: '#/components/parameters/AttachmentId'
+    get:
+      operationId: getReceivedEmailAttachment
+      tags: [Emails]
+      summary: Get one inbound email attachment
+      responses:
+        '200':
+          description: Attachment metadata with a signed download URL.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailAttachment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/emails/{emailId}:
     parameters:
       - $ref: '#/components/parameters/EmailId'
@@ -382,8 +513,222 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/emails/metrics:
+    get:
+      operationId: getEmailMetrics
+      tags: [Emails]
+      summary: Aggregate email metrics
+      description: >-
+        Totals always cover the range; data rows appear when a dimension is
+        requested. Email and broadcast dimensions cannot be combined.
+      parameters:
+        - name: start_date
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: end_date
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: timezone
+          in: query
+          required: false
+          schema:
+            type: string
+            default: UTC
+        - name: granularity
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [hourly, daily, weekly, monthly]
+            default: daily
+        - name: metrics
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: dimensions
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: domain_id
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: email_id
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: broadcast_id
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Metric totals with optional breakdowns.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailMetrics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/emails/{emailId}/share:
+    parameters:
+      - $ref: '#/components/parameters/EmailId'
+    post:
+      operationId: shareEmail
+      tags: [Emails]
+      summary: Create a shareable link for one email
+      description: Links expire after at most 48 hours.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareEmailInput'
+      responses:
+        '200':
+          description: Shareable link.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedEmail'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/v1/emails/{emailId}/attachments:
+    parameters:
+      - $ref: '#/components/parameters/EmailId'
+    get:
+      operationId: listEmailAttachments
+      tags: [Emails]
+      summary: List one email's attachments
+      responses:
+        '200':
+          description: Attachment metadata with signed download URLs.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetrievedEmailAttachmentListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/emails/{emailId}/attachments/{attachmentId}:
+    parameters:
+      - $ref: '#/components/parameters/EmailId'
+      - $ref: '#/components/parameters/AttachmentId'
+    get:
+      operationId: getEmailAttachment
+      tags: [Emails]
+      summary: Get one email attachment
+      responses:
+        '200':
+          description: Attachment metadata with a signed download URL.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailAttachment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/shared/{token}:
+    get:
+      operationId: getSharedEmail
+      tags: [Emails]
+      summary: Read a shared email
+      description: Public signed link access. No API key required.
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Shared message content.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedEmailContent'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/attachments/download:
+    get:
+      operationId: downloadAttachment
+      tags: [Emails]
+      summary: Download shared attachment bytes
+      description: Public signed link access. No API key required.
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Attachment bytes.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/emails/{emailId}/events:
@@ -751,26 +1096,59 @@ paths:
           $ref: '#/components/responses/InternalError'
   /api/v1/webhooks:
     get:
-      operationId: getWebhook
+      operationId: listWebhooks
       tags: [Webhooks]
-      summary: Read webhook configuration
+      summary: List webhooks
       description: Returns safe endpoint metadata and never returns signing secret material.
       responses:
         '200':
-          description: Current configuration, or null when none exists.
+          description: Organization webhooks.
           headers:
             Cache-Control:
               $ref: '#/components/headers/NoStore'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebhookReadEnvelope'
+                $ref: '#/components/schemas/WebhookListEnvelope'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalError'
+    post:
+      operationId: createWebhook
+      tags: [Webhooks]
+      summary: Create one webhook
+      description: The signing secret is shown only in this response.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookCreateInput'
+      responses:
+        '201':
+          description: Stored webhook and one-time signing secret.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookCreateEnvelope'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
     put:
       operationId: configureWebhook
       tags: [Webhooks]
@@ -806,6 +1184,192 @@ paths:
           $ref: '#/components/responses/InternalError'
         '503':
           $ref: '#/components/responses/Unavailable'
+  /api/v1/webhooks/{webhookId}:
+    parameters:
+      - $ref: '#/components/parameters/WebhookId'
+    get:
+      operationId: getWebhookById
+      tags: [Webhooks]
+      summary: Get one webhook
+      responses:
+        '200':
+          description: Stored webhook.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      operationId: updateWebhook
+      tags: [Webhooks]
+      summary: Update one webhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookUpdateInput'
+      responses:
+        '200':
+          description: Updated webhook.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      operationId: deleteWebhook
+      tags: [Webhooks]
+      summary: Delete one webhook
+      responses:
+        '200':
+          description: Webhook deleted.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/webhooks/{webhookId}/events:
+    parameters:
+      - $ref: '#/components/parameters/WebhookId'
+    get:
+      operationId: listWebhookEvents
+      tags: [Webhooks]
+      summary: List one webhook's events
+      responses:
+        '200':
+          description: Recent webhook deliveries.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDeliveryListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/webhooks/{webhookId}/events/{eventId}:
+    parameters:
+      - $ref: '#/components/parameters/WebhookId'
+      - $ref: '#/components/parameters/WebhookEventId'
+    get:
+      operationId: getWebhookEvent
+      tags: [Webhooks]
+      summary: Get one webhook event
+      responses:
+        '200':
+          description: Stored webhook delivery.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDelivery'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/webhooks/{webhookId}/events/{eventId}/replay:
+    parameters:
+      - $ref: '#/components/parameters/WebhookId'
+      - $ref: '#/components/parameters/WebhookEventId'
+    post:
+      operationId: replayWebhookEvent
+      tags: [Webhooks]
+      summary: Replay one webhook event
+      description: Requeues the delivery. Disabled webhooks return 422.
+      responses:
+        '200':
+          description: Requeued webhook delivery.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDelivery'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/webhooks/{webhookId}/events/{eventId}/attempts:
+    parameters:
+      - $ref: '#/components/parameters/WebhookId'
+      - $ref: '#/components/parameters/WebhookEventId'
+    get:
+      operationId: listWebhookEventAttempts
+      tags: [Webhooks]
+      summary: List one webhook event's attempts
+      description: PaperBoy tracks aggregate attempt state per delivery.
+      responses:
+        '200':
+          description: Recorded delivery attempts.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDeliveryAttemptListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/emails/batch:
     post:
       operationId: sendEmailBatch
@@ -1110,6 +1674,1509 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/templates/{templateId}/publish:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+    post:
+      operationId: publishTemplate
+      tags: [Templates]
+      summary: Publish one template
+      responses:
+        '200':
+          description: Published template.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/templates/{templateId}/duplicate:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+    post:
+      operationId: duplicateTemplate
+      tags: [Templates]
+      summary: Duplicate one template as a new draft
+      responses:
+        '201':
+          description: Duplicated draft template.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Another template already uses that name.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/api-keys:
+    get:
+      operationId: listApiKeys
+      tags: [API keys]
+      summary: List API keys
+      responses:
+        '200':
+          description: Organization API keys. Secrets are never returned.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      operationId: createApiKey
+      tags: [API keys]
+      summary: Create one API key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyInput'
+      responses:
+        '201':
+          description: Created API key. The secret is shown only once.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeySecret'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/api-keys/{apiKeyId}:
+    parameters:
+      - $ref: '#/components/parameters/ApiKeyId'
+    get:
+      operationId: getApiKey
+      tags: [API keys]
+      summary: Get one API key
+      responses:
+        '200':
+          description: Stored API key. Secrets are never returned.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKey'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      operationId: updateApiKey
+      tags: [API keys]
+      summary: Update one API key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyUpdateInput'
+      responses:
+        '200':
+          description: Updated API key.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKey'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      operationId: revokeApiKey
+      tags: [API keys]
+      summary: Revoke one API key
+      responses:
+        '200':
+          description: API key revoked.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/segments:
+    get:
+      operationId: listSegments
+      tags: [Segments]
+      summary: List segments
+      responses:
+        '200':
+          description: Organization segments with contact counts.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SegmentListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      operationId: createSegment
+      tags: [Segments]
+      summary: Create one segment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SegmentInput'
+      responses:
+        '201':
+          description: Stored segment.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Segment'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Another segment already uses that name.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/segments/{segmentId}:
+    parameters:
+      - $ref: '#/components/parameters/SegmentId'
+    get:
+      operationId: getSegment
+      tags: [Segments]
+      summary: Get one segment
+      responses:
+        '200':
+          description: Stored segment.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Segment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      operationId: updateSegment
+      tags: [Segments]
+      summary: Update one segment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SegmentInput'
+      responses:
+        '200':
+          description: Updated segment.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Segment'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Another segment already uses that name.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      operationId: deleteSegment
+      tags: [Segments]
+      summary: Delete one segment
+      responses:
+        '200':
+          description: Segment deleted. Contact rows are kept.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/topics:
+    get:
+      operationId: listTopics
+      tags: [Topics]
+      summary: List topics
+      responses:
+        '200':
+          description: Organization topics.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      operationId: createTopic
+      tags: [Topics]
+      summary: Create one topic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopicInput'
+      responses:
+        '201':
+          description: Stored topic.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Another topic already uses that name.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/topics/{topicId}:
+    parameters:
+      - $ref: '#/components/parameters/TopicId'
+    get:
+      operationId: getTopic
+      tags: [Topics]
+      summary: Get one topic
+      responses:
+        '200':
+          description: Stored topic.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      operationId: updateTopic
+      tags: [Topics]
+      summary: Update one topic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopicUpdateInput'
+      responses:
+        '200':
+          description: Updated topic.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Another topic already uses that name.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      operationId: deleteTopic
+      tags: [Topics]
+      summary: Delete one topic
+      responses:
+        '200':
+          description: Topic deleted. Contact rows are kept.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/contact-properties:
+    get:
+      operationId: listContactProperties
+      tags: [Contact properties]
+      summary: List contact properties
+      responses:
+        '200':
+          description: Organization contact property definitions.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactPropertyListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      operationId: createContactProperty
+      tags: [Contact properties]
+      summary: Create one contact property
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactPropertyInput'
+      responses:
+        '201':
+          description: Stored contact property.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactProperty'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Another property already uses that key.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/contact-properties/{propertyId}:
+    parameters:
+      - $ref: '#/components/parameters/ContactPropertyId'
+    get:
+      operationId: getContactProperty
+      tags: [Contact properties]
+      summary: Get one contact property
+      responses:
+        '200':
+          description: Stored contact property.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactProperty'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      operationId: updateContactProperty
+      tags: [Contact properties]
+      summary: Update one contact property
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactPropertyUpdateInput'
+      responses:
+        '200':
+          description: Updated contact property.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactProperty'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      operationId: deleteContactProperty
+      tags: [Contact properties]
+      summary: Delete one contact property
+      responses:
+        '200':
+          description: Contact property deleted. Contact values are kept.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/contacts:
+    get:
+      operationId: listOrgContacts
+      tags: [Contacts]
+      summary: List contacts
+      parameters:
+        - name: segment_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+      responses:
+        '200':
+          description: Organization contacts.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgContactListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      operationId: createOrgContact
+      tags: [Contacts]
+      summary: Create one contact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrgContactInput'
+      responses:
+        '201':
+          description: Stored contact.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgContact'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Another contact already uses that email.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/contacts/{contactId}:
+    parameters:
+      - $ref: '#/components/parameters/ContactId'
+    get:
+      operationId: getOrgContact
+      tags: [Contacts]
+      summary: Get one contact by ID or email
+      responses:
+        '200':
+          description: Stored contact.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgContact'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      operationId: updateOrgContact
+      tags: [Contacts]
+      summary: Update one contact by ID or email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrgContactUpdateInput'
+      responses:
+        '200':
+          description: Updated contact.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgContact'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Another contact already uses that email.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      operationId: deleteOrgContact
+      tags: [Contacts]
+      summary: Delete one contact by ID or email
+      responses:
+        '200':
+          description: Contact deleted.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/contacts/imports:
+    get:
+      operationId: listContactImports
+      tags: [Contacts]
+      summary: List contact imports
+      responses:
+        '200':
+          description: Organization contact imports.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactImportListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      operationId: createContactImport
+      tags: [Contacts]
+      summary: Import contacts from CSV
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactImportInput'
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                column_map:
+                  type: string
+                on_conflict:
+                  type: string
+                  enum: [skip, upsert]
+                segments:
+                  type: string
+                topics:
+                  type: string
+      responses:
+        '201':
+          description: Processed contact import.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactImport'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/contacts/imports/{importId}:
+    parameters:
+      - $ref: '#/components/parameters/ContactImportId'
+    get:
+      operationId: getContactImport
+      tags: [Contacts]
+      summary: Get one contact import
+      responses:
+        '200':
+          description: Stored contact import.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactImport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/contacts/{contactId}/segments:
+    parameters:
+      - $ref: '#/components/parameters/ContactId'
+    get:
+      operationId: listContactSegments
+      tags: [Contacts]
+      summary: List one contact's segments
+      responses:
+        '200':
+          description: Contact segment membership.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactSegmentListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/contacts/{contactId}/segments/{segmentId}:
+    parameters:
+      - $ref: '#/components/parameters/ContactId'
+      - $ref: '#/components/parameters/SegmentId'
+    post:
+      operationId: addContactToSegment
+      tags: [Contacts]
+      summary: Add one contact to one segment
+      responses:
+        '200':
+          description: Updated contact.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgContact'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      operationId: removeContactFromSegment
+      tags: [Contacts]
+      summary: Remove one contact from one segment
+      responses:
+        '200':
+          description: Updated contact.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgContact'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/contacts/{contactId}/topics:
+    parameters:
+      - $ref: '#/components/parameters/ContactId'
+    get:
+      operationId: listContactTopics
+      tags: [Contacts]
+      summary: List one contact's topics
+      responses:
+        '200':
+          description: Contact topic subscriptions.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactTopicListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      operationId: updateContactTopics
+      tags: [Contacts]
+      summary: Replace one contact's topic subscriptions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactTopicsUpdateInput'
+      responses:
+        '200':
+          description: Updated contact.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgContact'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/events:
+    get:
+      operationId: listEvents
+      tags: [Events]
+      summary: List custom events
+      responses:
+        '200':
+          description: Organization custom event definitions.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomEventListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      operationId: createEvent
+      tags: [Events]
+      summary: Define one custom event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomEventInput'
+      responses:
+        '201':
+          description: Stored event definition.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomEvent'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Another event already uses that name.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/events/send:
+    post:
+      operationId: sendEvent
+      tags: [Events]
+      summary: Send one custom event
+      description: Records the occurrence and runs matching enabled automations.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendEventInput'
+      responses:
+        '202':
+          description: Accepted event occurrence.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventOccurrenceEnvelope'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/events/{identifier}:
+    parameters:
+      - name: identifier
+        in: path
+        required: true
+        description: Event UUID or name.
+        schema:
+          type: string
+    get:
+      operationId: getEvent
+      tags: [Events]
+      summary: Get one custom event
+      responses:
+        '200':
+          description: Stored event definition.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomEvent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      operationId: updateEvent
+      tags: [Events]
+      summary: Update one custom event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomEventUpdateInput'
+      responses:
+        '200':
+          description: Updated event definition.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomEvent'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Another event already uses that name.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      operationId: deleteEvent
+      tags: [Events]
+      summary: Delete one custom event
+      responses:
+        '200':
+          description: Event definition deleted. Past occurrences are kept.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/automations:
+    get:
+      operationId: listAutomations
+      tags: [Automations]
+      summary: List automations
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [enabled, disabled]
+      responses:
+        '200':
+          description: Organization automations.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      operationId: createAutomation
+      tags: [Automations]
+      summary: Create one automation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutomationInput'
+      responses:
+        '201':
+          description: Stored automation.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Automation'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/automations/{automationId}:
+    parameters:
+      - $ref: '#/components/parameters/AutomationId'
+    get:
+      operationId: getAutomation
+      tags: [Automations]
+      summary: Get one automation
+      responses:
+        '200':
+          description: Stored automation.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Automation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      operationId: updateAutomation
+      tags: [Automations]
+      summary: Update one automation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutomationUpdateInput'
+      responses:
+        '200':
+          description: Updated automation.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Automation'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      operationId: deleteAutomation
+      tags: [Automations]
+      summary: Delete one automation
+      responses:
+        '200':
+          description: Automation and its runs deleted.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/automations/{automationId}/duplicate:
+    parameters:
+      - $ref: '#/components/parameters/AutomationId'
+    post:
+      operationId: duplicateAutomation
+      tags: [Automations]
+      summary: Duplicate one automation as disabled
+      responses:
+        '201':
+          description: Duplicated automation.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Automation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/automations/{automationId}/stop:
+    parameters:
+      - $ref: '#/components/parameters/AutomationId'
+    post:
+      operationId: stopAutomation
+      tags: [Automations]
+      summary: Stop one automation
+      responses:
+        '200':
+          description: Disabled automation.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Automation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/automations/{automationId}/runs:
+    parameters:
+      - $ref: '#/components/parameters/AutomationId'
+    get:
+      operationId: listAutomationRuns
+      tags: [Automations]
+      summary: List one automation's runs
+      responses:
+        '200':
+          description: Run history newest first.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRunListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/automations/{automationId}/runs/{runId}:
+    parameters:
+      - $ref: '#/components/parameters/AutomationId'
+      - $ref: '#/components/parameters/AutomationRunId'
+    get:
+      operationId: getAutomationRun
+      tags: [Automations]
+      summary: Get one automation run
+      responses:
+        '200':
+          description: Stored run.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRun'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/logs:
+    get:
+      operationId: listLogs
+      tags: [Logs]
+      summary: List API request logs
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: after
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: before
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Request logs newest first.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiLogListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/logs/{logId}:
+    parameters:
+      - $ref: '#/components/parameters/ApiLogId'
+    get:
+      operationId: getLog
+      tags: [Logs]
+      summary: Get one API request log
+      responses:
+        '200':
+          description: Stored request log.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiLog'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/audiences:
@@ -1573,6 +3640,40 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
         '500':
           $ref: '#/components/responses/InternalError'
+    delete:
+      operationId: deleteBroadcast
+      tags: [Broadcasts]
+      summary: Delete a scheduled broadcast
+      description: >-
+        Only a still-scheduled broadcast can be deleted. Running, completed,
+        and cancelled broadcasts are kept for history.
+      responses:
+        '200':
+          description: Broadcast deleted.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: The broadcast already started and cannot be deleted.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/broadcasts/{broadcastId}/pause:
     parameters:
       - $ref: '#/components/parameters/BroadcastId'
@@ -1653,6 +3754,131 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/broadcasts/{broadcastId}/send:
+    parameters:
+      - $ref: '#/components/parameters/BroadcastId'
+    post:
+      operationId: sendBroadcast
+      tags: [Broadcasts]
+      summary: Send or schedule a broadcast
+      description: >-
+        Starts a scheduled or paused broadcast now, or reschedules it when
+        scheduled_at is provided.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BroadcastSendInput'
+      responses:
+        '200':
+          description: Broadcast sending or scheduled.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BroadcastEnvelope'
+        '400':
+          $ref: '#/components/responses/InvalidJson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: The broadcast cannot be sent from its current status.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/broadcasts/{broadcastId}/recipients:
+    parameters:
+      - $ref: '#/components/parameters/BroadcastId'
+    get:
+      operationId: listBroadcastRecipients
+      tags: [Broadcasts]
+      summary: List one broadcast's recipients
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [sent, delivered, opened, clicked, bounced, complained, unsubscribed, suppressed]
+        - name: email
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: bounce_type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [permanent, transient, undetermined]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+      responses:
+        '200':
+          description: Broadcast recipients with event timestamps.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BroadcastRecipientListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/broadcasts/{broadcastId}/clicked-links:
+    parameters:
+      - $ref: '#/components/parameters/BroadcastId'
+    get:
+      operationId: listBroadcastClickedLinks
+      tags: [Broadcasts]
+      summary: List one broadcast's clicked links
+      responses:
+        '200':
+          description: Template links with click counts.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BroadcastClickedLinkListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/suppressions:
@@ -1910,6 +4136,14 @@ components:
       schema:
         type: string
         format: uuid
+    AttachmentId:
+      name: attachmentId
+      in: path
+      required: true
+      description: Attachment UUID.
+      schema:
+        type: string
+        format: uuid
     TemplateId:
       name: templateId
       in: path
@@ -1928,9 +4162,9 @@ components:
       name: contactId
       in: path
       required: true
+      description: Contact UUID or email address.
       schema:
         type: string
-        format: uuid
     BroadcastId:
       name: broadcastId
       in: path
@@ -1942,6 +4176,86 @@ components:
       name: suppressionId
       in: path
       required: true
+      schema:
+        type: string
+        format: uuid
+    WebhookId:
+      name: webhookId
+      in: path
+      required: true
+      description: Webhook UUID.
+      schema:
+        type: string
+        format: uuid
+    WebhookEventId:
+      name: eventId
+      in: path
+      required: true
+      description: Webhook delivery UUID.
+      schema:
+        type: string
+        format: uuid
+    ApiKeyId:
+      name: apiKeyId
+      in: path
+      required: true
+      description: PaperBoy API key UUID.
+      schema:
+        type: string
+        format: uuid
+    SegmentId:
+      name: segmentId
+      in: path
+      required: true
+      description: Segment UUID.
+      schema:
+        type: string
+        format: uuid
+    TopicId:
+      name: topicId
+      in: path
+      required: true
+      description: Topic UUID.
+      schema:
+        type: string
+        format: uuid
+    ContactPropertyId:
+      name: propertyId
+      in: path
+      required: true
+      description: Contact property UUID.
+      schema:
+        type: string
+        format: uuid
+    ContactImportId:
+      name: importId
+      in: path
+      required: true
+      description: Contact import UUID.
+      schema:
+        type: string
+        format: uuid
+    AutomationId:
+      name: automationId
+      in: path
+      required: true
+      description: Automation UUID.
+      schema:
+        type: string
+        format: uuid
+    AutomationRunId:
+      name: runId
+      in: path
+      required: true
+      description: Automation run UUID.
+      schema:
+        type: string
+        format: uuid
+    ApiLogId:
+      name: logId
+      in: path
+      required: true
+      description: Request log UUID.
       schema:
         type: string
         format: uuid
@@ -2758,6 +5072,115 @@ components:
           type: integer
           minimum: 1
           maximum: 10485760
+    RetrievedEmailAttachment:
+      type: object
+      additionalProperties: false
+      required: [content_id, content_type, download_url, filename, id]
+      properties:
+        content_id:
+          type: [string, 'null']
+        content_type:
+          type: string
+        download_url:
+          type: string
+          description: Signed expiring download URL.
+        filename:
+          type: string
+        id:
+          type: string
+          format: uuid
+    RetrievedEmailAttachmentListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, object]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RetrievedEmailAttachment'
+        object:
+          type: string
+          const: list
+    ShareEmailInput:
+      type: object
+      additionalProperties: false
+      properties:
+        expires_in:
+          type: string
+          description: Duration like 10m, 2 hours, or 1 day. Defaults to 48h and cannot exceed 48 hours.
+    SharedEmail:
+      type: object
+      additionalProperties: false
+      required: [expires_at, id, url]
+      properties:
+        expires_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+    SharedEmailContent:
+      type: object
+      additionalProperties: false
+      required: [expires_at, from, html, id, subject, text, to]
+      properties:
+        expires_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        from:
+          type: string
+        html:
+          type: [string, 'null']
+        id:
+          type: string
+          format: uuid
+        subject:
+          type: string
+        text:
+          type: [string, 'null']
+        to:
+          type: array
+          items:
+            type: string
+    EmailMetrics:
+      type: object
+      additionalProperties: false
+      required: [data, end_date, granularity, start_date, timezone, totals]
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [data, dimensions]
+            properties:
+              data:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: false
+                  required: [metric, value]
+                  properties:
+                    metric:
+                      type: string
+                    value:
+                      type: integer
+              dimensions:
+                type: object
+                additionalProperties:
+                  type: [string, 'null']
+        end_date:
+          $ref: '#/components/schemas/UtcDateTime'
+        granularity:
+          type: string
+        start_date:
+          $ref: '#/components/schemas/UtcDateTime'
+        timezone:
+          type: string
+        totals:
+          type: object
+          additionalProperties:
+            type: integer
     MessageEvent:
       type: object
       additionalProperties: false
@@ -2790,10 +5213,12 @@ components:
     WebhookEndpoint:
       type: object
       additionalProperties: false
-      required: [created_at, id, updated_at, url]
+      required: [created_at, enabled, id, updated_at, url]
       properties:
         created_at:
           $ref: '#/components/schemas/UtcDateTime'
+        enabled:
+          type: boolean
         id:
           type: string
           format: uuid
@@ -2802,6 +5227,145 @@ components:
         url:
           type: string
           format: uri
+    Webhook:
+      type: object
+      additionalProperties: false
+      required: [created_at, enabled, id, updated_at, url]
+      properties:
+        created_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        enabled:
+          type: boolean
+        id:
+          type: string
+          format: uuid
+        updated_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        url:
+          type: string
+          format: uri
+    WebhookListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Webhook'
+    WebhookCreateInput:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        enabled:
+          type: boolean
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+    WebhookCreateEnvelope:
+      type: object
+      additionalProperties: false
+      required: [created_at, enabled, id, signing_secret, updated_at, url]
+      properties:
+        created_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        enabled:
+          type: boolean
+        id:
+          type: string
+          format: uuid
+        signing_secret:
+          type: string
+          description: Returned only on creation and never by GET.
+        updated_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        url:
+          type: string
+          format: uri
+    WebhookUpdateInput:
+      type: object
+      additionalProperties: false
+      properties:
+        enabled:
+          type: boolean
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+    WebhookDelivery:
+      type: object
+      additionalProperties: false
+      required: [attempt_count, created_at, delivered_at, endpoint_id, event_type, failed_at, failure_reason, id, last_attempt_at, last_error_code, response_status, status, updated_at, url]
+      properties:
+        attempt_count:
+          type: integer
+          minimum: 0
+        created_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        delivered_at:
+          $ref: '#/components/schemas/NullableUtcDateTime'
+        endpoint_id:
+          type: string
+          format: uuid
+        event_type:
+          type: [string, 'null']
+        failed_at:
+          $ref: '#/components/schemas/NullableUtcDateTime'
+        failure_reason:
+          type: [string, 'null']
+        id:
+          type: string
+          format: uuid
+        last_attempt_at:
+          $ref: '#/components/schemas/NullableUtcDateTime'
+        last_error_code:
+          type: [string, 'null']
+        response_status:
+          type: [integer, 'null']
+        status:
+          type: string
+        updated_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        url:
+          type: string
+    WebhookDeliveryListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookDelivery'
+    WebhookDeliveryAttempt:
+      type: object
+      additionalProperties: false
+      required: [attempt_count, attempted_at, failure_reason, last_error_code, response_status, status]
+      properties:
+        attempt_count:
+          type: integer
+          minimum: 0
+        attempted_at:
+          $ref: '#/components/schemas/NullableUtcDateTime'
+        failure_reason:
+          type: [string, 'null']
+        last_error_code:
+          type: [string, 'null']
+        response_status:
+          type: [integer, 'null']
+        status:
+          type: string
+    WebhookDeliveryAttemptListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookDeliveryAttempt'
     WebhookReadEnvelope:
       type: object
       additionalProperties: false
@@ -2926,7 +5490,7 @@ components:
     Template:
       type: object
       additionalProperties: false
-      required: [created_at, html, id, name, required_variables, subject, text, updated_at]
+      required: [created_at, html, id, name, published_at, published_version, react, required_variables, status, subject, text, updated_at, version]
       properties:
         created_at:
           $ref: '#/components/schemas/UtcDateTime'
@@ -2937,16 +5501,30 @@ components:
           format: uuid
         name:
           type: string
+        published_at:
+          $ref: '#/components/schemas/NullableUtcDateTime'
+        published_version:
+          type: [integer, 'null']
+          minimum: 1
+        react:
+          type: [string, 'null']
+          maxLength: 524288
         required_variables:
           type: array
           items:
             type: string
+        status:
+          type: string
+          enum: [draft, published]
         subject:
           type: string
         text:
           type: [string, 'null']
         updated_at:
           $ref: '#/components/schemas/UtcDateTime'
+        version:
+          type: integer
+          minimum: 1
     TemplateListEnvelope:
       type: object
       additionalProperties: false
@@ -2965,6 +5543,9 @@ components:
           type: [string, 'null']
         name:
           type: string
+        react:
+          type: [string, 'null']
+          maxLength: 524288
         required_variables:
           type: array
           items:
@@ -2998,6 +5579,720 @@ components:
           format: uuid
         text:
           type: [string, 'null']
+    ApiKey:
+      type: object
+      additionalProperties: false
+      required: [created_at, display, environment, id, key_id, last_used_at, name, revoked_at, scopes]
+      properties:
+        created_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        display:
+          type: [string, 'null']
+        environment:
+          type: string
+          enum: [live, test]
+        id:
+          type: string
+          format: uuid
+        key_id:
+          type: string
+        last_used_at:
+          $ref: '#/components/schemas/NullableUtcDateTime'
+        name:
+          type: string
+        revoked_at:
+          $ref: '#/components/schemas/NullableUtcDateTime'
+        scopes:
+          type: ['array', 'null']
+          description: Granted organization permissions. Null grants the creator role's full permissions.
+          items:
+            type: string
+    ApiKeySecret:
+      type: object
+      additionalProperties: false
+      required: [display, environment, id, key, name, scopes]
+      properties:
+        display:
+          type: string
+        environment:
+          type: string
+          enum: [live, test]
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+          description: Raw bearer secret. Shown only once.
+        name:
+          type: string
+        scopes:
+          type: ['array', 'null']
+          items:
+            type: string
+    ApiKeyListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiKey'
+    ApiKeyInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        environment:
+          type: string
+          enum: [live, test]
+          default: live
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        scopes:
+          type: ['array', 'null']
+          description: Subset of the creator role's permissions. Omit for full role access.
+          items:
+            type: string
+    ApiKeyUpdateInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        scopes:
+          type: ['array', 'null']
+          description: Replacement scope list, or null to restore full role access.
+          items:
+            type: string
+    Segment:
+      type: object
+      additionalProperties: false
+      required: [contact_count, created_at, id, name, updated_at]
+      properties:
+        contact_count:
+          type: integer
+          minimum: 0
+        created_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        updated_at:
+          $ref: '#/components/schemas/UtcDateTime'
+    SegmentListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Segment'
+    SegmentInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+    Topic:
+      type: object
+      additionalProperties: false
+      required: [created_at, default_subscription, description, id, name, updated_at, visibility]
+      properties:
+        created_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        default_subscription:
+          type: string
+          enum: [opt_in, opt_out]
+        description:
+          type: [string, 'null']
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        updated_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        visibility:
+          type: string
+          enum: [public, private]
+    TopicListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Topic'
+    TopicInput:
+      type: object
+      additionalProperties: false
+      required: [default_subscription, name]
+      properties:
+        default_subscription:
+          type: string
+          enum: [opt_in, opt_out]
+        description:
+          type: [string, 'null']
+          maxLength: 200
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        visibility:
+          type: string
+          enum: [public, private]
+          default: private
+    TopicUpdateInput:
+      type: object
+      additionalProperties: false
+      properties:
+        description:
+          type: [string, 'null']
+          maxLength: 200
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        visibility:
+          type: string
+          enum: [public, private]
+    ContactProperty:
+      type: object
+      additionalProperties: false
+      required: [created_at, fallback_value, id, key, type, updated_at]
+      properties:
+        created_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        fallback_value:
+          type: [string, 'null']
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        type:
+          type: string
+          enum: [string, number]
+        updated_at:
+          $ref: '#/components/schemas/UtcDateTime'
+    ContactPropertyListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactProperty'
+    ContactPropertyInput:
+      type: object
+      additionalProperties: false
+      required: [key, type]
+      properties:
+        fallback_value:
+          type: [string, number, 'null']
+        key:
+          type: string
+          pattern: '^[A-Za-z0-9_]{1,50}$'
+        type:
+          type: string
+          enum: [string, number]
+    ContactPropertyUpdateInput:
+      type: object
+      additionalProperties: false
+      properties:
+        fallback_value:
+          type: [string, number, 'null']
+    ContactSegmentRef:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    ContactTopicRef:
+      type: object
+      additionalProperties: false
+      required: [id, name, subscription]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        subscription:
+          type: string
+          enum: [opt_in, opt_out]
+    OrgContact:
+      type: object
+      additionalProperties: false
+      required: [audience_id, created_at, email, first_name, id, last_name, name, properties, segments, topics, unsubscribed_at, updated_at]
+      properties:
+        audience_id:
+          type: [string, 'null']
+          format: uuid
+        created_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        email:
+          type: string
+          format: email
+        first_name:
+          type: [string, 'null']
+        id:
+          type: string
+          format: uuid
+        last_name:
+          type: [string, 'null']
+        name:
+          type: [string, 'null']
+        properties:
+          type: object
+          additionalProperties: true
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactSegmentRef'
+        topics:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactTopicRef'
+        unsubscribed_at:
+          $ref: '#/components/schemas/NullableUtcDateTime'
+        updated_at:
+          $ref: '#/components/schemas/UtcDateTime'
+    OrgContactListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgContact'
+    OrgContactInput:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+        first_name:
+          type: [string, 'null']
+        last_name:
+          type: [string, 'null']
+        properties:
+          type: object
+          additionalProperties: true
+        segments:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id]
+            properties:
+              id:
+                type: string
+                format: uuid
+        topics:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, subscription]
+            properties:
+              id:
+                type: string
+                format: uuid
+              subscription:
+                type: string
+                enum: [opt_in, opt_out]
+        unsubscribed:
+          type: boolean
+    OrgContactUpdateInput:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+        first_name:
+          type: [string, 'null']
+        last_name:
+          type: [string, 'null']
+        properties:
+          type: object
+          additionalProperties: true
+        unsubscribed:
+          type: boolean
+    ContactSegmentListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactSegmentRef'
+    ContactTopicListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactTopicRef'
+    ContactTopicsUpdateInput:
+      type: object
+      additionalProperties: false
+      required: [topics]
+      properties:
+        topics:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, subscription]
+            properties:
+              id:
+                type: string
+                format: uuid
+              subscription:
+                type: string
+                enum: [opt_in, opt_out]
+    ContactImport:
+      type: object
+      additionalProperties: false
+      required: [created_at, created_rows, error, file_name, id, skipped_rows, status, total_rows, updated_at, updated_rows]
+      properties:
+        created_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        created_rows:
+          type: integer
+          minimum: 0
+        error:
+          type: [string, 'null']
+        file_name:
+          type: [string, 'null']
+        id:
+          type: string
+          format: uuid
+        skipped_rows:
+          type: integer
+          minimum: 0
+        status:
+          type: string
+          enum: [queued, in_progress, completed, failed]
+        total_rows:
+          type: integer
+          minimum: 0
+        updated_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        updated_rows:
+          type: integer
+          minimum: 0
+    ContactImportListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactImport'
+    ContactImportInput:
+      type: object
+      additionalProperties: false
+      required: [csv]
+      properties:
+        column_map:
+          type: object
+          additionalProperties:
+            type: string
+        csv:
+          type: string
+        file_name:
+          type: [string, 'null']
+        on_conflict:
+          type: string
+          enum: [skip, upsert]
+          default: skip
+        segments:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id]
+            properties:
+              id:
+                type: string
+                format: uuid
+        topics:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, subscription]
+            properties:
+              id:
+                type: string
+                format: uuid
+              subscription:
+                type: string
+                enum: [opt_in, opt_out]
+    CustomEvent:
+      type: object
+      additionalProperties: false
+      required: [created_at, id, name, object, schema, updated_at]
+      properties:
+        created_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        object:
+          type: string
+          const: event
+        schema:
+          type: ['object', 'null']
+          additionalProperties:
+            type: string
+        updated_at:
+          $ref: '#/components/schemas/UtcDateTime'
+    CustomEventListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomEvent'
+    CustomEventInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        schema:
+          type: ['object', 'null']
+          additionalProperties:
+            type: string
+    CustomEventUpdateInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        schema:
+          type: ['object', 'null']
+          additionalProperties:
+            type: string
+    SendEventInput:
+      type: object
+      additionalProperties: false
+      required: [event]
+      properties:
+        contact_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        event:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+    EventOccurrence:
+      type: object
+      additionalProperties: false
+      required: [contact_email, created_at, event_id, id, name, payload]
+      properties:
+        contact_email:
+          type: [string, 'null']
+        created_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        event_id:
+          type: [string, 'null']
+          format: uuid
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+    EventOccurrenceEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/EventOccurrence'
+    Automation:
+      type: object
+      additionalProperties: false
+      required: [connections, created_at, id, name, status, steps, trigger_event, updated_at]
+      properties:
+        connections:
+          type: array
+        created_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+          enum: [enabled, disabled]
+        steps:
+          type: array
+        trigger_event:
+          type: string
+        updated_at:
+          $ref: '#/components/schemas/UtcDateTime'
+    AutomationListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Automation'
+    AutomationInput:
+      type: object
+      additionalProperties: false
+      required: [name, steps]
+      properties:
+        connections:
+          type: array
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        status:
+          type: string
+          enum: [enabled, disabled]
+          default: disabled
+        steps:
+          type: array
+          minItems: 1
+          maxItems: 150
+    AutomationUpdateInput:
+      type: object
+      additionalProperties: false
+      properties:
+        connections:
+          type: array
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        status:
+          type: string
+          enum: [enabled, disabled]
+        steps:
+          type: array
+          minItems: 1
+          maxItems: 150
+    AutomationRun:
+      type: object
+      additionalProperties: false
+      required: [automation_id, created_at, id, occurrence_id, status, updated_at]
+      properties:
+        automation_id:
+          type: string
+          format: uuid
+        created_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        id:
+          type: string
+          format: uuid
+        occurrence_id:
+          type: [string, 'null']
+          format: uuid
+        status:
+          type: string
+          enum: [completed, failed]
+        updated_at:
+          $ref: '#/components/schemas/UtcDateTime'
+    AutomationRunListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationRun'
+    ApiLog:
+      type: object
+      additionalProperties: false
+      required: [api_key_id, created_at, duration_ms, environment, id, method, object, path, response_status, user_agent]
+      properties:
+        api_key_id:
+          type: [string, 'null']
+          format: uuid
+        created_at:
+          $ref: '#/components/schemas/UtcDateTime'
+        duration_ms:
+          type: integer
+          minimum: 0
+        environment:
+          type: [string, 'null']
+        id:
+          type: string
+          format: uuid
+        method:
+          type: string
+        object:
+          type: string
+          const: log
+        path:
+          type: string
+        response_status:
+          type: integer
+        user_agent:
+          type: [string, 'null']
+    ApiLogListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, object]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiLog'
+        object:
+          type: string
+          const: list
     Audience:
       type: object
       additionalProperties: false
@@ -3218,6 +6513,76 @@ components:
         template_id:
           type: string
           format: uuid
+    BroadcastSendInput:
+      type: object
+      additionalProperties: false
+      properties:
+        scheduled_at:
+          $ref: '#/components/schemas/UtcDateTime'
+    BroadcastRecipient:
+      type: object
+      additionalProperties: false
+      required: [bounced_at, clicked_at, complained_at, contact_id, delivered_at, email, message_id, opened_at, position, sent_at, status, unsubscribed]
+      properties:
+        bounced_at:
+          $ref: '#/components/schemas/NullableUtcDateTime'
+        clicked_at:
+          $ref: '#/components/schemas/NullableUtcDateTime'
+        complained_at:
+          $ref: '#/components/schemas/NullableUtcDateTime'
+        contact_id:
+          type: [string, 'null']
+          format: uuid
+        delivered_at:
+          $ref: '#/components/schemas/NullableUtcDateTime'
+        email:
+          type: string
+          format: email
+        message_id:
+          type: [string, 'null']
+          format: uuid
+        opened_at:
+          $ref: '#/components/schemas/NullableUtcDateTime'
+        position:
+          type: integer
+          minimum: 0
+        sent_at:
+          $ref: '#/components/schemas/NullableUtcDateTime'
+        status:
+          type: string
+        unsubscribed:
+          type: boolean
+    BroadcastRecipientListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BroadcastRecipient'
+    BroadcastClickedLink:
+      type: object
+      additionalProperties: false
+      required: [click_count, unique_clicks, url]
+      properties:
+        click_count:
+          type: integer
+          minimum: 0
+        unique_clicks:
+          type: integer
+          minimum: 0
+        url:
+          type: string
+    BroadcastClickedLinkListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BroadcastClickedLink'
     SuppressionReason:
       type: string
       enum: [manual, unsubscribed, bounced, complained]

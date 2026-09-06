@@ -1,4 +1,5 @@
 import type { ApiKeyPrincipal } from "@/lib/api-key-auth";
+import { requireKeyScope } from "@/lib/authorization";
 import { listMessageEvents } from "@/lib/message-events";
 import {
   getMessageDeliveryStatus,
@@ -7,6 +8,7 @@ import {
 import type { PaperBoyMcpDeliveryServices } from "@/mcp/delivery-tools";
 
 function actorUserId(principal: ApiKeyPrincipal): string | null {
+  requireKeyScope(principal.scopes, "messages.read");
   return principal.actorUserId;
 }
 

@@ -1,4 +1,5 @@
 import type { ApiKeyPrincipal } from "@/lib/api-key-auth";
+import { requireKeyScope, type OrgPermission } from "@/lib/authorization";
 import {
   DomainError,
   createDomain,
@@ -15,10 +16,15 @@ import {
 } from "@/lib/dkim";
 import type { PaperBoyMcpDomainServices } from "@/mcp/domain-tools";
 
-function actorUserId(principal: ApiKeyPrincipal): string {
+function actorUserId(
+  principal: ApiKeyPrincipal,
+  permission: OrgPermission,
+): string {
   if (!principal.actorUserId) {
     throw new DomainError("MEMBERSHIP_REQUIRED");
   }
+
+  requireKeyScope(principal.scopes, permission);
 
   return principal.actorUserId;
 }
@@ -26,19 +32,19 @@ function actorUserId(principal: ApiKeyPrincipal): string {
 export const paperBoyMcpDomainServices: PaperBoyMcpDomainServices = {
   create: (principal, name) =>
     createDomain({
-      actorUserId: actorUserId(principal),
+      actorUserId: actorUserId(principal, "domains.create"),
       name,
       orgId: principal.orgId,
     }),
   delete: (principal, domainId) =>
     deleteDomain({
-      actorUserId: actorUserId(principal),
+      actorUserId: actorUserId(principal, "domains.delete"),
       domainId,
       orgId: principal.orgId,
     }),
   finalizeDkimRotation: async (principal, domainId) => {
     const access = {
-      actorUserId: actorUserId(principal),
+      actorUserId: actorUserId(principal, "domains.manageDkim"),
       domainId,
       orgId: principal.orgId,
     };
@@ -47,13 +53,13 @@ export const paperBoyMcpDomainServices: PaperBoyMcpDomainServices = {
   },
   list: (principal) =>
     listDomains({
-      actorUserId: actorUserId(principal),
+      actorUserId: actorUserId(principal, "domains.read"),
       orgId: principal.orgId,
     }),
   records: domainDnsRecords,
   rotateDkim: async (principal, domainId) => {
     const access = {
-      actorUserId: actorUserId(principal),
+      actorUserId: actorUserId(principal, "domains.manageDkim"),
       domainId,
       orgId: principal.orgId,
     };
@@ -62,7 +68,7 @@ export const paperBoyMcpDomainServices: PaperBoyMcpDomainServices = {
   },
   setupDkim: async (principal, domainId) => {
     const access = {
-      actorUserId: actorUserId(principal),
+      actorUserId: actorUserId(principal, "domains.manageDkim"),
       domainId,
       orgId: principal.orgId,
     };
@@ -71,7 +77,7 @@ export const paperBoyMcpDomainServices: PaperBoyMcpDomainServices = {
   },
   verify: async (principal, domainId) => {
     const result = await verifyDomain({
-      actorUserId: actorUserId(principal),
+      actorUserId: actorUserId(principal, "domains.verify"),
       domainId,
       orgId: principal.orgId,
     });

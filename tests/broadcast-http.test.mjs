@@ -4,10 +4,14 @@ import { BroadcastError } from "../src/lib/broadcast-core.ts";
 import {
   handleCancelBroadcastRequest,
   handleCreateBroadcastRequest,
+  handleDeleteBroadcastRequest,
   handleGetBroadcastRequest,
+  handleListBroadcastClickedLinksRequest,
+  handleListBroadcastRecipientsRequest,
   handleListBroadcastsRequest,
   handlePauseBroadcastRequest,
   handleResumeBroadcastRequest,
+  handleSendBroadcastRequest,
   handleUpdateBroadcastRequest,
 } from "../src/lib/broadcast-http.ts";
 
@@ -60,10 +64,14 @@ function services(overrides = {}) {
   return {
     cancel: async () => record,
     create: async () => record,
+    delete: async () => undefined,
     get: async () => record,
     list: async () => [record],
+    listClickedLinks: async () => [],
+    listRecipients: async () => [],
     pause: async () => record,
     resume: async () => record,
+    send: async () => record,
     update: async () => record,
     ...overrides,
   };
@@ -200,4 +208,105 @@ test("broadcast REST hides cross-tenant records and rejects unauthenticated requ
   assert.equal(hidden.status, 404);
   assert.equal((await hidden.json()).error.code, "broadcast_not_found");
   assert.equal(unauthorized.status, 401);
+});
+
+test("broadcast REST deletes drafts, sends on demand, and reports transition conflicts", async () => {
+  const calls = [];
+  const deps = dependencies({
+    services: services({
+      delete: async (received, broadcastId) => {
+        calls.push(["delete", received, broadcastId]);
+      },
+      send: async (received, broadcastId, payload) => {
+        calls.push(["send", received, broadcastId, payload]);
+        return record;
+      },
+    }),
+  });
+  const deleted = await handleDeleteBroadcastRequest(
+    request("DELETE"),
+    record.id,
+    deps,
+  );
+  const sent = await handleSendBroadcastRequest(
+    request("POST", JSON.stringify({})),
+    record.id,
+    deps,
+  );
+  const conflict = await handleDeleteBroadcastRequest(
+    request("DELETE"),
+    record.id,
+    dependencies({
+      services: services({
+        delete: async () => {
+          throw new BroadcastError("INVALID_TRANSITION");
+        },
+      }),
+    }),
+  );
+
+  assert.equal(deleted.status, 200);
+  assert.deepEqual(await deleted.json(), {
+    data: { deleted: true, id: record.id },
+  });
+  assert.equal(sent.status, 200);
+  assert.equal(conflict.status, 409);
+  assert.equal(
+    (await conflict.json()).error.code,
+    "invalid_broadcast_transition",
+  );
+  assert.deepEqual(calls, [
+    ["delete", principal, record.id],
+    ["send", principal, record.id, {}],
+  ]);
+});
+
+test("broadcast REST lists recipients and clicked links", async () => {
+  const recipient = {
+    bouncedAt: null,
+    clickedAt: null,
+    complainedAt: null,
+    contactId: null,
+    deliveredAt: fixedNow,
+    email: "reader@example.net",
+    messageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    openedAt: null,
+    position: 0,
+    sentAt: fixedNow,
+    status: "queued",
+    unsubscribed: false,
+  };
+  const deps = dependencies({
+    services: services({
+      listRecipients: async (received, broadcastId, filter) => {
+        assert.deepEqual(filter, { type: "delivered" });
+        return [recipient];
+      },
+      listClickedLinks: async () => [
+        { clickCount: 2, uniqueClicks: 2, url: "https://example.com/news" },
+      ],
+    }),
+  });
+  const recipientsUrl = `http://paperboy.test/api/v1/broadcasts/${record.id}/recipients?type=delivered`;
+  const recipients = await handleListBroadcastRecipientsRequest(
+    new Request(recipientsUrl, {
+      headers: { Authorization: "Bearer test" },
+    }),
+    record.id,
+    deps,
+  );
+  const links = await handleListBroadcastClickedLinksRequest(
+    request("GET"),
+    record.id,
+    deps,
+  );
+  const recipientsBody = await recipients.json();
+
+  assert.equal(recipients.status, 200);
+  assert.equal(recipientsBody.data[0].email, "reader@example.net");
+  assert.equal(recipientsBody.data[0].delivered_at, fixedNow.toISOString());
+  assert.equal(links.status, 200);
+  assert.deepEqual((await links.json()).data, [
+    { click_count: 2, unique_clicks: 2, url: "https://example.com/news" },
+  ]);
 });

@@ -15,6 +15,14 @@ export type TemplateHttpServices = {
     principal: ApiKeyPrincipal,
     templateId: string,
   ) => Promise<void>;
+  duplicate: (
+    principal: ApiKeyPrincipal,
+    templateId: string,
+  ) => Promise<TemplateRecord>;
+  publish: (
+    principal: ApiKeyPrincipal,
+    templateId: string,
+  ) => Promise<TemplateRecord>;
   get: (
     principal: ApiKeyPrincipal,
     templateId: string,
@@ -135,15 +143,21 @@ function failure(error: unknown): Response {
 }
 
 function serialize(template: TemplateRecord) {
+  const timestamp = (value: Date | null) => value?.toISOString() ?? null;
   return {
     created_at: template.createdAt.toISOString(),
     html: template.html,
     id: template.id,
     name: template.name,
+    published_at: timestamp(template.publishedAt),
+    published_version: template.publishedVersion,
+    react: template.react,
     required_variables: template.requiredVariables,
+    status: template.status,
     subject: template.subject,
     text: template.text,
     updated_at: template.updatedAt.toISOString(),
+    version: template.version,
   };
 }
 
@@ -337,6 +351,49 @@ export async function handlePreviewTemplateRequest(
         text: preview.text,
       },
       200,
+    );
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function handlePublishTemplateRequest(
+  request: Request,
+  templateId: string,
+  dependencies: TemplateHttpDependencies,
+): Promise<Response> {
+  const principal = await dependencies.authenticate(request);
+
+  if (!principal) {
+    return unauthorized();
+  }
+
+  try {
+    const template = await dependencies.services.publish(
+      principal,
+      templateId,
+    );
+    return json(serialize(template), 200);
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function handleDuplicateTemplateRequest(
+  request: Request,
+  templateId: string,
+  dependencies: TemplateHttpDependencies,
+): Promise<Response> {
+  const principal = await dependencies.authenticate(request);
+
+  if (!principal) {
+    return unauthorized();
+  }
+
+  try {
+    return json(
+      serialize(await dependencies.services.duplicate(principal, templateId)),
+      201,
     );
   } catch (error) {
     return failure(error);

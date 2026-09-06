@@ -324,6 +324,49 @@ test("an unknown organization template returns 404", async () => {
   assert.equal(body.error.code, "template_not_found");
 });
 
+test("a key without the messages.send scope is refused before queueing", async () => {
+  const { dependencies } = testDependencies();
+  let queued = false;
+  dependencies.authenticate = async () => ({ ...principal, scopes: [] });
+  dependencies.queue = async () => {
+    queued = true;
+    throw new Error("must not queue");
+  };
+  const response = await handleSendEmailRequest(
+    request({
+      from: "sender@example.com",
+      subject: "Hello",
+      text: "Body",
+      to: "reader@example.net",
+    }),
+    dependencies,
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 403);
+  assert.equal(body.error.code, "forbidden");
+  assert.equal(queued, false);
+});
+
+test("a draft organization template returns 422", async () => {
+  const { dependencies } = testDependencies();
+  dependencies.queue = async () => {
+    throw new TemplateError("TEMPLATE_NOT_PUBLISHED");
+  };
+  const response = await handleSendEmailRequest(
+    request({
+      from: "sender@example.com",
+      template_id: "33333333-3333-4333-8333-333333333333",
+      to: "reader@example.net",
+    }),
+    dependencies,
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 422);
+  assert.equal(body.error.code, "template_not_published");
+});
+
 test("missing required template variables return field-level 422 details", async () => {
   const { dependencies } = testDependencies();
   dependencies.queue = async () => {

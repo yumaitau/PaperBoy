@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 import type { ApiKeyPrincipal } from "@/lib/api-key-auth";
 import { AttachmentStorageError } from "@/lib/attachment-storage";
+import { AuthorizationError } from "@/lib/authorization";
 import { DomainError } from "@/lib/domain-core";
 import {
   EmailError,
@@ -23,6 +24,10 @@ import { PAPERBOY_MCP_SCHEMA_VERSION } from "@/mcp/contract";
 export const PAPERBOY_EMAIL_MCP_TOOL_NAMES = [
   "paperboy_send_email",
   "paperboy_send_email_batch",
+  "paperboy_share_email",
+  "paperboy_list_email_attachments",
+  "paperboy_get_email_attachment",
+  "paperboy_get_email_metrics",
 ] as const;
 
 export const PAPERBOY_EMAIL_MCP_TOOL_DEFINITIONS = [
@@ -40,6 +45,32 @@ export const PAPERBOY_EMAIL_MCP_TOOL_DEFINITIONS = [
     name: PAPERBOY_EMAIL_MCP_TOOL_NAMES[1],
     schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
   },
+  {
+    description:
+      "Create an expiring shareable link for one sent email. Links last up to 48 hours.",
+    mutating: true,
+    name: PAPERBOY_EMAIL_MCP_TOOL_NAMES[2],
+    schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
+  },
+  {
+    description: "List one sent email's attachments with signed download URLs.",
+    mutating: false,
+    name: PAPERBOY_EMAIL_MCP_TOOL_NAMES[3],
+    schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
+  },
+  {
+    description: "Get one sent email attachment with a signed download URL.",
+    mutating: false,
+    name: PAPERBOY_EMAIL_MCP_TOOL_NAMES[4],
+    schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
+  },
+  {
+    description:
+      "Aggregate account email metrics with optional period, domain, email, and broadcast breakdowns.",
+    mutating: false,
+    name: PAPERBOY_EMAIL_MCP_TOOL_NAMES[5],
+    schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
+  },
 ] as const;
 
 export type PaperBoyMcpEmailServices = {
@@ -52,6 +83,49 @@ export type PaperBoyMcpEmailServices = {
     principal: ApiKeyPrincipal,
     payloads: unknown[],
   ) => Promise<QueuedMessageBatchItem[]>;
+  share: (
+    principal: ApiKeyPrincipal,
+    messageId: string,
+    input: { expiresIn?: unknown; origin: string },
+  ) => Promise<{ expiresAt: Date; id: string; url: string }>;
+  listAttachments: (
+    principal: ApiKeyPrincipal,
+    messageId: string,
+  ) => Promise<McpAttachmentRecord[]>;
+  getAttachment: (
+    principal: ApiKeyPrincipal,
+    messageId: string,
+    attachmentId: string,
+  ) => Promise<McpAttachmentRecord>;
+  attachmentDownloadUrl: (
+    principal: ApiKeyPrincipal,
+    messageId: string,
+    attachmentId: string,
+    origin: string,
+  ) => Promise<{ expiresAt: Date; url: string }>;
+  metrics: (
+    principal: ApiKeyPrincipal,
+    query: Record<string, string>,
+  ) => Promise<McpMetricsResult>;
+};
+
+export type McpAttachmentRecord = {
+  byteSize: number;
+  contentId: string | null;
+  contentType: string;
+  createdAt: Date;
+  filename: string;
+  id: string;
+  messageId: string;
+};
+
+export type McpMetricsResult = {
+  data: { data: { metric: string; value: number }[]; dimensions: Record<string, string | null> }[];
+  endDate: Date;
+  granularity: string;
+  startDate: Date;
+  timezone: string;
+  totals: Record<string, number>;
 };
 
 const address = z.string().min(1).max(320);
@@ -347,6 +421,12 @@ function errorDetails(error: unknown) {
       message:
         "Attachment storage is unavailable. Ask the PaperBoy operator to check its private storage configuration.",
     };
+  } else if (error instanceof AuthorizationError) {
+    details = {
+      code: "forbidden",
+      message:
+        "This API key is not granted the messages.send scope required to send email.",
+    };
   }
 
   return details;
@@ -465,4 +545,276 @@ export function registerPaperBoyEmailTools(input: {
       };
     },
   );
+
+  const metadata = () => ({
+    observedAt: protocolTimestamp(new Date()),
+    protocolTimeZone: "UTC" as const,
+    schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
+  });
+
+  function successResult(output: Record<string, unknown>) {
+    return {
+      content: [{ text: JSON.stringify(output, null, 2), type: "text" as const }],
+      structuredContent: output,
+    };
+  }
+
+  const attachmentSchema = z.object({
+    contentId: z.string().nullable(),
+    contentType: z.string(),
+    downloadUrl: z.string(),
+    filename: z.string(),
+    id: z.string().uuid(),
+  });
+
+  const shareOutputSchema = z.object({
+    expiresAt: z.iso.datetime({ offset: true }),
+    id: z.string().uuid(),
+    observedAt: z.iso.datetime({ offset: true }),
+    protocolTimeZone: z.literal("UTC"),
+    schemaVersion: z.literal(PAPERBOY_MCP_SCHEMA_VERSION),
+    url: z.string(),
+  });
+
+  const attachmentsOutputSchema = z.object({
+    attachments: z.array(attachmentSchema),
+    observedAt: z.iso.datetime({ offset: true }),
+    protocolTimeZone: z.literal("UTC"),
+    schemaVersion: z.literal(PAPERBOY_MCP_SCHEMA_VERSION),
+  });
+
+  const attachmentOutputSchema = z.object({
+    attachment: attachmentSchema,
+    observedAt: z.iso.datetime({ offset: true }),
+    protocolTimeZone: z.literal("UTC"),
+    schemaVersion: z.literal(PAPERBOY_MCP_SCHEMA_VERSION),
+  });
+
+  const metricsOutputSchema = z.object({
+    data: z.array(
+      z.object({
+        data: z.array(
+          z.object({ metric: z.string(), value: z.number() }),
+        ),
+        dimensions: z.record(z.string(), z.string().nullable()),
+      }),
+    ),
+    endDate: z.iso.datetime({ offset: true }),
+    granularity: z.string(),
+    observedAt: z.iso.datetime({ offset: true }),
+    protocolTimeZone: z.literal("UTC"),
+    schemaVersion: z.literal(PAPERBOY_MCP_SCHEMA_VERSION),
+    startDate: z.iso.datetime({ offset: true }),
+    timezone: z.string(),
+    totals: z.record(z.string(), z.number()),
+  });
+
+  const messageIdInput = z.object({ messageId: z.string().uuid() }).strict();
+
+  async function attachmentOutput(
+    principal: ApiKeyPrincipal,
+    messageId: string,
+    attachment: McpAttachmentRecord,
+  ) {
+    const download = await input.services.attachmentDownloadUrl(
+      principal,
+      messageId,
+      attachment.id,
+      publicOrigin(),
+    );
+    return {
+      attachment: {
+        contentId: attachment.contentId,
+        contentType: attachment.contentType,
+        downloadUrl: download.url,
+        filename: attachment.filename,
+        id: attachment.id,
+      },
+    };
+  }
+
+  input.server.registerTool(
+    PAPERBOY_EMAIL_MCP_TOOL_NAMES[2],
+    {
+      annotations: {
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+        readOnlyHint: false,
+      },
+      description: PAPERBOY_EMAIL_MCP_TOOL_DEFINITIONS[2].description,
+      inputSchema: z
+        .object({
+          expiresIn: z.string().min(1).max(32).optional(),
+          messageId: z.string().uuid(),
+        })
+        .strict(),
+      outputSchema: shareOutputSchema,
+      title: "Share a PaperBoy email",
+      _meta: { "paperboy/schemaVersion": PAPERBOY_MCP_SCHEMA_VERSION },
+    },
+    async ({ expiresIn, messageId }: { expiresIn?: string; messageId: string }) => {
+      const principal = await input.authorize();
+      if (!principal) return unauthorizedResult();
+
+      try {
+        const shared = await input.services.share(principal, messageId, {
+          expiresIn,
+          origin: publicOrigin(),
+        });
+        return successResult({
+          ...metadata(),
+          expiresAt: shared.expiresAt.toISOString(),
+          id: shared.id,
+          url: shared.url,
+        });
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  input.server.registerTool(
+    PAPERBOY_EMAIL_MCP_TOOL_NAMES[3],
+    {
+      annotations: {
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+        readOnlyHint: true,
+      },
+      description: PAPERBOY_EMAIL_MCP_TOOL_DEFINITIONS[3].description,
+      inputSchema: messageIdInput,
+      outputSchema: attachmentsOutputSchema,
+      title: "List a PaperBoy email's attachments",
+      _meta: { "paperboy/schemaVersion": PAPERBOY_MCP_SCHEMA_VERSION },
+    },
+    async ({ messageId }: { messageId: string }) => {
+      const principal = await input.authorize();
+      if (!principal) return unauthorizedResult();
+
+      try {
+        const attachments = await input.services.listAttachments(
+          principal,
+          messageId,
+        );
+        return successResult({
+          ...metadata(),
+          attachments: await Promise.all(
+            attachments.map((attachment) =>
+              attachmentOutput(principal, messageId, attachment),
+            ),
+          ),
+        });
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  input.server.registerTool(
+    PAPERBOY_EMAIL_MCP_TOOL_NAMES[4],
+    {
+      annotations: {
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+        readOnlyHint: true,
+      },
+      description: PAPERBOY_EMAIL_MCP_TOOL_DEFINITIONS[4].description,
+      inputSchema: z
+        .object({ attachmentId: z.string().uuid(), messageId: z.string().uuid() })
+        .strict(),
+      outputSchema: attachmentOutputSchema,
+      title: "Get a PaperBoy email attachment",
+      _meta: { "paperboy/schemaVersion": PAPERBOY_MCP_SCHEMA_VERSION },
+    },
+    async ({
+      attachmentId,
+      messageId,
+    }: {
+      attachmentId: string;
+      messageId: string;
+    }) => {
+      const principal = await input.authorize();
+      if (!principal) return unauthorizedResult();
+
+      try {
+        const attachment = await input.services.getAttachment(
+          principal,
+          messageId,
+          attachmentId,
+        );
+        return successResult({
+          ...metadata(),
+          ...(await attachmentOutput(principal, messageId, attachment)),
+        });
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  input.server.registerTool(
+    PAPERBOY_EMAIL_MCP_TOOL_NAMES[5],
+    {
+      annotations: {
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+        readOnlyHint: true,
+      },
+      description: PAPERBOY_EMAIL_MCP_TOOL_DEFINITIONS[5].description,
+      inputSchema: z
+        .object({
+          broadcastId: z.string().uuid().optional(),
+          dimensions: z.string().optional(),
+          domainId: z.string().optional(),
+          emailId: z.string().optional(),
+          endDate: z.string().optional(),
+          granularity: z
+            .enum(["hourly", "daily", "weekly", "monthly"])
+            .optional(),
+          metrics: z.string().optional(),
+          startDate: z.string().optional(),
+          timezone: z.string().optional(),
+        })
+        .strict(),
+      outputSchema: metricsOutputSchema,
+      title: "Get PaperBoy email metrics",
+      _meta: { "paperboy/schemaVersion": PAPERBOY_MCP_SCHEMA_VERSION },
+    },
+     
+    async (args: any) => {
+      const principal = await input.authorize();
+      if (!principal) return unauthorizedResult();
+
+      try {
+        const query: Record<string, string> = {};
+        for (const [key, value] of Object.entries(args ?? {})) {
+          if (typeof value === "string") query[key] = value;
+        }
+        const result = await input.services.metrics(principal, query);
+        return successResult({
+          ...metadata(),
+          data: result.data,
+          endDate: result.endDate.toISOString(),
+          granularity: result.granularity,
+          startDate: result.startDate.toISOString(),
+          timezone: result.timezone,
+          totals: result.totals,
+        });
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+}
+
+function publicOrigin(): string {
+  const raw =
+    process.env.PAPERBOY_PUBLIC_URL ??
+    process.env.BETTER_AUTH_URL ??
+    "http://localhost";
+  return raw.replace(/\/$/, "");
 }
