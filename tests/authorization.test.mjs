@@ -66,6 +66,7 @@ const matrix = {
     "broadcasts.read",
     "contactProperties.read",
     "domains.read",
+    "emails.metrics",
     "events.read",
     "logs.read",
     "members.read",

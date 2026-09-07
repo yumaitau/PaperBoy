@@ -1694,6 +1694,9 @@ test("initializes and publishes versioned tool schemas", async () => {
       paperboy_verify_domain: ["domainId"],
     };
     const requiredInputSchemaSnapshots = {
+      paperboy_list_automations: [],
+      paperboy_list_org_contacts: [],
+      paperboy_list_logs: [],
       paperboy_create_broadcast: ["audienceId", "from", "name", "templateId"],
       paperboy_update_broadcast: ["broadcastId"],
       paperboy_send_broadcast: ["broadcastId"],

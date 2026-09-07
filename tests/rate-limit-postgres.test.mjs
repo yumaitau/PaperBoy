@@ -195,6 +195,7 @@ test(
         .returning({ id: audiences.id });
       await db.insert(contacts).values({
         audienceId: audience.id,
+        orgId,
         email: "broadcast-reader@example.net",
         name: "Broadcast reader",
       });
@@ -203,6 +204,9 @@ test(
         .values({
           name: "Capped broadcast",
           orgId,
+          status: "published",
+          publishedAt: fixedNow,
+          publishedVersion: 1,
           requiredVariables: ["name"],
           subject: "Hello {{name}}",
           textBody: "Body for {{name}}",
