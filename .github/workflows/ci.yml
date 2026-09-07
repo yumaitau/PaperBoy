@@ -145,6 +145,12 @@ jobs:
           BETTER_AUTH_SECRET: paperboy-ci-only-secret-32-characters
           BETTER_AUTH_URL: http://127.0.0.1:3000
 
+      - name: Install browser for responsive checks
+        run: bunx playwright install --with-deps chromium
+
+      - name: Check responsive pages
+        run: bun run test:responsive
+
   container:
     name: Container (linux/arm64)
     needs: ci
