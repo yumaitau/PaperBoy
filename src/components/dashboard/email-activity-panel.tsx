@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { EmailActivityChart } from "@/components/dashboard/email-activity-chart";
 import { PaperCard } from "@/components/paper/paper-card";
-import { Tape } from "@/components/paper/tape";
 import {
   Select,
   SelectContent,
@@ -48,9 +47,8 @@ export function EmailActivityPanel({
 
   return (
     <PaperCard className="activity-panel">
-      <Tape className="activity-panel-tape" />
       <header className="paper-panel-header">
-        <h2>Email Activity</h2>
+        <h2>Email activity</h2>
         {bucket === "day" ? (
           <Select
             onValueChange={(value) => setGranularity(value as "daily" | "weekly")}

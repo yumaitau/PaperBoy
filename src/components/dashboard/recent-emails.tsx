@@ -1,6 +1,5 @@
 import { Mail, MoveRight } from "lucide-react";
 import Link from "next/link";
-import { Paperclip } from "@/components/paper/paperclip";
 import { PaperCard } from "@/components/paper/paper-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,9 +24,8 @@ function ageLabel(value: string, now: Date): string {
 export function RecentEmails({ emails, now }: { emails: DashboardEmail[]; now: Date }) {
   return (
     <PaperCard className="recent-emails-panel">
-      <Paperclip className="recent-emails-paperclip" />
       <header className="paper-panel-header recent-emails-header">
-        <h2>Recent Emails</h2>
+        <h2>Recent emails</h2>
         <Link href="/app/logs">View all</Link>
       </header>
 
@@ -47,7 +45,6 @@ export function RecentEmails({ emails, now }: { emails: DashboardEmail[]; now: D
         </ol>
       ) : (
         <div className="postal-empty-state">
-          <span>MAIL ROOM CLEAR</span>
           <p>No emails have been sent yet.</p>
           <Button asChild size="sm" variant="paper">
             <Link href="/app/send">
@@ -57,14 +54,6 @@ export function RecentEmails({ emails, now }: { emails: DashboardEmail[]; now: D
           </Button>
         </div>
       )}
-      <a
-        className="paperclip-attribution"
-        href="https://www.flaticon.com/free-icons/paperclip"
-        rel="noreferrer"
-        target="_blank"
-      >
-        Paperclip icons created by Freepik - Flaticon
-      </a>
     </PaperCard>
   );
 }

@@ -4,7 +4,6 @@ import { EmailActivityPanel } from "@/components/dashboard/email-activity-panel"
 import { MetricsGrid } from "@/components/dashboard/metrics-grid";
 import { RecentEmails } from "@/components/dashboard/recent-emails";
 import { WelcomeNote } from "@/components/dashboard/welcome-note";
-import { PostalStamp } from "@/components/brand/postal-stamp";
 import {
   dashboardRangeLabel,
   dashboardRangeParam,
@@ -44,7 +43,6 @@ export default async function Overview({ searchParams }: OverviewProps) {
       <div className="dashboard-welcome-row">
         <WelcomeNote organizationName={organization.name} />
         <div className="dashboard-postmark">
-          <PostalStamp />
           <div className="dashboard-reporting">
             <DateRangeControl label={rangeLabel} range={range} />
             <a

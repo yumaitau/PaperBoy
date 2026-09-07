@@ -1,5 +1,3 @@
-import "server-only";
-
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { apiKeys, orgMembers } from "@/db/schema";

@@ -36,7 +36,7 @@ function dependencies(overrides = {}) {
     services: {
       get: async () => record,
       list: async () => [record],
-      ...overrides,
+      ...overrides.services,
     },
   };
 }
