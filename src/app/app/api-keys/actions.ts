@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { ApiKeyError, createApiKey, revokeApiKey } from "@/lib/api-keys";
+import { ApiKeyError, createApiKey, deleteApiKey, revokeApiKey } from "@/lib/api-keys";
 import { AuthorizationError } from "@/lib/authorization";
 import { requireOrganization, requireSession } from "@/lib/session";
 
@@ -20,6 +20,10 @@ function apiKeyErrorMessage(error: unknown): string {
   if (error instanceof ApiKeyError) {
     if (error.code === "INVALID_NAME") {
       return "Enter a key name between 1 and 80 characters.";
+    }
+
+    if (error.code === "KEY_NOT_REVOKED") {
+      return "Revoke this API key before deleting it.";
     }
 
     return "That API key action is no longer available.";
@@ -74,4 +78,23 @@ export async function revokeApiKeyAction(formData: FormData) {
 
   revalidatePath("/app/api-keys");
   redirect("/app/api-keys?saved=revoked");
+}
+
+export async function deleteApiKeyAction(formData: FormData) {
+  const { organization, session } = await requireOrganization();
+
+  try {
+    await deleteApiKey({
+      actorUserId: session.user.id,
+      apiKeyId: String(formData.get("apiKeyId")),
+      orgId: organization.id,
+    });
+  } catch (error) {
+    redirect(
+      `/app/api-keys?error=${encodeURIComponent(apiKeyErrorMessage(error))}`,
+    );
+  }
+
+  revalidatePath("/app/api-keys");
+  redirect("/app/api-keys?saved=deleted");
 }

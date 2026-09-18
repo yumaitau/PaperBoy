@@ -253,6 +253,13 @@
       "when": 1788614467200,
       "tag": "0035_automations-events-logs",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1789705255092,
+      "tag": "0036_delete_revoked_api_keys",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { apiKeys, orgMembers } from "@/db/schema";
 import {
@@ -16,6 +16,7 @@ export type ApiKeyErrorCode =
   | "INVALID_NAME"
   | "INVALID_SCOPES"
   | "KEY_NOT_FOUND"
+  | "KEY_NOT_REVOKED"
   | "MEMBERSHIP_REQUIRED";
 
 export class ApiKeyError extends Error {
@@ -160,7 +161,7 @@ export async function listApiKeys(input: {
       scopes: apiKeys.scopes,
     })
     .from(apiKeys)
-    .where(eq(apiKeys.orgId, input.orgId))
+    .where(and(eq(apiKeys.orgId, input.orgId), isNull(apiKeys.deletedAt)))
     .orderBy(desc(apiKeys.createdAt));
 }
 
@@ -323,5 +324,55 @@ export async function revokeApiKey(input: {
       .update(apiKeys)
       .set({ revokedAt: new Date() })
       .where(and(eq(apiKeys.id, input.apiKeyId), isNull(apiKeys.revokedAt)));
+  });
+}
+
+export async function deleteApiKey(input: {
+  actorUserId: string;
+  apiKeyId: string;
+  orgId: string;
+}) {
+  return db.transaction(async (tx) => {
+    const [membership] = await tx
+      .select({ role: orgMembers.role })
+      .from(orgMembers)
+      .where(
+        and(
+          eq(orgMembers.orgId, input.orgId),
+          eq(orgMembers.userId, input.actorUserId),
+        ),
+      )
+      .limit(1);
+
+    if (!membership || !isOrgRole(membership.role)) {
+      throw new ApiKeyError("MEMBERSHIP_REQUIRED");
+    }
+
+    requirePermission(membership.role, "apiKeys.revoke");
+
+    const [key] = await tx
+      .select({ revokedAt: apiKeys.revokedAt })
+      .from(apiKeys)
+      .where(and(eq(apiKeys.id, input.apiKeyId), eq(apiKeys.orgId, input.orgId)))
+      .for("update");
+
+    if (!key) {
+      throw new ApiKeyError("KEY_NOT_FOUND");
+    }
+    if (!key.revokedAt) {
+      throw new ApiKeyError("KEY_NOT_REVOKED");
+    }
+
+    // Keep historical references and broadcast revocation checks intact.
+    await tx
+      .update(apiKeys)
+      .set({ deletedAt: new Date() })
+      .where(
+        and(
+          eq(apiKeys.id, input.apiKeyId),
+          isNotNull(apiKeys.revokedAt),
+          isNull(apiKeys.deletedAt),
+        ),
+      );
   });
 }

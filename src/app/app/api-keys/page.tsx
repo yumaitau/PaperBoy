@@ -1,4 +1,4 @@
-import { revokeApiKeyAction } from "./actions";
+import { deleteApiKeyAction, revokeApiKeyAction } from "./actions";
 import { ApiKeyForm } from "./api-key-form";
 import { listApiKeys } from "@/lib/api-keys";
 import {
@@ -46,6 +46,12 @@ export default async function ApiKeysPage({ searchParams }: ApiKeysPageProps) {
       {status.error ? (
         <p className="form-error" role="alert">
           {status.error}
+        </p>
+      ) : null}
+
+      {status.saved === "deleted" ? (
+        <p className="form-success" role="status">
+          API key deleted.
         </p>
       ) : null}
 
@@ -135,7 +141,16 @@ export default async function ApiKeysPage({ searchParams }: ApiKeysPageProps) {
                                 </button>
                               </form>
                             ) : (
-                              "—"
+                              <form action={deleteApiKeyAction}>
+                                <input
+                                  name="apiKeyId"
+                                  type="hidden"
+                                  value={key.id}
+                                />
+                                <button className="btn btn-compact" type="submit">
+                                  Delete
+                                </button>
+                              </form>
                             )}
                           </td>
                         ) : null}
