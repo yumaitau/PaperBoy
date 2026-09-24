@@ -3,7 +3,7 @@ name = "paperboy"
 version = "0.1.0"
 edition = "2021"
 description = "Command-line client for the PaperBoy HTTP API"
-license = "UNLICENSED"
+license = "MIT"
 publish = false
 
 [dependencies]

@@ -420,3 +420,7 @@ Send transactional mail through an API that looks familiar if you have used Rese
 - Not a marketing ESP with drag-and-drop campaigns as the core
 - Not a closed hosted SaaS
 - No third-party send vendor as the default path
+
+## License
+
+[MIT](LICENSE)
