@@ -273,7 +273,7 @@ export const API_GUIDES: ApiGuide[] = [
       },
     ],
     slug: "events-automations",
-    tags: ["Events", "Automations"],
+    tags: ["Custom events", "Automations"],
     title: "Events and automations",
   },
   {

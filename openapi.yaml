@@ -43,7 +43,7 @@ tags:
     description: Manage organization contacts and imports.
   - name: Contact properties
     description: Define custom contact property keys.
-  - name: Events
+  - name: Custom events
     description: Define and send custom events for automations.
   - name: Automations
     description: Run event-triggered automation workflows.
@@ -2688,7 +2688,7 @@ paths:
   /api/v1/events:
     get:
       operationId: listEvents
-      tags: [Events]
+      tags: [Custom events]
       summary: List custom events
       responses:
         '200':
@@ -2708,7 +2708,7 @@ paths:
           $ref: '#/components/responses/InternalError'
     post:
       operationId: createEvent
-      tags: [Events]
+      tags: [Custom events]
       summary: Define one custom event
       requestBody:
         required: true
@@ -2748,7 +2748,7 @@ paths:
   /api/v1/events/send:
     post:
       operationId: sendEvent
-      tags: [Events]
+      tags: [Custom events]
       summary: Send one custom event
       description: Records the occurrence and runs matching enabled automations.
       requestBody:
@@ -2787,7 +2787,7 @@ paths:
           type: string
     get:
       operationId: getEvent
-      tags: [Events]
+      tags: [Custom events]
       summary: Get one custom event
       responses:
         '200':
@@ -2809,7 +2809,7 @@ paths:
           $ref: '#/components/responses/InternalError'
     patch:
       operationId: updateEvent
-      tags: [Events]
+      tags: [Custom events]
       summary: Update one custom event
       requestBody:
         required: true
@@ -2850,7 +2850,7 @@ paths:
           $ref: '#/components/responses/InternalError'
     delete:
       operationId: deleteEvent
-      tags: [Events]
+      tags: [Custom events]
       summary: Delete one custom event
       responses:
         '200':
