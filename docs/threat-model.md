@@ -30,7 +30,7 @@ Security invariants:
 - Private attachment bytes and their integrity metadata.
 - Sending-domain DNS, DKIM/SPF records, provider account, IP/domain reputation, and suppression state.
 - CI runner registration tokens, the runner host, Docker socket, repository credentials, and release integrity.
-- The fixed `Australia/Sydney` IANA policy and UTC timestamps used for calendar filters, limits, schedules, logs, and signatures.
+- Per-user IANA timezone presentation (validated against the runtime's zone list) and UTC timestamps used for calendar filters, limits, schedules, logs, and signatures.
 
 ### Actors and boundaries
 

@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   canonicalTimeZone,
   formatDateTime,
+  timeZoneLabel,
   formatLocalDateTime,
   parseLocalDateTime,
   protocolTimestamp,
@@ -13,6 +14,26 @@ import {
 test("IANA timezones are canonicalized and invalid input is rejected", () => {
   assert.equal(canonicalTimeZone("Australia/Sydney"), "Australia/Sydney");
   assert.equal(canonicalTimeZone("../../etc/passwd"), null);
+});
+
+test("renamed and UTC zone spellings resolve to the runtime's listed zone", () => {
+  const listed = new Set(Intl.supportedValuesOf("timeZone"));
+  for (const pair of [
+    ["Asia/Kolkata", "Asia/Calcutta"],
+    ["Asia/Kathmandu", "Asia/Katmandu"],
+    ["Europe/Kyiv", "Europe/Kiev"],
+    ["Asia/Ho_Chi_Minh", "Asia/Saigon"],
+  ]) {
+    const current = canonicalTimeZone(pair[0]);
+    assert.ok(current, `${pair[0]} must resolve`);
+    assert.equal(canonicalTimeZone(pair[1]), current);
+    assert.ok(listed.has(current), `${current} must be a listed zone`);
+  }
+  assert.equal(canonicalTimeZone("Etc/UTC"), "UTC");
+  assert.equal(canonicalTimeZone("GMT"), "UTC");
+  assert.equal(canonicalTimeZone("US/Nowhere"), null);
+  assert.equal(timeZoneLabel("Asia/Calcutta"), "Asia/Kolkata (Asia/Calcutta)");
+  assert.equal(timeZoneLabel("Australia/Sydney"), "Australia/Sydney");
 });
 
 test("display uses the user timezone while protocol output stays UTC", () => {

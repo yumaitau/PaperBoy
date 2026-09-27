@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { sendTestEmailAction } from "./actions";
+import { TemplateHtmlEditor } from "@/components/templates/template-html-editor";
 import { can } from "@/lib/authorization";
 import { listDomains } from "@/lib/domains";
 import { MessageStatusError } from "@/lib/message-status-core";
@@ -174,30 +175,19 @@ export default async function Send({ searchParams }: SendPageProps) {
             />
           </div>
 
-          <div className="send-body-grid">
-            <div className="field">
-              <label htmlFor="send-html">HTML</label>
-              <textarea
-                defaultValue="<p>PaperBoy test email.</p>"
-                id="send-html"
-                name="html"
-                rows={10}
-                spellCheck={false}
-              />
-              <p className="field-help">Optional raw HTML. No rich-text editor.</p>
-            </div>
-            <div className="field">
-              <label htmlFor="send-text">Plain text</label>
-              <textarea
-                defaultValue="PaperBoy test email."
-                id="send-text"
-                name="text"
-                rows={10}
-              />
-              <p className="field-help">
-                Include HTML, plain text, or both.
-              </p>
-            </div>
+          <TemplateHtmlEditor
+            defaultValue="<p>PaperBoy test email.</p>"
+            id="send-html"
+          />
+          <div className="field">
+            <label htmlFor="send-text">Plain text</label>
+            <textarea
+              defaultValue="PaperBoy test email."
+              id="send-text"
+              name="text"
+              rows={6}
+            />
+            <p className="field-help">Include HTML, plain text, or both.</p>
           </div>
 
           <div className="send-submit-row">

@@ -7,23 +7,68 @@ const canonicalTimeZones = new Set([
   "UTC",
 ]);
 
+// IANA renames as [current, former]. Runtimes disagree on which spelling they
+// list and report: JavaScriptCore (Bun, Safari) lists former names and returns
+// input unchanged, while SpiderMonkey reports current names. Map either to the
+// spelling this runtime lists so a browser's zone is never rejected.
+const timeZoneRenames: ReadonlyArray<readonly [string, string]> = [
+  ["America/Argentina/Buenos_Aires", "America/Buenos_Aires"],
+  ["America/Argentina/Catamarca", "America/Catamarca"],
+  ["America/Argentina/Cordoba", "America/Cordoba"],
+  ["America/Argentina/Jujuy", "America/Jujuy"],
+  ["America/Argentina/Mendoza", "America/Mendoza"],
+  ["America/Atikokan", "America/Coral_Harbour"],
+  ["America/Indiana/Indianapolis", "America/Indianapolis"],
+  ["America/Kentucky/Louisville", "America/Louisville"],
+  ["America/Nuuk", "America/Godthab"],
+  ["Asia/Dhaka", "Asia/Dacca"],
+  ["Asia/Ho_Chi_Minh", "Asia/Saigon"],
+  ["Asia/Kathmandu", "Asia/Katmandu"],
+  ["Asia/Kolkata", "Asia/Calcutta"],
+  ["Asia/Macau", "Asia/Macao"],
+  ["Asia/Makassar", "Asia/Ujung_Pandang"],
+  ["Asia/Thimphu", "Asia/Thimbu"],
+  ["Asia/Ulaanbaatar", "Asia/Ulan_Bator"],
+  ["Asia/Yangon", "Asia/Rangoon"],
+  ["Atlantic/Faroe", "Atlantic/Faeroe"],
+  ["Europe/Kyiv", "Europe/Kiev"],
+  ["Pacific/Chuuk", "Pacific/Truk"],
+  ["Pacific/Kanton", "Pacific/Enderbury"],
+  ["Pacific/Pohnpei", "Pacific/Ponape"],
+];
+const utcAliases = ["Etc/GMT", "Etc/UCT", "Etc/Universal", "Etc/UTC", "Etc/Zulu", "GMT", "UCT", "Universal", "Zulu"];
+const timeZoneAliases = new Map<string, string>(utcAliases.map((alias) => [alias, "UTC"]));
+for (const [current, former] of timeZoneRenames) {
+  if (canonicalTimeZones.has(current)) timeZoneAliases.set(former, current);
+  else if (canonicalTimeZones.has(former)) timeZoneAliases.set(current, former);
+}
+
 export function canonicalTimeZone(value: unknown): string | null {
   if (
     typeof value !== "string" ||
     value.length === 0 ||
     value.length > 100 ||
-    !/^[A-Za-z0-9_+\-/]+$/.test(value) ||
-    !canonicalTimeZones.has(value)
+    !/^[A-Za-z0-9_+\-/]+$/.test(value)
   ) {
     return null;
   }
 
+  const listed = canonicalTimeZones.has(value) ? value : timeZoneAliases.get(value);
+  if (!listed) return null;
+
   try {
-    return new Intl.DateTimeFormat("en-AU", { timeZone: value }).resolvedOptions()
+    return new Intl.DateTimeFormat("en-AU", { timeZone: listed }).resolvedOptions()
       .timeZone;
   } catch {
     return null;
   }
+}
+
+// Label listed former spellings with the current name, e.g. "Asia/Kolkata
+// (Asia/Calcutta)", so people find their city in pickers.
+export function timeZoneLabel(timeZone: string): string {
+  const rename = timeZoneRenames.find(([, former]) => former === timeZone);
+  return rename ? `${rename[0]} (${timeZone})` : timeZone;
 }
 
 export function normalizeTimeZone(value: unknown): string {

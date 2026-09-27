@@ -481,6 +481,21 @@ select:focus-visible {
   margin-top: 18px;
 }
 
+.device-time-zone {
+  align-items: center;
+  border: 1px dashed var(--rule-heavy);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding: 10px 12px;
+}
+
+.device-time-zone p {
+  margin: 0;
+}
+
 .security-stack,
 .security-actions {
   display: grid;
@@ -650,19 +665,8 @@ select:focus-visible {
 }
 
 .send-envelope-grid,
-.send-body-grid {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .send-compose-form .field {
   margin-bottom: 0;
-}
-
-.send-body-grid textarea {
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  resize: vertical;
 }
 
 .send-submit-row {
@@ -1005,6 +1009,105 @@ select:focus-visible {
   font-family: var(--font-mono), ui-monospace, monospace;
   min-height: 300px;
   resize: vertical;
+}
+
+.template-html-mode {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.template-html-mode label {
+  margin-bottom: 0;
+}
+
+.template-html-mode [role="group"] {
+  display: flex;
+  gap: 6px;
+}
+
+.template-html-mode [aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper-raised);
+}
+
+.visual-email-editor {
+  border: 1px solid var(--rule-heavy);
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  min-height: 300px;
+}
+
+.visual-email-blocks {
+  background: var(--paper-deep);
+  border-right: 1px solid var(--rule);
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 10px;
+}
+
+.visual-email-blocks small {
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.visual-email-blocks ul {
+  display: grid;
+  gap: 2px;
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+
+.visual-email-blocks button {
+  align-items: center;
+  background: none;
+  border: 1px solid transparent;
+  color: var(--ink);
+  cursor: grab;
+  display: flex;
+  font-size: 12px;
+  gap: 6px;
+  padding: 4px 6px;
+  text-align: left;
+  width: 100%;
+}
+
+.visual-email-blocks button:hover:not(:disabled) {
+  background: var(--paper-raised);
+  border-color: var(--rule);
+}
+
+.visual-email-blocks button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.visual-email-blocks svg {
+  flex: none;
+  height: 16px;
+  width: 16px;
+}
+
+.visual-email-canvas {
+  background: #fff;
+  color: #1a1a1a;
+  max-height: 640px;
+  overflow: auto;
+  padding: 16px 20px;
+}
+
+.visual-email-canvas .tiptap {
+  min-height: 260px;
+  outline: none;
+}
+
+/* The exported email keeps its 600px container; the canvas just fits it. */
+.visual-email-canvas .node-container {
+  max-width: 100%;
 }
 
 .template-html-preview {
@@ -2733,8 +2836,7 @@ body:has(.broadcast-workspace) {
 
   .rate-limit-form,
   .rate-limit-summary,
-  .send-envelope-grid,
-  .send-body-grid {
+  .send-envelope-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2759,7 +2861,8 @@ body:has(.broadcast-workspace) {
   .audience-update-form,
   .contact-create-form,
   .audience-layout,
-  .template-html-workbench {
+  .template-html-workbench,
+  .visual-email-editor {
     grid-template-columns: 1fr;
   }
 

@@ -111,7 +111,7 @@ Open tracking is a persisted organization setting and is off by default. Current
 
 When enabled, queue creation adds one signed first-party pixel to future HTML messages and snapshots that choice on the message. Plain-text messages remain untracked. The public pixel route always returns the same uncacheable transparent GIF; valid repeated requests create at most one `opened` event and invalid requests reveal no message state. The event contains no recipient, IP address, user agent, or provider payload. A fetch may come from a mail security scanner, privacy proxy, or prefetcher, so it does not prove a person read the message.
 
-The pixel is part of provider-neutral stored HTML before delivery. Self-hosted SMTP and Cloudflare Email Service therefore receive the same signed URL and body while Cloudflare remains responsible for its provider-owned DKIM and ARC signatures. Events are stored and exposed in UTC; the console formats them in fixed `Australia/Sydney` time. Rotating the signing key invalidates outstanding pixels. See the [open-tracking privacy, API, MCP, timezone, and Cloudflare guide](docs/open-tracking.md).
+The pixel is part of provider-neutral stored HTML before delivery. Self-hosted SMTP and Cloudflare Email Service therefore receive the same signed URL and body while Cloudflare remains responsible for its provider-owned DKIM and ARC signatures. Events are stored and exposed in UTC; the console formats them in each user's chosen IANA timezone. Rotating the signing key invalidates outstanding pixels. See the [open-tracking privacy, API, MCP, timezone, and Cloudflare guide](docs/open-tracking.md).
 
 ## Click tracking
 
@@ -121,13 +121,13 @@ When enabled on the sending domain, queue creation rewrites each absolute http(s
 
 ## Console test send
 
-The signed-in console at `/app/send` lets owners and admins compose one provider test from a verified domain. It enters the same live queue used by `POST /api/v1/emails` and `paperboy_send_email`, including domain/DKIM authorisation, suppressions, organization rate limits, delivery events, and logs. Members can inspect delivery records but cannot queue a console send. Success timestamps render in fixed `Australia/Sydney` time; stored and protocol timestamps remain UTC.
+The signed-in console at `/app/send` lets owners and admins compose one provider test from a verified domain. It enters the same live queue used by `POST /api/v1/emails` and `paperboy_send_email`, including domain/DKIM authorisation, suppressions, organization rate limits, delivery events, and logs. Members can inspect delivery records but cannot queue a console send. Success timestamps render in the signed-in user's timezone; stored and protocol timestamps remain UTC.
 
 This is a real provider check rather than isolated test-sink traffic. A development job runner configured for Mailpit captures it, while a production job runner configured for Cloudflare Email Service submits it through the same live SMTP adapter. Use a safe recipient address.
 
 ## Message logs
 
-The signed-in console at `/app/logs` lists every matching message with search, status, sending-domain, inclusive calendar-date, and sort controls. Results page in hundreds; the matching total is always shown. Search matches subject, sender, and recipients. Calendar dates are interpreted in fixed `Australia/Sydney` time before indexed tenant-safe PostgreSQL queries receive UTC boundaries. Selecting a row opens its safe metadata and ordered event timeline in a drawer without a page reload; message HTML, plain text, attachment bytes, event data, and provider payloads are not rendered there.
+The signed-in console at `/app/logs` lists every matching message with search, status, sending-domain, inclusive calendar-date, and sort controls. Results page in hundreds; the matching total is always shown. Search matches subject, sender, and recipients. Calendar dates are interpreted in the signed-in user's timezone before indexed tenant-safe PostgreSQL queries receive UTC boundaries. Selecting a row opens its safe metadata and ordered event timeline in a drawer without a page reload; message HTML, plain text, attachment bytes, event data, and provider payloads are not rendered there.
 
 Only organization owners can click **Download MIME (.eml)**. The file is an unsigned reconstruction from the stored semantic message and verified private attachment bytes, not a captured provider transmission. PaperBoy never stores Cloudflare's provider-owned DKIM or ARC headers, so those signatures are intentionally absent; Cloudflare Email Service remains the signing authority when it submits the live message. Admins and members can inspect logs and events but cannot download reconstructed MIME.
 
@@ -192,7 +192,7 @@ Each item is validated and queued independently under the same API-key, domain, 
 
 The queue stores semantic `from`, `to`, subject, HTML/text, tags, and private attachment references rather than prebuilt MIME. This leaves Date and DKIM ownership to the selected outbound adapter: a self-hosted SMTP path builds MIME with the stored bytes and can use PaperBoy signing, while Cloudflare Email Sending receives structured Base64 attachments and constructs and signs its provider-managed message without double-signing. This endpoint persists authoritative `queued` rows in PostgreSQL and dispatches exact BullMQ jobs through Redis; the job runner is a separate deployment component.
 
-Message and event instants are PostgreSQL `timestamptz` values. REST and MCP expose them as RFC 3339 UTC; console presentation uses fixed `Australia/Sydney` time.
+Message and event instants are PostgreSQL `timestamptz` values. REST and MCP expose them as RFC 3339 UTC; console presentation uses the signed-in user's IANA timezone, set in Settings.
 
 ### OpenAPI, console docs, CLI, and TypeScript SDK
 
@@ -269,7 +269,7 @@ For self-hosted SMTP, set `PAPERBOY_BOUNCE_ADDRESS` and route that address to th
 
 ### Suppression list
 
-The console, REST API, and first-class MCP tools manage the same organization suppression list. Owners and admins can create, update, remove, and atomically import UTF-8 CSV records; members can read them. Search and reason filters expose manual, unsubscribed, permanent-bounce, and complaint entries with console timestamps in fixed `Australia/Sydney` time and protocol timestamps in UTC.
+The console, REST API, and first-class MCP tools manage the same organization suppression list. Owners and admins can create, update, remove, and atomically import UTF-8 CSV records; members can read them. Search and reason filters expose manual, unsubscribed, permanent-bounce, and complaint entries with console timestamps in the signed-in user's timezone and protocol timestamps in UTC.
 
 REST provides `GET`/`POST /api/v1/suppressions`, `GET`/`PATCH`/`DELETE /api/v1/suppressions/:suppressionId`, and `POST /api/v1/suppressions/import` with `Content-Type: text/csv`. CSV is bounded to 1 MiB and 5,000 rows, validates fully before mutation, and keeps the strongest reason across duplicates. The matching MCP tools expose the same CRUD/import services without accepting an organization ID.
 
@@ -296,7 +296,7 @@ Outbound delivery bodies contain only `type`, UTC `created_at`, and `data.email_
 
 ## Email templates
 
-Templates are organization-owned records with a case-insensitively unique name, subject, at least one of HTML or plain text, and an explicit `required_variables` list. Owners and admins manage them in the console; members can read and preview them. The console formats template timestamps in fixed `Australia/Sydney` time. REST timestamps and MCP timestamps are RFC 3339 UTC.
+Templates are organization-owned records with a case-insensitively unique name, subject, at least one of HTML or plain text, and an explicit `required_variables` list. Owners and admins manage them in the console; members can read and preview them. The console formats template timestamps in the signed-in user's timezone. REST timestamps and MCP timestamps are RFC 3339 UTC.
 
 The bearer-key REST surface is:
 
@@ -352,7 +352,7 @@ Set `PAPERBOY_PUBLIC_URL` to the stable externally reachable origin and `PAPERBO
 
 The signed URL and rendered footer are part of the provider-neutral semantic body before queue insertion. SMTP and Cloudflare Email Sending therefore receive the same unsubscribe behavior; PaperBoy does not replace or bypass Cloudflare's independent `cf-bounce` and provider suppression pipeline. See [audience, CSV, unsubscribe, MCP, timezone, and Cloudflare behavior](docs/audiences.md).
 
-Progress is available from uncapped `GET /api/v1/broadcasts` and `GET /api/v1/broadcasts/:broadcastId`. `PATCH /api/v1/broadcasts/:broadcastId` updates a still-scheduled broadcast; changing its audience or template atomically replaces the corresponding frozen snapshot, and changing `scheduled_for` reschedules its deterministic BullMQ job. Use `POST` on `/pause`, `/resume`, or `/cancel` beneath that broadcast URL. Pause takes effect after an already-processing recipient; resume handles pending recipients; cancel irreversibly marks pending recipients cancelled so they cannot be claimed. Responses expose counts and the source audience ID, never contact addresses or rendered bodies. REST timestamps are RFC 3339 UTC; the console renders them in fixed `Australia/Sydney` time.
+Progress is available from uncapped `GET /api/v1/broadcasts` and `GET /api/v1/broadcasts/:broadcastId`. `PATCH /api/v1/broadcasts/:broadcastId` updates a still-scheduled broadcast; changing its audience or template atomically replaces the corresponding frozen snapshot, and changing `scheduled_for` reschedules its deterministic BullMQ job. Use `POST` on `/pause`, `/resume`, or `/cancel` beneath that broadcast URL. Pause takes effect after an already-processing recipient; resume handles pending recipients; cancel irreversibly marks pending recipients cancelled so they cannot be claimed. Responses expose counts and the source audience ID, never contact addresses or rendered bodies. REST timestamps are RFC 3339 UTC; the console renders them in the signed-in user's timezone.
 
 ## Sending domains
 
@@ -362,7 +362,7 @@ The default SPF value is `v=spf1 mx ~all`. Operators whose outbound host is not 
 
 Set `PAPERBOY_DKIM_ENCRYPTION_KEY` to a base64-encoded 32-byte random value before adding domains or managing DKIM. For example, generate it in the deployment secret store with `openssl rand -base64 32`; do not put the result in source control, command-line arguments, or logs. PaperBoy stores each RSA private key in PostgreSQL inside a context-bound AES-256-GCM envelope. Console, API, and MCP responses expose only selector/public DNS material.
 
-Rotation is staged: PaperBoy keeps signing with the active selector while the replacement is pending. A DNS check activates the replacement only after its public key resolves, moves the old selector to retiring, and keeps both DNS instructions visible. Finalising rotation destroys the retiring encrypted private key. Stored lifecycle instants are UTC; console presentation uses fixed `Australia/Sydney` time.
+Rotation is staged: PaperBoy keeps signing with the active selector while the replacement is pending. A DNS check activates the replacement only after its public key resolves, moves the old selector to retiring, and keeps both DNS instructions visible. Finalising rotation destroys the retiring encrypted private key. Stored lifecycle instants are UTC; console presentation uses the signed-in user's IANA timezone, set in Settings.
 
 ### Cloudflare Email compatibility
 

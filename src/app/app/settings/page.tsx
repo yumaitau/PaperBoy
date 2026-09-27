@@ -1,9 +1,11 @@
 import { updateTimeZoneAction } from "./actions";
+import { DeviceTimeZone } from "./device-time-zone";
 import { SecuritySettings } from "./security-settings";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { requireSession } from "@/lib/session";
 import { configuredPasskeys } from "@/lib/passkey-configuration";
+import { formatDateTime, timeZoneLabel } from "@/lib/time";
 
 type SettingsPageProps = {
   searchParams: Promise<{
@@ -49,18 +51,26 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           </p>
         ) : null}
 
+        <p className="field-help">
+          Current time in <code>{session.user.timezone}</code>:{" "}
+          <strong>{formatDateTime(new Date(), session.user.timezone)}</strong>
+        </p>
+        <DeviceTimeZone savedTimeZone={session.user.timezone} />
+
         <form action={updateTimeZoneAction} className="settings-form">
           <div className="field">
             <label htmlFor="timezone">IANA timezone</label>
             <select
               defaultValue={session.user.timezone}
               id="timezone"
+              // Remount after a save so the dropdown shows the stored zone.
+              key={session.user.timezone}
               name="timezone"
               required
             >
               {timeZones.map((timeZone) => (
                 <option key={timeZone} value={timeZone}>
-                  {timeZone}
+                  {timeZoneLabel(timeZone)}
                 </option>
               ))}
             </select>

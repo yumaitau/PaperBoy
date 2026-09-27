@@ -108,7 +108,7 @@ PaperBoy correlates the message tag and SES message ID to exactly one queued org
 
 ## Console, REST, and MCP
 
-The signed-in Organisation page shows the default, safe readiness, capabilities, connection-test controls, and each domain override. Timestamps render in fixed `Australia/Sydney` time.
+The signed-in Organisation page shows the default, safe readiness, capabilities, connection-test controls, and each domain override. Timestamps render in the signed-in user's timezone.
 
 REST uses:
 

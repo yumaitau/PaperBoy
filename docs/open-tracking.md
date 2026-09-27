@@ -25,4 +25,4 @@ An event means only that an image URL was fetched. Security scanners, privacy pr
 
 Instrumentation happens in the shared queue before provider selection. Self-hosted SMTP builds MIME from the stored tracked HTML. Cloudflare Email Service SMTP receives that same HTML through `smtps://api_token:<URL-encoded token>@smtp.mx.cloudflare.net:465`; the structured Cloudflare builder also preserves it unchanged. PaperBoy adds no provider-owned `Date`, DKIM, or ARC header, so Cloudflare remains the signing authority.
 
-The pixel callback returns to the configured PaperBoy public origin, not Cloudflare and not a third-party analytics service. The event stores a PostgreSQL UTC instant. REST and MCP serialize RFC 3339 UTC; console views format it in fixed `Australia/Sydney` time.
+The pixel callback returns to the configured PaperBoy public origin, not Cloudflare and not a third-party analytics service. The event stores a PostgreSQL UTC instant. REST and MCP serialize RFC 3339 UTC; console views format it in the signed-in user's timezone.

@@ -13,7 +13,7 @@ PAPERBOY_TEST_RATE_LIMIT_PER_MINUTE=600
 
 The test default must be higher than live. Both variables must be present with the same values in every web and MCP process that can queue mail. Invalid or reversed values fail closed with `rate_limit_unavailable` instead of silently disabling protection.
 
-Owners and admins can set nullable organization overrides in the Organization console. A blank field restores the operator default. Current members can read the effective settings. The console renders `updated_at` in fixed `Australia/Sydney` time; storage and protocol output remain UTC.
+Owners and admins can set nullable organization overrides in the Organization console. A blank field restores the operator default. Current members can read the effective settings. The console renders `updated_at` in the signed-in user's timezone; storage and protocol output remain UTC.
 
 REST exposes `GET` and `PATCH /api/v1/rate-limits`. Tenant and actor context come only from the bearer key:
 
