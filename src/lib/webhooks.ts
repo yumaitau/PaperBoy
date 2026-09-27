@@ -410,7 +410,7 @@ export async function deleteWebhook(input: {
   orgId: string;
   webhookId: string;
 }): Promise<void> {
-  await requireWebhookPermission({ ...input, permission: "webhooks.manage" });
+  await requireWebhookPermission({ ...input, permission: "webhooks.delete" });
   requireWebhookId(input.webhookId);
 
   const deleted = await db

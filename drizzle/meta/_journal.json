@@ -267,6 +267,13 @@
       "when": 1790492708840,
       "tag": "0037_agency_role",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1790502764272,
+      "tag": "0038_delete_permission_scopes",
+      "breakpoints": true
     }
   ]
 }

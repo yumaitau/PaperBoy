@@ -137,7 +137,7 @@ export const API_GUIDES: ApiGuide[] = [
     title: "Audiences, segments, topics, and contacts",
   },
   {
-    body: "A broadcast snapshots one audience and one published template, then queues a recipient row per active contact. Only scheduled broadcasts can be updated, deleted, or sent on demand; running broadcasts pause, resume, or cancel. Recipients filter by event type, email, and bounce type. Clicked links come from the stored template with click counts.",
+    body: "A broadcast snapshots one audience and one published template, then queues a recipient row per active contact. Only scheduled broadcasts can be updated or sent on demand; running broadcasts pause, resume, or cancel. Scheduled, completed, and cancelled broadcasts can be deleted. Recipients filter by event type, email, and bounce type. Clicked links come from the stored template with click counts.",
     examples: [
       {
         body: JSON.stringify({

@@ -3643,10 +3643,12 @@ paths:
     delete:
       operationId: deleteBroadcast
       tags: [Broadcasts]
-      summary: Delete a scheduled broadcast
+      summary: Delete a broadcast
       description: >-
-        Only a still-scheduled broadcast can be deleted. Running, completed,
-        and cancelled broadcasts are kept for history.
+        Deletes a scheduled, completed, or cancelled broadcast and its
+        recipient rows. Cancel a running or paused broadcast first. Delivered
+        messages stay in delivery logs. Requires the broadcasts.delete
+        permission.
       responses:
         '200':
           description: Broadcast deleted.

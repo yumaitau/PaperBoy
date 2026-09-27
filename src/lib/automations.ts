@@ -222,7 +222,7 @@ export async function deleteAutomation(input: {
   automationId: string;
   orgId: string;
 }): Promise<void> {
-  await requireAutomationsPermission({ ...input, permission: "automations.manage" });
+  await requireAutomationsPermission({ ...input, permission: "automations.delete" });
   const { id } = await readAutomation(input.orgId, input.automationId);
 
   const deleted = await db

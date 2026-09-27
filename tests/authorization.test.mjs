@@ -14,18 +14,21 @@ import {
 const matrix = {
   owner: new Set(ORG_PERMISSIONS),
   admin: new Set([
-    "audiences.delete",
-    "audiences.manage",
-    "audiences.read",
     "apiKeys.create",
     "apiKeys.read",
     "apiKeys.revoke",
     "apiKeys.update",
+    "automations.delete",
     "automations.manage",
     "automations.read",
     "broadcasts.control",
     "broadcasts.create",
+    "broadcasts.delete",
     "broadcasts.read",
+    "audiences.delete",
+    "audiences.manage",
+    "audiences.read",
+    "contactProperties.delete",
     "contactProperties.manage",
     "contactProperties.read",
     "domains.create",
@@ -35,6 +38,7 @@ const matrix = {
     "domains.verify",
     "emails.metrics",
     "emails.share",
+    "events.delete",
     "events.manage",
     "events.read",
     "feedback.ingest",
@@ -49,6 +53,7 @@ const matrix = {
     "outboundProviders.read",
     "rateLimits.manage",
     "rateLimits.read",
+    "segments.delete",
     "segments.manage",
     "segments.read",
     "suppressions.delete",
@@ -58,8 +63,10 @@ const matrix = {
     "templates.delete",
     "templates.read",
     "templates.update",
+    "topics.delete",
     "topics.manage",
     "topics.read",
+    "webhooks.delete",
     "webhooks.manage",
     "webhooks.read",
   ]),
@@ -194,6 +201,19 @@ test("agency cannot delete resources or see members", () => {
   assert.equal(can("agency", "audiences.delete"), false);
   assert.equal(can("agency", "templates.delete"), false);
   assert.equal(can("agency", "domains.delete"), false);
+  for (const permission of [
+    "automations.delete",
+    "broadcasts.delete",
+    "contactProperties.delete",
+    "events.delete",
+    "segments.delete",
+    "topics.delete",
+    "webhooks.delete",
+  ]) {
+    assert.equal(can("agency", permission), false, permission);
+    assert.equal(can("admin", permission), true, permission);
+    assert.equal(can("member", permission), false, permission);
+  }
   assert.equal(can("agency", "suppressions.delete"), false);
   assert.equal(can("agency", "apiKeys.revoke"), false);
   assert.equal(can("agency", "members.read"), false);

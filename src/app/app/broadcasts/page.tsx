@@ -1,6 +1,7 @@
 import {
   cancelBroadcastAction,
   createBroadcastAction,
+  deleteBroadcastAction,
   pauseBroadcastAction,
   resumeBroadcastAction,
 } from "./actions";
@@ -23,6 +24,7 @@ type BroadcastsPageProps = {
 const errorMessages: Record<string, string> = {
   "audience-empty": "Choose an audience with at least one active subscribed contact.",
   "audience-not-found": "That audience is no longer available.",
+  "confirm-delete": "Tick the confirmation box to delete a broadcast.",
   "consent-required": "Confirm recipient consent and sender identification before sending.",
   forbidden: "Your role does not allow that broadcast operation.",
   "invalid-schedule": "Choose one unambiguous future date and time.",
@@ -36,6 +38,7 @@ const errorMessages: Record<string, string> = {
 const successMessages: Record<string, string> = {
   cancel: "Broadcast cancelled. Pending recipients will not be queued.",
   created: "Broadcast created and queued.",
+  delete: "Broadcast deleted. Delivered messages remain in Delivery logs.",
   pause: "Broadcast paused after its current recipient.",
   resume: "Broadcast resumed.",
   scheduled: "Broadcast scheduled.",
@@ -52,6 +55,7 @@ export default async function BroadcastsPage({
   const canRead = can(organization.role, "broadcasts.read");
   const canCreate = can(organization.role, "broadcasts.create");
   const canControl = can(organization.role, "broadcasts.control");
+  const canDelete = can(organization.role, "broadcasts.delete");
   const [records, audiences, templates, domains, outboundProviders] = await Promise.all([
     canRead
       ? listBroadcasts({
@@ -330,6 +334,24 @@ export default async function BroadcastsPage({
                     </>
                   ) : null}
                 </div>
+                {canDelete &&
+                (record.status === "scheduled" ||
+                  record.status === "completed" ||
+                  record.status === "cancelled") ? (
+                  <details className="template-delete">
+                    <summary>Delete broadcast</summary>
+                    <form action={deleteBroadcastAction}>
+                      <input name="broadcastId" type="hidden" value={record.id} />
+                      <label className="confirmation-control">
+                        <input name="confirm" required type="checkbox" value="yes" />{" "}
+                        Permanently delete {record.name} and its recipient list
+                      </label>
+                      <button className="btn btn-danger btn-compact" type="submit">
+                        Delete permanently
+                      </button>
+                    </form>
+                  </details>
+                ) : null}
               </article>
             );
           })}

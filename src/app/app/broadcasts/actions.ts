@@ -11,6 +11,7 @@ import {
 } from "@/lib/broadcast-test-send";
 import {
   cancelBroadcast,
+  deleteBroadcast,
   createBroadcast,
   getBroadcast,
   pauseBroadcast,
@@ -115,7 +116,7 @@ export async function createBroadcastAction(formData: FormData) {
 
 async function control(
   broadcastId: string,
-  operation: "cancel" | "pause" | "resume",
+  operation: "cancel" | "delete" | "pause" | "resume",
 ): Promise<never> {
   const { organization, session } = await requireOrganization();
   const input = {
@@ -127,6 +128,8 @@ async function control(
   try {
     if (operation === "cancel") {
       await cancelBroadcast(input);
+    } else if (operation === "delete") {
+      await deleteBroadcast(input);
     } else if (operation === "pause") {
       await pauseBroadcast(input);
     } else {
@@ -150,6 +153,13 @@ export async function resumeBroadcastAction(formData: FormData) {
 
 export async function cancelBroadcastAction(formData: FormData) {
   return control(String(formData.get("broadcastId") ?? ""), "cancel");
+}
+
+export async function deleteBroadcastAction(formData: FormData) {
+  if (formData.get("confirm") !== "yes") {
+    redirect("/app/broadcasts?error=confirm-delete");
+  }
+  return control(String(formData.get("broadcastId") ?? ""), "delete");
 }
 
 export async function updateBroadcastAction(formData: FormData) {

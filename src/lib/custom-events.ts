@@ -224,7 +224,7 @@ export async function deleteEvent(input: {
   identifier: string;
   orgId: string;
 }): Promise<void> {
-  await requireEventsPermission({ ...input, permission: "events.manage" });
+  await requireEventsPermission({ ...input, permission: "events.delete" });
   const resolved = await resolveDefinition(input.orgId, input.identifier);
 
   const deleted = await db

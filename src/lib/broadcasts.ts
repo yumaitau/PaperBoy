@@ -1051,6 +1051,14 @@ export async function cancelBroadcast(input: {
   return getBroadcast(input);
 }
 
+// Running or paused broadcasts must be cancelled first so no recipient job is
+// orphaned mid-send; delivered messages stay in logs after deletion.
+const DELETABLE_BROADCAST_STATUSES: ReadonlySet<string> = new Set([
+  "scheduled",
+  "completed",
+  "cancelled",
+]);
+
 export async function deleteBroadcast(input: {
   actorUserId: string | null;
   broadcastId: string;
@@ -1060,25 +1068,31 @@ export async function deleteBroadcast(input: {
   await requireOrganizationPermission({
     actorUserId: input.actorUserId,
     orgId: input.orgId,
-    permission: "broadcasts.control",
+    permission: "broadcasts.delete",
   });
 
-  const current = await readBroadcastRow(input);
+  await db.transaction(async (tx) => {
+    const [current] = await tx
+      .select({ status: broadcasts.status })
+      .from(broadcasts)
+      .where(
+        and(eq(broadcasts.id, input.broadcastId), eq(broadcasts.orgId, input.orgId)),
+      )
+      .for("update");
 
-  if (current.status !== "scheduled") {
-    throw new BroadcastError("INVALID_TRANSITION");
-  }
+    if (!current) {
+      throw new BroadcastError("BROADCAST_NOT_FOUND");
+    }
+    if (!DELETABLE_BROADCAST_STATUSES.has(current.status)) {
+      throw new BroadcastError("INVALID_TRANSITION");
+    }
 
-  const deleted = await db
-    .delete(broadcasts)
-    .where(
-      and(eq(broadcasts.id, input.broadcastId), eq(broadcasts.orgId, input.orgId)),
-    )
-    .returning({ id: broadcasts.id });
-
-  if (deleted.length !== 1) {
-    throw new BroadcastError("BROADCAST_NOT_FOUND");
-  }
+    await tx
+      .delete(broadcasts)
+      .where(
+        and(eq(broadcasts.id, input.broadcastId), eq(broadcasts.orgId, input.orgId)),
+      );
+  });
 }
 
 const RFC3339_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;

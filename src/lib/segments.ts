@@ -535,7 +535,7 @@ export async function deleteSegment(input: {
 }): Promise<void> {
   await requireOrganizationPermission({
     ...input,
-    permission: "segments.manage",
+    permission: "segments.delete",
   });
   requireId(input.segmentId);
 
@@ -672,7 +672,7 @@ export async function deleteTopic(input: {
 }): Promise<void> {
   await requireOrganizationPermission({
     ...input,
-    permission: "topics.manage",
+    permission: "topics.delete",
   });
 
   if (!UUID_PATTERN.test(input.topicId)) {
@@ -816,7 +816,7 @@ export async function deleteContactProperty(input: {
 }): Promise<void> {
   await requireOrganizationPermission({
     ...input,
-    permission: "contactProperties.manage",
+    permission: "contactProperties.delete",
   });
 
   if (!UUID_PATTERN.test(input.propertyId)) {
@@ -1026,7 +1026,7 @@ export async function deleteTopLevelContact(input: {
 }): Promise<void> {
   await requireOrganizationPermission({
     ...input,
-    permission: "audiences.manage",
+    permission: "audiences.delete",
   });
   const id = await resolveContactId(input.orgId, input.contactId);
 

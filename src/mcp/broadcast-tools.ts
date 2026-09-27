@@ -85,7 +85,7 @@ export const PAPERBOY_BROADCAST_MCP_TOOL_DEFINITIONS = [
   },
   {
     description:
-      "Delete a scheduled broadcast that has not started sending. Running, completed, and cancelled broadcasts cannot be deleted.",
+      "Delete a scheduled, completed, or cancelled broadcast and its recipient rows. Cancel a running or paused broadcast first; delivered messages stay in delivery logs.",
     mutating: true,
     name: PAPERBOY_BROADCAST_MCP_TOOL_NAMES[7],
     schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
