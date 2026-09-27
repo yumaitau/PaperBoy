@@ -172,7 +172,7 @@ function failure(error: unknown): Response {
           error: {
             code: "invalid_webhook_url",
             message:
-              "Provide one HTTPS webhook URL without embedded credentials or a fragment.",
+              "Provide one public HTTPS webhook URL without embedded credentials or a fragment. Private, loopback, and link-local addresses are not allowed.",
           },
         },
         422,

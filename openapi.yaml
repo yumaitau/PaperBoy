@@ -5211,7 +5211,7 @@ components:
           type: string
           format: uri
           maxLength: 2048
-          description: HTTPS URL without embedded credentials or a fragment.
+          description: Public HTTPS URL without embedded credentials or a fragment. Loopback, private, link-local, CGNAT, and reserved addresses are rejected unless the operator sets PAPERBOY_WEBHOOK_ALLOW_PRIVATE_NETWORKS.
     WebhookEndpoint:
       type: object
       additionalProperties: false

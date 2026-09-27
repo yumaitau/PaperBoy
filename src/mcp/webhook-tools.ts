@@ -258,7 +258,7 @@ function errorResult(error: unknown) {
       case "INVALID_INPUT":
       case "INVALID_URL":
         message =
-          "Provide one HTTPS webhook URL without embedded credentials or a fragment.";
+          "Provide one public HTTPS webhook URL without embedded credentials or a fragment. Private, loopback, and link-local addresses are not allowed.";
         break;
       case "WEBHOOK_NOT_FOUND":
       case "EVENT_NOT_FOUND":
