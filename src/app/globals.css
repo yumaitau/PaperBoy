@@ -2169,6 +2169,14 @@ body:has(.broadcast-workspace) {
   grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
 }
 
+.segment-card {
+  margin-top: 20px;
+}
+
+.segment-card .audience-create-form {
+  margin-bottom: 16px;
+}
+
 .audience-layout {
   display: grid;
   gap: 20px;

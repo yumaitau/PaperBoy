@@ -18,6 +18,8 @@ import {
   updateContact,
 } from "@/lib/audiences";
 import { AuthorizationError } from "@/lib/authorization";
+import { SegmentError } from "@/lib/segment-core";
+import { createSegment, deleteSegment } from "@/lib/segments";
 import { requireOrganization } from "@/lib/session";
 
 function message(error: unknown): string {
@@ -33,6 +35,14 @@ function message(error: unknown): string {
       case "CSV_TOO_LARGE": return "CSV files must not exceed 1 MiB.";
       case "VALIDATION_ERROR": return error.issues[0]?.message ?? "Check the audience input.";
       default: return "That audience action is no longer available.";
+    }
+  }
+  if (error instanceof SegmentError) {
+    switch (error.code) {
+      case "SEGMENT_EXISTS": return "A segment with that name already exists.";
+      case "SEGMENT_NOT_FOUND": return "That segment is no longer available.";
+      case "VALIDATION_ERROR": return error.issues[0]?.message ?? "Check the segment name.";
+      default: return "That segment action is no longer available.";
     }
   }
   throw error;
@@ -195,4 +205,30 @@ export async function importContactsAction(formData: FormData) {
       updated: String(result.updated),
     }),
   );
+}
+
+export async function createSegmentAction(formData: FormData) {
+  try {
+    await createSegment({ ...(await context()), payload: { name: formData.get("name") } });
+  } catch (error) {
+    errorRedirect(error, null);
+  }
+  revalidatePath("/app/audiences");
+  redirect(destination(null, { saved: "segment-created" }));
+}
+
+export async function deleteSegmentAction(formData: FormData) {
+  if (formData.get("confirm") !== "yes") {
+    redirect(destination(null, { error: "Confirm segment deletion." }));
+  }
+  try {
+    await deleteSegment({
+      ...(await context()),
+      segmentId: String(formData.get("segmentId") ?? ""),
+    });
+  } catch (error) {
+    errorRedirect(error, null);
+  }
+  revalidatePath("/app/audiences");
+  redirect(destination(null, { saved: "segment-deleted" }));
 }

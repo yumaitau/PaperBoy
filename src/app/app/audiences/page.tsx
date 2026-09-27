@@ -8,6 +8,8 @@ import {
   importContactsAction,
   updateAudienceAction,
   updateContactAction,
+  createSegmentAction,
+  deleteSegmentAction,
 } from "./actions";
 import {
   AudienceError,
@@ -16,6 +18,7 @@ import {
 } from "@/lib/audience-core";
 import { getAudience, listAudiences, listContacts } from "@/lib/audiences";
 import { can } from "@/lib/authorization";
+import { listSegments } from "@/lib/segments";
 import { requireOrganization } from "@/lib/session";
 import { formatDateTime } from "@/lib/time";
 
@@ -77,6 +80,12 @@ export default async function AudiencesPage({ searchParams }: Props) {
   const canManage = can(organization.role, "audiences.manage");
   const canDelete = can(organization.role, "audiences.delete");
   const canMutate = canManage || canDelete;
+  const canReadSegments = can(organization.role, "segments.read");
+  const canManageSegments = can(organization.role, "segments.manage");
+  const canDeleteSegments = can(organization.role, "segments.delete");
+  const segments = canReadSegments
+    ? await listSegments({ actorUserId: session.user.id, orgId: organization.id })
+    : [];
   const audienceQuery = parseAudienceSearch(status.audienceQuery);
   const contactQuery = parseAudienceSearch(status.contactQuery);
   const records = canRead
@@ -113,7 +122,9 @@ export default async function AudiencesPage({ searchParams }: Props) {
     ? selected.contactCount - selected.activeContactCount
     : 0;
   const saved =
-    status.saved === "audience-created" ? "Audience created."
+    status.saved === "segment-created" ? "Segment created."
+      : status.saved === "segment-deleted" ? "Segment deleted. Its contacts remain."
+      : status.saved === "audience-created" ? "Audience created."
       : status.saved === "audience-updated" ? "Audience updated."
         : status.saved === "audience-deleted" ? "Audience and its contacts deleted."
           : status.saved === "contact-created" ? "Contact added."
@@ -397,6 +408,67 @@ export default async function AudiencesPage({ searchParams }: Props) {
           </div>
         </div>
       )}
+
+      {canReadSegments ? (
+        <div className="card segment-card">
+          <h2>Segments</h2>
+          <p>
+            Org-wide contact groups used by the API and MCP. Deleting a segment
+            removes the grouping only; its contacts stay.
+          </p>
+          {canManageSegments ? (
+            <form action={createSegmentAction} className="audience-create-form">
+              <div className="field">
+                <label htmlFor="segment-name">Name</label>
+                <input id="segment-name" maxLength={120} name="name" placeholder="VIP readers" required type="text" />
+              </div>
+              <button className="btn btn-primary" type="submit">Create segment</button>
+            </form>
+          ) : null}
+          {segments.length === 0 ? (
+            <p className="empty-state">No segments yet.</p>
+          ) : (
+            <div className="table-scroll">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Contacts</th>
+                    <th>Updated</th>
+                    {canDeleteSegments ? <th>Action</th> : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  {segments.map((segment) => (
+                    <tr key={segment.id}>
+                      <td>{segment.name}</td>
+                      <td>{segment.contactCount}</td>
+                      <td>{formatDateTime(segment.updatedAt, session.user.timezone)}</td>
+                      {canDeleteSegments ? (
+                        <td>
+                          <details className="template-delete">
+                            <summary>Delete</summary>
+                            <form action={deleteSegmentAction}>
+                              <input name="segmentId" type="hidden" value={segment.id} />
+                              <label className="confirmation-control">
+                                <input name="confirm" required type="checkbox" value="yes" />{" "}
+                                Delete {segment.name}
+                              </label>
+                              <button className="btn btn-danger btn-compact" type="submit">
+                                Delete segment
+                              </button>
+                            </form>
+                          </details>
+                        </td>
+                      ) : null}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : null}
     </section>
   );
 }
