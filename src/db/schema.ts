@@ -182,7 +182,7 @@ export const orgMembers = pgTable(
     index("org_members_user_id_idx").on(table.userId),
     check(
       "org_members_role_check",
-      sql`${table.role} in ('owner', 'admin', 'member')`,
+      sql`${table.role} in ('owner', 'admin', 'agency', 'member')`,
     ),
   ],
 );
@@ -221,7 +221,7 @@ export const orgInvites = pgTable(
     index("org_invites_email_idx").on(table.email),
     check(
       "org_invites_role_check",
-      sql`${table.role} in ('admin', 'member')`,
+      sql`${table.role} in ('admin', 'agency', 'member')`,
     ),
   ],
 );

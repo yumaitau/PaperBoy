@@ -322,7 +322,7 @@ export async function deleteSuppression(input: {
       throw new SuppressionError("MEMBERSHIP_REQUIRED");
     }
 
-    requirePermission(membership.role, "suppressions.manage");
+    requirePermission(membership.role, "suppressions.delete");
     const deleted = await tx
       .delete(emailSuppressions)
       .where(

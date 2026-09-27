@@ -417,7 +417,7 @@ const webhookDocument = `# PaperBoy signed webhooks
 
 const feedbackDocument = `# PaperBoy bounce and complaint ingestion
 
-- Use paperboy_ingest_feedback for one Base64 RFC 3464 delivery-status report or RFC 5965 abuse feedback report. The API key creator must remain an organization owner or admin.
+- Use paperboy_ingest_feedback for one Base64 RFC 3464 delivery-status report or RFC 5965 abuse feedback report. The API key creator must remain an organization owner, admin, or agency.
 - PaperBoy accepts at most 10 MiB, stores no raw report, and correlates explicit envelope, X-PaperBoy-Message-ID, or Message-ID UUIDs plus the reported recipient to a message in the authenticated organization.
 - Prefer header-only reports. Raw reports are untrusted and may contain original content; pass them only through the authenticated tool transport, never a prompt, URL, log, or command argument.
 - A 5.x.x failed DSN is a hard bounce and creates a bounced event plus a bounced suppression. A 4.x.x delayed or failed DSN is a soft bounce and creates an event without suppression. An ARF complaint creates a complained event plus a complained suppression.
@@ -430,7 +430,7 @@ const feedbackDocument = `# PaperBoy bounce and complaint ingestion
 const suppressionDocument = `# PaperBoy suppression list
 
 - Suppressions belong to the organization bound to the API key. Never pass an organization ID to a suppression tool.
-- paperboy_list_suppressions and paperboy_get_suppression are available to current members. Create, update, delete, and import require an owner or admin.
+- paperboy_list_suppressions and paperboy_get_suppression are available to current members. Create, update, and import require an owner, admin, or agency. Delete requires an owner or admin.
 - Reasons are manual, unsubscribed, bounced, or complained. The send path returns recipient_suppressed with the reason before inserting a queue row, so the address never reaches SMTP or Cloudflare Email Sending.
 - CSV import accepts UTF-8 with an email header and optional reason column, at most 1 MiB and 5,000 data rows. The entire file validates before mutation. Duplicate rows and existing entries keep the strongest reason: complained, then bounced, then unsubscribed, then manual. An unsubscribed import marks matching contacts. Broadcast snapshots skip the whole suppression list. Import Resend unsubscribed contacts and bounce/complaint suppressions through this CSV so PaperBoy does not mail people who already opted out there.
 - Read a suppression before deleting it and pass confirm: true. Deletion means the address may receive future mail; it does not modify Cloudflare provider suppressions.
@@ -441,7 +441,7 @@ const suppressionDocument = `# PaperBoy suppression list
 const audienceDocument = `# PaperBoy audiences and contacts
 
 - Audiences and contacts belong to the organization bound to the API key. Never pass an organization ID.
-- Current members can list and read. Owners and admins create, rename, delete, and import.
+- Current members can list and read. Owners, admins, and agencies create, rename, and import. Owners and admins delete.
 - PaperBoy imposes no audience-count or contact-count cap. Each CSV import accepts UTF-8 with an email header and optional name column, at most 1 MiB. The complete file validates before mutation.
 - paperboy_delete_unsubscribed_contacts requires explicit confirmation, deletes unsubscribed contacts from one audience, and retains organization suppression records.
 - Import only contacts who gave the sender permission. PaperBoy does not provide a purchased-list marketplace.
@@ -456,7 +456,7 @@ const rateLimitDocument = `# PaperBoy organization send-rate limits
 
 - Every accepted message consumes one PostgreSQL counter slot for the organization and API-key environment, regardless of which API key, web process, REST route, MCP transport, batch, or broadcast created it.
 - The default caps are PAPERBOY_LIVE_RATE_LIMIT_PER_MINUTE=60 and PAPERBOY_TEST_RATE_LIMIT_PER_MINUTE=600. Both must be whole numbers and the test cap must be higher.
-- Current members can read effective settings. Owners and admins can set an organization override or pass null to restore an operator default. Tools never accept an organization ID.
+- Current members can read effective settings. Owners, admins, and agencies can set an organization override or pass null to restore an operator default. Tools never accept an organization ID.
 - Windows are fixed UTC minutes. A rejected single send returns rate_limit_exceeded with environment, limit, and retryAfterSeconds. HTTP peers return 429 and the same delay in Retry-After.
 - Validation failures, suppressions, attachment-storage rollbacks, and idempotent replays do not consume a slot. Parallel inserts serialize on one organization-and-environment counter row.
 - A broadcast pauses with its unprocessed recipient still pending when the cap is reached. Resume it after the reported window has reset.
@@ -465,7 +465,7 @@ const rateLimitDocument = `# PaperBoy organization send-rate limits
 
 const openTrackingDocument = `# PaperBoy open tracking
 
-- Open tracking is an organization setting and is off by default. Current members can read it; owners and admins can change it without passing an organization ID.
+- Open tracking is an organization setting and is off by default. Current members can read it; owners, admins, and agencies can change it without passing an organization ID.
 - When enabled, PaperBoy adds one signed first-party pixel to each future HTML message. Plain-text messages are never tracked, and queued messages retain the setting captured at creation.
 - Two or more valid pixel requests create at most one opened event per message. The event contains no recipient, IP address, user agent, or provider payload.
 - An opened event means the pixel was fetched. Security scanners, privacy proxies, and prefetchers can trigger it, so it does not prove a person read the message.
@@ -478,7 +478,7 @@ const outboundProviderDocument = `# PaperBoy outbound providers
 
 - Every live message resolves the organization default and optional sending-domain override before queue insertion. The provider ID is snapshotted on the message, so later settings changes never reroute queued mail.
 - paperboy_get_outbound_providers returns SMTP, Cloudflare Email Service, Amazon SES, and Azure Communication Services Email capabilities plus safe readiness state. It never returns secret values or provider payloads.
-- Owners and admins use paperboy_update_outbound_providers to select the organization default or tenant-owned domain overrides. Current members can read settings. Organization context always comes from the API key.
+- Owners, admins, and agencies use paperboy_update_outbound_providers to select the organization default or tenant-owned domain overrides. Current members can read settings. Organization context always comes from the API key.
 - paperboy_test_outbound_provider performs a provider connection check using operator-injected credentials. Never put SMTP passwords, Cloudflare API tokens, AWS keys, Azure connection strings, or secret references in tool arguments.
 - Amazon SES connection tests return only its region, sandbox or production mode, sending-enabled flag, and normalized verified domain identities discovered through paginated ListEmailIdentities. paperboy_ingest_outbound_provider_event accepts one bounded SES SNS or EventBridge JSON object, correlates it within the key's organization, and idempotently records delivery, delay, permanent-bounce, or complaint outcomes.
 - Missing or invalid credentials fail closed before a live message enters the queue. Test API keys continue to use the isolated test sink.

@@ -9,6 +9,7 @@ import {
   users,
 } from "@/db/schema";
 import {
+  isInviteableOrgRole,
   isOrgRole,
   requirePermission,
   type OrgRole,
@@ -375,7 +376,7 @@ export async function inviteOrganizationMember(input: {
     throw new OrganizationError("INVALID_EMAIL");
   }
 
-  if (!isOrgRole(role) || role === "owner") {
+  if (!isInviteableOrgRole(role)) {
     throw new OrganizationError("INVALID_ROLE");
   }
 

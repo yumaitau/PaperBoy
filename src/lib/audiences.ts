@@ -224,7 +224,7 @@ export async function deleteAudience(input: {
   orgId: string;
 }): Promise<void> {
   requireId(input.audienceId, "AUDIENCE_NOT_FOUND");
-  await requireOrganizationPermission({ ...input, permission: "audiences.manage" });
+  await requireOrganizationPermission({ ...input, permission: "audiences.delete" });
   const deleted = await db
     .delete(audiences)
     .where(
@@ -360,7 +360,7 @@ export async function deleteContact(input: {
   orgId: string;
 }): Promise<void> {
   requireId(input.contactId, "CONTACT_NOT_FOUND");
-  await requireOrganizationPermission({ ...input, permission: "audiences.manage" });
+  await requireOrganizationPermission({ ...input, permission: "audiences.delete" });
   await readAudience(input);
   const deleted = await db
     .delete(contacts)
@@ -380,7 +380,7 @@ export async function deleteUnsubscribedContacts(input: {
   orgId: string;
 }): Promise<{ deleted: number }> {
   requireId(input.audienceId, "AUDIENCE_NOT_FOUND");
-  await requireOrganizationPermission({ ...input, permission: "audiences.manage" });
+  await requireOrganizationPermission({ ...input, permission: "audiences.delete" });
   return db.transaction(async (tx) => {
     const [audience] = await tx
       .select({ id: audiences.id })

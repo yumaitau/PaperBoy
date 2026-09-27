@@ -26,9 +26,11 @@ test(
         users,
       },
       { AudienceError },
+      { AuthorizationError },
       {
         createAudience,
         createContact,
+        deleteAudience,
         deleteUnsubscribedContacts,
         getAudience,
         importContacts,
@@ -54,6 +56,7 @@ test(
       import("../src/db/index.ts"),
       import("../src/db/schema.ts"),
       import("../src/lib/audience-core.ts"),
+      import("../src/lib/authorization.ts"),
       import("../src/lib/audiences.ts"),
       import("../src/lib/api-key-crypto.ts"),
       import("../src/lib/broadcasts.ts"),
@@ -67,6 +70,7 @@ test(
     const firstOrgId = randomUUID();
     const secondOrgId = randomUUID();
     const adminId = `audience-admin-${randomUUID()}`;
+    const agencyId = `audience-agency-${randomUUID()}`;
     const memberId = `audience-member-${randomUUID()}`;
     const apiKeyId = randomUUID();
     const generatedKey = generateApiKey("test");
@@ -95,6 +99,12 @@ test(
         },
         {
           email: `${randomUUID()}@example.com`,
+          id: agencyId,
+          name: "Audience agency",
+          timezone: "Pacific/Auckland",
+        },
+        {
+          email: `${randomUUID()}@example.com`,
           id: memberId,
           name: "Audience reader",
           timezone: "Pacific/Auckland",
@@ -103,6 +113,7 @@ test(
       await db.insert(orgMembers).values([
         { orgId: firstOrgId, role: "admin", userId: adminId },
         { orgId: secondOrgId, role: "admin", userId: adminId },
+        { orgId: firstOrgId, role: "agency", userId: agencyId },
         { orgId: firstOrgId, role: "member", userId: memberId },
       ]);
       await db.insert(apiKeys).values({
@@ -183,6 +194,21 @@ test(
       assert.equal(replay.unchanged, 2);
       assert.equal((await getAudience({ actorUserId: memberId, audienceId: weekly.id, orgId: firstOrgId })).contactCount, 2);
       assert.equal((await listAudiences({ actorUserId: memberId, orgId: firstOrgId })).length, 2);
+      const agencyAudience = await createAudience({
+        actorUserId: agencyId,
+        now: fixedNow,
+        orgId: firstOrgId,
+        payload: { name: "Agency campaign" },
+      });
+      await assert.rejects(
+        () =>
+          deleteAudience({
+            actorUserId: agencyId,
+            audienceId: agencyAudience.id,
+            orgId: firstOrgId,
+          }),
+        AuthorizationError,
+      );
       const uncapped = await createAudience({
         actorUserId: adminId,
         orgId: firstOrgId,
@@ -488,6 +514,7 @@ test(
         await db.delete(orgs).where(eq(orgs.id, firstOrgId));
         await db.delete(orgs).where(eq(orgs.id, secondOrgId));
         await db.delete(users).where(eq(users.id, adminId));
+        await db.delete(users).where(eq(users.id, agencyId));
         await db.delete(users).where(eq(users.id, memberId));
       } finally {
         await lock`SELECT pg_advisory_unlock(${190023})`;

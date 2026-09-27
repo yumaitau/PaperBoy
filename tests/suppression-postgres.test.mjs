@@ -41,6 +41,7 @@ test(
     const secondOrgId = randomUUID();
     const apiKeyId = randomUUID();
     const adminId = `suppression-admin-${randomUUID()}`;
+    const agencyId = `suppression-agency-${randomUUID()}`;
     const memberId = `suppression-member-${randomUUID()}`;
     const generatedKey = generateApiKey("test");
     const lock = await db.$client.reserve();
@@ -67,6 +68,12 @@ test(
         },
         {
           email: `${randomUUID()}@example.com`,
+          id: agencyId,
+          name: "Suppression agency",
+          timezone: "Pacific/Auckland",
+        },
+        {
+          email: `${randomUUID()}@example.com`,
           id: memberId,
           name: "Suppression reader",
           timezone: "Pacific/Auckland",
@@ -75,6 +82,7 @@ test(
       await db.insert(orgMembers).values([
         { orgId: firstOrgId, role: "admin", userId: adminId },
         { orgId: secondOrgId, role: "admin", userId: adminId },
+        { orgId: firstOrgId, role: "agency", userId: agencyId },
         { orgId: firstOrgId, role: "member", userId: memberId },
       ]);
       await db.insert(apiKeys).values({
@@ -119,6 +127,20 @@ test(
             actorUserId: memberId,
             orgId: firstOrgId,
             payload: { email: "member-change@example.net" },
+          }),
+        AuthorizationError,
+      );
+      const agencyCreated = await createSuppression({
+        actorUserId: agencyId,
+        orgId: firstOrgId,
+        payload: { email: "agency-block@example.net", reason: "manual" },
+      });
+      await assert.rejects(
+        () =>
+          deleteSuppression({
+            actorUserId: agencyId,
+            orgId: firstOrgId,
+            suppressionId: agencyCreated.id,
           }),
         AuthorizationError,
       );
@@ -258,6 +280,7 @@ test(
         await db.delete(orgs).where(eq(orgs.id, firstOrgId));
         await db.delete(orgs).where(eq(orgs.id, secondOrgId));
         await db.delete(users).where(eq(users.id, adminId));
+        await db.delete(users).where(eq(users.id, agencyId));
         await db.delete(users).where(eq(users.id, memberId));
       } finally {
         await lock`SELECT pg_advisory_unlock(${190022})`;

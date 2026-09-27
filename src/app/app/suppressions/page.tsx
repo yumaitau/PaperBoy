@@ -46,6 +46,8 @@ export default async function SuppressionsPage({
     searchParams,
   ]);
   const canManage = can(organization.role, "suppressions.manage");
+  const canDelete = can(organization.role, "suppressions.delete");
+  const canMutate = canManage || canDelete;
   const canRead = can(organization.role, "suppressions.read");
   const reason = isSuppressionReason(status.reason) ? status.reason : null;
   const query = status.query?.trim() ?? "";
@@ -206,13 +208,13 @@ export default async function SuppressionsPage({
                   <th>Reason</th>
                   <th>Created</th>
                   <th>Updated</th>
-                  {canManage ? <th>Manage</th> : null}
+                  {canMutate ? <th>Manage</th> : null}
                 </tr>
               </thead>
               <tbody>
                 {suppressions.length === 0 ? (
                   <tr>
-                    <td colSpan={canManage ? 5 : 4}>
+                    <td colSpan={canMutate ? 5 : 4}>
                       {query || reason
                         ? "No suppressions match these filters."
                         : "No suppressed addresses yet."}
@@ -268,47 +270,51 @@ export default async function SuppressionsPage({
                           session.user.timezone,
                         )}
                       </td>
-                      {canManage ? (
+                      {canMutate ? (
                         <td>
                           <div className="table-manage-actions">
-                            <form
-                              action={updateSuppressionAction}
-                              id={`update-suppression-${suppression.id}`}
-                            >
-                              <input
-                                name="suppressionId"
-                                type="hidden"
-                                value={suppression.id}
-                              />
-                              <button className="btn btn-compact" type="submit">
-                                Save
-                              </button>
-                            </form>
-                            <form
-                              action={deleteSuppressionAction}
-                              className="suppression-delete-form"
-                            >
-                              <input
-                                name="suppressionId"
-                                type="hidden"
-                                value={suppression.id}
-                              />
-                              <label className="confirmation-control">
-                                <input
-                                  name="confirm"
-                                  required
-                                  type="checkbox"
-                                  value="yes"
-                                />
-                                Allow future mail
-                              </label>
-                              <button
-                                className="btn btn-danger btn-compact"
-                                type="submit"
+                            {canManage ? (
+                              <form
+                                action={updateSuppressionAction}
+                                id={`update-suppression-${suppression.id}`}
                               >
-                                Remove
-                              </button>
-                            </form>
+                                <input
+                                  name="suppressionId"
+                                  type="hidden"
+                                  value={suppression.id}
+                                />
+                                <button className="btn btn-compact" type="submit">
+                                  Save
+                                </button>
+                              </form>
+                            ) : null}
+                            {canDelete ? (
+                              <form
+                                action={deleteSuppressionAction}
+                                className="suppression-delete-form"
+                              >
+                                <input
+                                  name="suppressionId"
+                                  type="hidden"
+                                  value={suppression.id}
+                                />
+                                <label className="confirmation-control">
+                                  <input
+                                    name="confirm"
+                                    required
+                                    type="checkbox"
+                                    value="yes"
+                                  />
+                                  Allow future mail
+                                </label>
+                                <button
+                                  className="btn btn-danger btn-compact"
+                                  type="submit"
+                                >
+                                  Remove
+                                </button>
+                              </form>
+                            ) : null}
                           </div>
                         </td>
                       ) : null}

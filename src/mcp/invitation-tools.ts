@@ -1,7 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 import type { ApiKeyPrincipal } from "@/lib/api-key-auth";
-import { AuthorizationError } from "@/lib/authorization";
+import {
+  AuthorizationError,
+  INVITEABLE_ORG_ROLES,
+  type InviteableOrgRole,
+} from "@/lib/authorization";
 import { protocolTimestamp } from "@/lib/time";
 import { PAPERBOY_MCP_SCHEMA_VERSION } from "@/mcp/contract";
 
@@ -37,7 +41,7 @@ export const PAPERBOY_INVITATION_MCP_TOOL_DEFINITIONS = [
   },
   {
     description:
-      "Invite one person by email to the authenticated organization as admin or member, then queue the live invite email. Organization context comes from the API key.",
+      "Invite one person by email to the authenticated organization as admin, agency, or member, then queue the live invite email. Organization context comes from the API key.",
     mutating: true,
     name: PAPERBOY_INVITATION_MCP_TOOL_NAMES[1],
     schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
@@ -47,7 +51,7 @@ export const PAPERBOY_INVITATION_MCP_TOOL_DEFINITIONS = [
 export type PaperBoyMcpInvitationServices = {
   invite: (
     principal: ApiKeyPrincipal,
-    input: { email: string; role: "admin" | "member" },
+    input: { email: string; role: InviteableOrgRole },
   ) => Promise<OrganizationInviteResult>;
   list: (
     principal: ApiKeyPrincipal,
@@ -58,7 +62,7 @@ const invitationSchema = z.object({
   createdAt: z.iso.datetime({ offset: true }),
   email: z.string(),
   id: z.string().uuid(),
-  role: z.enum(["admin", "member"]),
+  role: z.enum(INVITEABLE_ORG_ROLES),
 });
 
 const metadataSchema = {
@@ -97,7 +101,7 @@ function serialize(invitation: OrganizationInvitationRecord) {
     createdAt: protocolTimestamp(invitation.createdAt),
     email: invitation.email,
     id: invitation.id,
-    role: invitation.role as "admin" | "member",
+    role: invitation.role as InviteableOrgRole,
   };
 }
 
@@ -130,7 +134,7 @@ function errorResult(error: unknown) {
         message = "Provide one valid email address.";
         break;
       case "INVALID_ROLE":
-        message = "Choose the admin or member role.";
+        message = "Choose the admin, agency, or member role.";
         break;
       case "MEMBERSHIP_REQUIRED":
         message = "Create a new API key from a current organization owner or admin.";
@@ -209,7 +213,7 @@ export function registerPaperBoyInvitationTools(input: {
       inputSchema: z
         .object({
           email: z.string().min(3).max(254),
-          role: z.enum(["admin", "member"]).default("member"),
+          role: z.enum(INVITEABLE_ORG_ROLES).default("member"),
         })
         .strict(),
       outputSchema: inviteOutputSchema,

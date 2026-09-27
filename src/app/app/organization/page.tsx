@@ -50,7 +50,7 @@ const errorMessages: Record<string, string> = {
   forbidden: "Your role does not allow that action.",
   invalid_email: "Enter a valid email address.",
   invalid_name: "Enter an organization name of at most 120 characters.",
-  invalid_role: "Choose the admin or member role.",
+  invalid_role: "Choose the admin, agency, or member role.",
   invalid_rate_limits:
     "Use whole-number limits, with the test limit higher than the live limit.",
   invalid_open_tracking: "Choose whether open tracking is enabled.",
@@ -101,6 +101,7 @@ export default async function OrganizationPage({
     requireOrganization(),
     searchParams,
   ]);
+  const canReadMembers = can(organization.role, "members.read");
   const [
     organizations,
     members,
@@ -112,8 +113,12 @@ export default async function OrganizationPage({
     sendingDomains,
   ] = await Promise.all([
       listUserOrganizations(session.user.id),
-      listOrganizationMembers(organization.id),
-      listOrganizationInvitations(organization.id),
+      canReadMembers
+        ? listOrganizationMembers(organization.id)
+        : Promise.resolve([]),
+      canReadMembers
+        ? listOrganizationInvitations(organization.id)
+        : Promise.resolve([]),
       listPendingInvitationsForUser(session.user.email),
       getRateLimitSettings({
         actorUserId: session.user.id,
@@ -590,125 +595,130 @@ export default async function OrganizationPage({
         ) : null}
       </div>
 
-      <div className="card">
-        <h2>Members</h2>
-        <div className="table-scroll">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Joined</th>
-                {canRemove ? <th>Action</th> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {members.map((member) => {
-                const role = isOrgRole(member.role) ? member.role : "member";
-                const removable =
-                  canRemove &&
-                  role !== "owner" &&
-                  member.userId !== session.user.id;
-
-                return (
-                  <tr key={member.id}>
-                    <td>{member.name}</td>
-                    <td>{member.email}</td>
-                    <td>
-                      <span className="pill pill-muted">{role}</span>
-                    </td>
-                    <td>
-                      {formatDateTime(member.createdAt, session.user.timezone)}
-                    </td>
-                    {canRemove ? (
-                      <td>
-                        {removable ? (
-                          <form action={removeMemberAction}>
-                            <input
-                              name="membershipId"
-                              type="hidden"
-                              value={member.id}
-                            />
-                            <button className="btn btn-compact" type="submit">
-                              Remove
-                            </button>
-                          </form>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    ) : null}
+      {canReadMembers ? (
+        <>
+          <div className="card">
+            <h2>Members</h2>
+            <div className="table-scroll">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Joined</th>
+                    {canRemove ? <th>Action</th> : null}
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </thead>
+                <tbody>
+                  {members.map((member) => {
+                    const role = isOrgRole(member.role) ? member.role : "member";
+                    const removable =
+                      canRemove &&
+                      role !== "owner" &&
+                      member.userId !== session.user.id;
 
-      <div className="card">
-        <h2>Invite by email</h2>
-        {canInvite ? (
-          <>
-            <p>
-              PaperBoy queues a live invite email from a verified sender
-              identity. Open it on{" "}
-              <Link href="/app/logs">Delivery</Link> like any other send. The
-              recipient signs in with this address and accepts it here.
-            </p>
-            {status.queued ? (
-              <p className="form-success" role="status">
-                Invite email {status.queued} is on{" "}
-                <Link href="/app/logs">Delivery</Link>.
-              </p>
-            ) : null}
-            <form action={inviteMemberAction} className="invite-form">
-              <div className="field">
-                <label htmlFor="invite-email">Email</label>
-                <input
-                  autoComplete="email"
-                  id="invite-email"
-                  name="email"
-                  required
-                  type="email"
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="invite-role">Role</label>
-                <select defaultValue="member" id="invite-role" name="role">
-                  <option value="member">Member</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-              <button className="btn btn-primary" type="submit">
-                Send invitation
-              </button>
-            </form>
-          </>
-        ) : (
-          <p>Owners and admins manage invitations.</p>
-        )}
-
-        {invitations.length > 0 ? (
-          <div className="pending-invitations">
-            <h3>Pending</h3>
-            <ul>
-              {invitations.map((invitation) => (
-                <li key={invitation.id}>
-                  <span>{invitation.email}</span>
-                  <span>
-                    {invitation.role} · {formatDateTime(
-                      invitation.createdAt,
-                      session.user.timezone,
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
+                    return (
+                      <tr key={member.id}>
+                        <td>{member.name}</td>
+                        <td>{member.email}</td>
+                        <td>
+                          <span className="pill pill-muted">{role}</span>
+                        </td>
+                        <td>
+                          {formatDateTime(member.createdAt, session.user.timezone)}
+                        </td>
+                        {canRemove ? (
+                          <td>
+                            {removable ? (
+                              <form action={removeMemberAction}>
+                                <input
+                                  name="membershipId"
+                                  type="hidden"
+                                  value={member.id}
+                                />
+                                <button className="btn btn-compact" type="submit">
+                                  Remove
+                                </button>
+                              </form>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                        ) : null}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        ) : null}
-      </div>
+
+          <div className="card">
+            <h2>Invite by email</h2>
+            {canInvite ? (
+              <>
+                <p>
+                  PaperBoy queues a live invite email from a verified sender
+                  identity. Open it on{" "}
+                  <Link href="/app/logs">Delivery</Link> like any other send. The
+                  recipient signs in with this address and accepts it here.
+                </p>
+                {status.queued ? (
+                  <p className="form-success" role="status">
+                    Invite email {status.queued} is on{" "}
+                    <Link href="/app/logs">Delivery</Link>.
+                  </p>
+                ) : null}
+                <form action={inviteMemberAction} className="invite-form">
+                  <div className="field">
+                    <label htmlFor="invite-email">Email</label>
+                    <input
+                      autoComplete="email"
+                      id="invite-email"
+                      name="email"
+                      required
+                      type="email"
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="invite-role">Role</label>
+                    <select defaultValue="member" id="invite-role" name="role">
+                      <option value="member">Member</option>
+                      <option value="agency">Agency</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                  <button className="btn btn-primary" type="submit">
+                    Send invitation
+                  </button>
+                </form>
+              </>
+            ) : (
+              <p>Owners and admins manage invitations.</p>
+            )}
+
+            {invitations.length > 0 ? (
+              <div className="pending-invitations">
+                <h3>Pending</h3>
+                <ul>
+                  {invitations.map((invitation) => (
+                    <li key={invitation.id}>
+                      <span>{invitation.email}</span>
+                      <span>
+                        {invitation.role} · {formatDateTime(
+                          invitation.createdAt,
+                          session.user.timezone,
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        </>
+      ) : null}
     </section>
   );
 }

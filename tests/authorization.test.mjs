@@ -5,6 +5,7 @@ import {
   ORG_PERMISSIONS,
   can,
   isKeyScopeGranted,
+  isInviteableOrgRole,
   isOrgRole,
   requireKeyScope,
   requirePermission,
@@ -13,6 +14,7 @@ import {
 const matrix = {
   owner: new Set(ORG_PERMISSIONS),
   admin: new Set([
+    "audiences.delete",
     "audiences.manage",
     "audiences.read",
     "apiKeys.create",
@@ -49,6 +51,7 @@ const matrix = {
     "rateLimits.read",
     "segments.manage",
     "segments.read",
+    "suppressions.delete",
     "suppressions.manage",
     "suppressions.read",
     "templates.create",
@@ -59,6 +62,68 @@ const matrix = {
     "topics.read",
     "webhooks.manage",
     "webhooks.read",
+  ]),
+  agency: new Set([
+    "apiKeys.create",
+    "apiKeys.read",
+    "apiKeys.update",
+    "automations.manage",
+    "automations.read",
+    "broadcasts.control",
+    "broadcasts.create",
+    "broadcasts.read",
+    "audiences.manage",
+    "audiences.read",
+    "contactProperties.manage",
+    "contactProperties.read",
+    "domains.create",
+    "domains.manageDkim",
+    "domains.read",
+    "domains.verify",
+    "emails.metrics",
+    "emails.share",
+    "events.manage",
+    "events.read",
+    "feedback.ingest",
+    "logs.read",
+    "messages.read",
+    "messages.send",
+    "openTracking.manage",
+    "openTracking.read",
+    "outboundProviders.manage",
+    "outboundProviders.read",
+    "rateLimits.manage",
+    "rateLimits.read",
+    "segments.manage",
+    "segments.read",
+    "suppressions.manage",
+    "suppressions.read",
+    "templates.create",
+    "templates.read",
+    "templates.update",
+    "topics.manage",
+    "topics.read",
+    "webhooks.manage",
+    "webhooks.read",
+]),
+  member: new Set([
+    "audiences.read",
+    "automations.read",
+    "broadcasts.read",
+    "contactProperties.read",
+    "domains.read",
+    "emails.metrics",
+    "events.read",
+    "logs.read",
+    "members.read",
+    "messages.read",
+    "openTracking.read",
+    "outboundProviders.read",
+    "rateLimits.read",
+    "segments.read",
+    "suppressions.read",
+    "templates.read",
+    "topics.read",
   ]),
   member: new Set([
     "audiences.read",
@@ -121,11 +186,33 @@ test("members cannot mint API keys or delete domains", () => {
   );
 });
 
+test("agency cannot delete resources or see members", () => {
+  assert.equal(can("agency", "messages.send"), true);
+  assert.equal(can("agency", "templates.create"), true);
+  assert.equal(can("agency", "templates.update"), true);
+  assert.equal(can("agency", "audiences.manage"), true);
+  assert.equal(can("agency", "audiences.delete"), false);
+  assert.equal(can("agency", "templates.delete"), false);
+  assert.equal(can("agency", "domains.delete"), false);
+  assert.equal(can("agency", "suppressions.delete"), false);
+  assert.equal(can("agency", "apiKeys.revoke"), false);
+  assert.equal(can("agency", "members.read"), false);
+  assert.equal(can("agency", "members.invite"), false);
+  assert.equal(can("agency", "members.remove"), false);
+  assert.throws(
+    () => requirePermission("agency", "members.read"),
+    AuthorizationError,
+  );
+});
+
 test("only declared roles are accepted", () => {
   assert.equal(isOrgRole("owner"), true);
   assert.equal(isOrgRole("admin"), true);
+  assert.equal(isOrgRole("agency"), true);
   assert.equal(isOrgRole("member"), true);
   assert.equal(isOrgRole("super-admin"), false);
+  assert.equal(isInviteableOrgRole("agency"), true);
+  assert.equal(isInviteableOrgRole("owner"), false);
 });
 
 test("key scopes are role-capped and null means full role access", () => {

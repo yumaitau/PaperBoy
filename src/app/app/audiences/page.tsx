@@ -75,6 +75,8 @@ export default async function AudiencesPage({ searchParams }: Props) {
   ]);
   const canRead = can(organization.role, "audiences.read");
   const canManage = can(organization.role, "audiences.manage");
+  const canDelete = can(organization.role, "audiences.delete");
+  const canMutate = canManage || canDelete;
   const audienceQuery = parseAudienceSearch(status.audienceQuery);
   const contactQuery = parseAudienceSearch(status.contactQuery);
   const records = canRead
@@ -213,21 +215,21 @@ export default async function AudiencesPage({ searchParams }: Props) {
                     <span className="pill pill-muted">{selected.activeContactCount} active</span>
                   </div>
                   {canManage ? (
-                    <>
-                      <form action={updateAudienceAction} className="audience-update-form">
-                        <input name="audienceId" type="hidden" value={selected.id} />
-                        <div className="field">
-                          <label htmlFor="selected-audience-name">Audience name</label>
-                          <input defaultValue={selected.name} id="selected-audience-name" maxLength={120} name="name" required />
-                        </div>
-                        <button className="btn btn-compact" type="submit">Save name</button>
-                      </form>
-                      <form action={deleteAudienceAction} className="audience-delete-form">
-                        <input name="audienceId" type="hidden" value={selected.id} />
-                        <label className="confirmation-control"><input name="confirm" required type="checkbox" value="yes" /> Delete this audience and all contacts</label>
-                        <button className="btn btn-danger btn-compact" type="submit">Delete audience</button>
-                      </form>
-                    </>
+                    <form action={updateAudienceAction} className="audience-update-form">
+                      <input name="audienceId" type="hidden" value={selected.id} />
+                      <div className="field">
+                        <label htmlFor="selected-audience-name">Audience name</label>
+                        <input defaultValue={selected.name} id="selected-audience-name" maxLength={120} name="name" required />
+                      </div>
+                      <button className="btn btn-compact" type="submit">Save name</button>
+                    </form>
+                  ) : null}
+                  {canDelete ? (
+                    <form action={deleteAudienceAction} className="audience-delete-form">
+                      <input name="audienceId" type="hidden" value={selected.id} />
+                      <label className="confirmation-control"><input name="confirm" required type="checkbox" value="yes" /> Delete this audience and all contacts</label>
+                      <button className="btn btn-danger btn-compact" type="submit">Delete audience</button>
+                    </form>
                   ) : null}
                 </div>
 
@@ -276,7 +278,7 @@ export default async function AudiencesPage({ searchParams }: Props) {
                           : `${unsubscribedCount} unsubscribed`}
                       </p>
                     </div>
-                    {canManage && unsubscribedCount > 0 ? (
+                    {canDelete && unsubscribedCount > 0 ? (
                       <form action={deleteUnsubscribedContactsAction} className="audience-bulk-delete-form">
                         <input name="audienceId" type="hidden" value={selected.id} />
                         {contactQuery ? (
@@ -304,7 +306,7 @@ export default async function AudiencesPage({ searchParams }: Props) {
                     ) : null}
                   </div>
 
-                  {canManage && unsubscribedCount > 0 ? (
+                  {canDelete && unsubscribedCount > 0 ? (
                     <p className="audience-bulk-delete-note" id="audience-bulk-delete-note">
                       Removes every unsubscribed contact row in this audience, never only the rows shown. Organization suppression records remain, so those addresses stay opted out.
                       {contactQuery
@@ -343,10 +345,10 @@ export default async function AudiencesPage({ searchParams }: Props) {
                   </form>
                   <div className="table-scroll">
                     <table className="table contact-table">
-                      <thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Updated</th>{canManage ? <th>Manage</th> : null}</tr></thead>
+                      <thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Updated</th>{canMutate ? <th>Manage</th> : null}</tr></thead>
                       <tbody>
                         {contacts.length === 0 ? (
-                          <tr><td colSpan={canManage ? 5 : 4}>{contactQuery ? "No contacts match that search." : "No contacts in this audience."}</td></tr>
+                          <tr><td colSpan={canMutate ? 5 : 4}>{contactQuery ? "No contacts match that search." : "No contacts in this audience."}</td></tr>
                         ) : contacts.map((contact) => (
                           <tr key={contact.id}>
                             <td>{canManage ? <input aria-label={`Email for ${contact.email}`} defaultValue={contact.email} form={`contact-${contact.id}`} maxLength={254} name="email" required type="email" /> : contact.email}</td>
@@ -357,20 +359,24 @@ export default async function AudiencesPage({ searchParams }: Props) {
                               ) : <span className="pill pill-accent">Active</span>}
                             </td>
                             <td>{formatDateTime(contact.updatedAt, session.user.timezone)}</td>
-                            {canManage ? (
+                            {canMutate ? (
                               <td>
                                 <div className="table-manage-actions">
-                                  <form action={updateContactAction} id={`contact-${contact.id}`}>
-                                    <input name="audienceId" type="hidden" value={selected.id} />
-                                    <input name="contactId" type="hidden" value={contact.id} />
-                                    <button className="btn btn-compact" type="submit">Save</button>
-                                  </form>
-                                  <form action={deleteContactAction} className="contact-delete-form">
-                                    <input name="audienceId" type="hidden" value={selected.id} />
-                                    <input name="contactId" type="hidden" value={contact.id} />
-                                    <label className="confirmation-control"><input name="confirm" required type="checkbox" value="yes" /> Confirm removal</label>
-                                    <button className="btn btn-danger btn-compact" type="submit">Remove</button>
-                                  </form>
+                                  {canManage ? (
+                                    <form action={updateContactAction} id={`contact-${contact.id}`}>
+                                      <input name="audienceId" type="hidden" value={selected.id} />
+                                      <input name="contactId" type="hidden" value={contact.id} />
+                                      <button className="btn btn-compact" type="submit">Save</button>
+                                    </form>
+                                  ) : null}
+                                  {canDelete ? (
+                                    <form action={deleteContactAction} className="contact-delete-form">
+                                      <input name="audienceId" type="hidden" value={selected.id} />
+                                      <input name="contactId" type="hidden" value={contact.id} />
+                                      <label className="confirmation-control"><input name="confirm" required type="checkbox" value="yes" /> Confirm removal</label>
+                                      <button className="btn btn-danger btn-compact" type="submit">Remove</button>
+                                    </form>
+                                  ) : null}
                                 </div>
                               </td>
                             ) : null}
