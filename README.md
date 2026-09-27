@@ -97,6 +97,10 @@ The matching SQL in `drizzle/down/` exists only to prove rollback on a throwaway
 
 The console mints `pb_live_` and `pb_test_` bearer keys. A key contains a public identifier and a 256-bit secret; PostgreSQL stores the identifier and SHA-256 hash, never the raw key. The raw value is shown once. Revocation is enforced by the shared HTTP/MCP authentication boundary on the next request.
 
+A key acts for the member who created it. Every REST and MCP operation, including sends, re-checks that member's current role, and removing a member revokes their keys. A key that manages keys can only create or rescope keys in its own environment and within its own scopes; omitted scopes inherit the calling key's scopes. Editing another member's key requires at least their role. Deletions use dedicated `*.delete` permissions (owners and admins); the agency role can manage but not delete.
+
+Organization invitations are bound to the emailed link. With public sign-up disabled, an account can only be created from a valid invitation link, and accepting from that link verifies the address. Accepting from inside the console requires an already-verified email.
+
 ## Organization rate limits
 
 Every accepted message consumes one PostgreSQL rate-limit slot shared by all keys in its organization and environment. Defaults are `PAPERBOY_LIVE_RATE_LIMIT_PER_MINUTE=60` and the higher `PAPERBOY_TEST_RATE_LIMIT_PER_MINUTE=600`. Both must be whole numbers from 1 to 1,000,000 and the effective test cap must remain higher than live. Owners and admins can set or clear per-organization overrides in the Organization console, through `GET`/`PATCH /api/v1/rate-limits`, or with the first-class `paperboy_get_rate_limits` and `paperboy_update_rate_limits` MCP tools; members can read them.
@@ -276,6 +280,8 @@ REST provides `GET`/`POST /api/v1/suppressions`, `GET`/`PATCH`/`DELETE /api/v1/s
 Suppression checks happen before queue insertion, so blocked recipients never reach SMTP, Cloudflare Email Sending, or a future adapter. PaperBoy's list complements Cloudflare's independent `cf-bounce` and provider suppression controls; removing a PaperBoy record does not bypass a Cloudflare provider suppression. See [suppression API, CSV, MCP, and Cloudflare behavior](docs/suppressions.md).
 
 ## Signed webhooks
+
+Webhook URLs must be HTTPS and may not target loopback, private (RFC 1918/ULA), link-local, CGNAT, metadata, multicast or reserved addresses, checked both when the URL is saved and against the resolved address before each delivery. Operators who intentionally deliver to internal services set `PAPERBOY_WEBHOOK_ALLOW_PRIVATE_NETWORKS=true`; restrict worker egress as well, since DNS can change between the check and the connection.
 
 Owners and admins can configure one organization-wide endpoint with `PUT /api/v1/webhooks` or `paperboy_configure_webhook`:
 

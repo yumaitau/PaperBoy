@@ -108,6 +108,7 @@ export async function acceptInvitationAction(formData: FormData) {
     await acceptOrganizationInvitation({
       email: session.user.email,
       invitationId: String(formData.get("invitationId")),
+      proof: "verified-session",
       userId: session.user.id,
     });
   } catch (error) {

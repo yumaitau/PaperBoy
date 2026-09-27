@@ -31,7 +31,7 @@ function toRecord(value: Record<string, unknown>): McpApiKeyRecord {
 export const paperBoyMcpApiKeyServices: PaperBoyMcpApiKeyServices = {
   create: async (principal, input): Promise<McpCreatedApiKeyRecord> => {
     const created = await apiKeyApiServices.create(principal, {
-      environment: input.environment ?? "live",
+      environment: input.environment ?? principal.environment,
       name: input.name,
       scopes: input.scopes,
     });

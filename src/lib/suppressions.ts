@@ -5,6 +5,8 @@ import {
   isOrgRole,
   requirePermission,
   type OrgPermission,
+  requireKeyScope,
+  type KeyScopes,
 } from "@/lib/authorization";
 import {
   parseCreateSuppressionInput,
@@ -240,6 +242,7 @@ export async function createSuppression(input: {
 
 export async function updateSuppression(input: {
   actorUserId: string;
+  keyScopes?: KeyScopes;
   now?: Date;
   orgId: string;
   payload: unknown;
@@ -272,6 +275,24 @@ export async function updateSuppression(input: {
       }
 
       requirePermission(membership.role, "suppressions.manage");
+      if (changes.email !== undefined) {
+        const [current] = await tx
+          .select({ email: emailSuppressions.email })
+          .from(emailSuppressions)
+          .where(
+            and(
+              eq(emailSuppressions.id, input.suppressionId),
+              eq(emailSuppressions.orgId, input.orgId),
+            ),
+          )
+          .for("update");
+        // Moving a suppression to another address lifts it for the original
+        // one, so it carries the same authority as deleting it.
+        if (current && current.email !== changes.email) {
+          requirePermission(membership.role, "suppressions.delete");
+          requireKeyScope(input.keyScopes, "suppressions.delete");
+        }
+      }
       const [updated] = await tx
         .update(emailSuppressions)
         .set({ ...changes, updatedAt: now })

@@ -61,7 +61,7 @@ test(
         timezone: "Australia/Sydney",
       });
       await db.insert(orgMembers).values([
-        { orgId, role: "member", userId },
+        { orgId, role: "admin", userId },
         { orgId: otherOrgId, role: "member", userId },
       ]);
       await db.insert(apiKeys).values({

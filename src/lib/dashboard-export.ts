@@ -30,7 +30,10 @@ export type DashboardExportMessage = {
 };
 
 export function csvCell(value: string | number | boolean | null): string {
-  const text = value === null ? "" : String(value);
+  let text = value === null ? "" : String(value);
+  // Sender-controlled text (subjects, recipients) must not open as a
+  // spreadsheet formula; numbers stay numeric.
+  if (typeof value === "string" && /^[=+\-@\t\r]/.test(text)) text = `'${text}`;
   if (/[",\n\r]/.test(text)) return `"${text.replaceAll('"', '""')}"`;
   return text;
 }

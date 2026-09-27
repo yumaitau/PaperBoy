@@ -1,4 +1,5 @@
 import type { ApiKeyPrincipal } from "@/lib/api-key-auth";
+import { isKeyScopeGranted, type OrgPermission } from "@/lib/authorization";
 import { DomainError } from "@/lib/domain-core";
 import {
   describeEmailFailure,
@@ -35,6 +36,19 @@ export type InboundHttpDependencies = {
     payload: unknown,
   ) => Promise<ReceivedEmailRecord | DiscardedInboundEmail>;
 };
+
+function scopeDenied(principal: ApiKeyPrincipal, permission: OrgPermission): Response | null {
+  if (isKeyScopeGranted(principal.scopes, permission)) return null;
+  return emailJson(
+    {
+      error: {
+        code: "forbidden",
+        message: `This API key is not granted the ${permission} scope required for received email.`,
+      },
+    },
+    403,
+  );
+}
 
 function unauthorized(): Response {
   return emailJson(
@@ -87,6 +101,8 @@ export async function handleReceiveInboundEmailRequest(
 ): Promise<Response> {
   const principal = await dependencies.authenticate(request);
   if (!principal) return unauthorized();
+  const denied = scopeDenied(principal, "feedback.ingest");
+  if (denied) return denied;
 
   let payload: unknown;
   try {
@@ -107,7 +123,8 @@ export async function handleReceiveInboundEmailRequest(
     const receive =
       dependencies.receive ??
       (async (actor, body) => {
-        const { receiveInboundEmail } = await import("@/lib/inbound");
+        const { receiveInboundEmail, requireInboundActor } = await import("@/lib/inbound");
+        await requireInboundActor(actor, "feedback.ingest");
         return receiveInboundEmail({ payload: body, principal: actor });
       });
     const email = await receive(principal, payload);
@@ -134,12 +151,15 @@ export async function handleGetReceivedEmailRequest(
 ): Promise<Response> {
   const principal = await dependencies.authenticate(request);
   if (!principal) return unauthorized();
+  const denied = scopeDenied(principal, "messages.read");
+  if (denied) return denied;
 
   try {
     const get =
       dependencies.get ??
       (async (actor, id) => {
-        const { getReceivedEmail } = await import("@/lib/inbound");
+        const { getReceivedEmail, requireInboundActor } = await import("@/lib/inbound");
+        await requireInboundActor(actor, "messages.read");
         return getReceivedEmail({
           environment: actor.environment,
           orgId: actor.orgId,
@@ -193,12 +213,15 @@ export async function handleListReceivedEmailAttachmentsRequest(
 ): Promise<Response> {
   const principal = await dependencies.authenticate(request);
   if (!principal) return unauthorized();
+  const denied = scopeDenied(principal, "messages.read");
+  if (denied) return denied;
 
   try {
     const list =
       dependencies.listAttachments ??
       (async (actor, id) => {
-        const { listReceivedEmailAttachments } = await import("@/lib/inbound");
+        const { listReceivedEmailAttachments, requireInboundActor } = await import("@/lib/inbound");
+        await requireInboundActor(actor, "messages.read");
         return listReceivedEmailAttachments({
           environment: actor.environment,
           orgId: actor.orgId,
@@ -234,12 +257,15 @@ export async function handleGetReceivedEmailAttachmentRequest(
 ): Promise<Response> {
   const principal = await dependencies.authenticate(request);
   if (!principal) return unauthorized();
+  const denied = scopeDenied(principal, "messages.read");
+  if (denied) return denied;
 
   try {
     const get =
       dependencies.getAttachment ??
       (async (actor, id, attachment) => {
-        const { getReceivedEmailAttachment } = await import("@/lib/inbound");
+        const { getReceivedEmailAttachment, requireInboundActor } = await import("@/lib/inbound");
+        await requireInboundActor(actor, "messages.read");
         return getReceivedEmailAttachment({
           attachmentId: attachment,
           environment: actor.environment,

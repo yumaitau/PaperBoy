@@ -6,6 +6,7 @@ import {
   attachmentStore as configuredAttachmentStore,
 } from "@/lib/attachment-storage";
 import {
+  orgMembers,
   orgs,
   receivedEmailAttachments,
   receivedEmails,
@@ -13,6 +14,12 @@ import {
   webhookEndpoints,
 } from "@/db/schema";
 import type { ApiKeyPrincipal } from "@/lib/api-key-auth";
+import {
+  AuthorizationError,
+  isOrgRole,
+  requirePermission,
+  type OrgPermission,
+} from "@/lib/authorization";
 import { DomainError } from "@/lib/domain-core";
 import { authorizeSendingDomain } from "@/lib/domains";
 import { MessageStatusError } from "@/lib/message-status-core";
@@ -25,6 +32,28 @@ import {
 import { enqueuePendingWebhook } from "@/lib/job-queue";
 import { isPostgresErrorCode } from "@/lib/postgres-errors";
 import { receivedEmailWebhookBody } from "@/lib/webhook-core";
+
+/** Received-mail API calls act for the key's creator, like every other key route. */
+export async function requireInboundActor(
+  principal: Pick<ApiKeyPrincipal, "actorUserId" | "orgId">,
+  permission: OrgPermission,
+): Promise<void> {
+  if (!principal.actorUserId) throw new AuthorizationError(permission);
+  const [membership] = await db
+    .select({ role: orgMembers.role })
+    .from(orgMembers)
+    .where(
+      and(
+        eq(orgMembers.orgId, principal.orgId),
+        eq(orgMembers.userId, principal.actorUserId),
+      ),
+    )
+    .limit(1);
+  if (!membership || !isOrgRole(membership.role)) {
+    throw new AuthorizationError(permission);
+  }
+  requirePermission(membership.role, permission);
+}
 
 export type ReceivedEmailRecord = {
   bcc: string[];

@@ -10,6 +10,7 @@ import {
   inboundSinkholeReasonFromPayload,
   MAX_INBOUND_RAW_BYTES,
   parseInboundEmailInput,
+  sesEnvelopeRecipient,
 } from "@/lib/inbound-core";
 import {
   findLiveOrgForInboundRecipients,
@@ -112,7 +113,10 @@ export async function processInboundS3Queue(
       }
 
       const parsed = await parseInboundEmailInput({ email: raw });
-      const orgId = await resolveOrg(parsed.to);
+      // Route by the envelope recipient SES accepted, not the sender-written
+      // To header; fall back to To only when SES did not record a single one.
+      const envelope = sesEnvelopeRecipient(raw);
+      const orgId = await resolveOrg(envelope ? [envelope] : parsed.to);
       if (!orgId) return false;
 
       await receive({

@@ -180,6 +180,7 @@ test("4xx fails once without retry", async () => {
   const result = await processNextWebhook({
     encryptionKey,
     fetch: async () => new Response(null, { status: 400 }),
+    resolve: async () => ["93.184.216.34"],
     now: () => firstAttemptAt,
     store,
     workerId: "webhook-worker",

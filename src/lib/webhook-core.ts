@@ -188,9 +188,101 @@ export function decryptWebhookSigningSecret(input: {
   }
 }
 
+/**
+ * Webhook deliveries run from the worker's network position, so by default
+ * they may not target loopback, private, link-local, CGNAT, multicast or
+ * reserved addresses (including IPv4-mapped and NAT64 forms). Self-hosters
+ * who deliberately post to internal services opt in with
+ * PAPERBOY_WEBHOOK_ALLOW_PRIVATE_NETWORKS=true.
+ */
+export function webhookPrivateNetworksAllowed(
+  environment: Readonly<Record<string, string | undefined>> = process.env,
+): boolean {
+  return environment.PAPERBOY_WEBHOOK_ALLOW_PRIVATE_NETWORKS === "true";
+}
+
+function ipv4Octets(address: string): number[] | null {
+  const parts = address.split(".");
+  if (parts.length !== 4) return null;
+  const octets = parts.map((part) => (/^\d{1,3}$/.test(part) ? Number(part) : NaN));
+  return octets.every((octet) => octet >= 0 && octet <= 255) ? octets : null;
+}
+
+function isNonPublicIpv4([a, b]: number[]): boolean {
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 0) ||
+    (a === 192 && b === 168) ||
+    (a === 198 && (b === 18 || b === 19)) ||
+    a >= 224
+  );
+}
+
+function ipv6Groups(address: string): number[] | null {
+  let value = address.toLowerCase().replace(/^\[|\]$/g, "");
+  const zone = value.indexOf("%");
+  if (zone !== -1) value = value.slice(0, zone);
+  if (!value.includes(":")) return null;
+  const tail: number[] = [];
+  const lastColon = value.lastIndexOf(":");
+  const dotted = ipv4Octets(value.slice(lastColon + 1));
+  if (dotted) {
+    tail.push((dotted[0] << 8) | dotted[1], (dotted[2] << 8) | dotted[3]);
+    const prefix = value.slice(0, lastColon + 1);
+    value = prefix.endsWith("::") ? prefix : prefix.slice(0, -1);
+  }
+  const halves = value.split("::");
+  if (halves.length > 2) return null;
+  const parse = (part: string) =>
+    part === ""
+      ? []
+      : part.split(":").map((group) => (/^[0-9a-f]{1,4}$/.test(group) ? parseInt(group, 16) : NaN));
+  const head = parse(halves[0]);
+  const rest = halves.length === 2 ? parse(halves[1]) : [];
+  const fill = 8 - head.length - rest.length - tail.length;
+  if (halves.length === 1 ? fill !== 0 : fill < 0) return null;
+  const groups = [...head, ...new Array<number>(fill).fill(0), ...rest, ...tail];
+  return groups.length === 8 && groups.every((group) => Number.isInteger(group)) ? groups : null;
+}
+
+/** True for any address a tenant webhook must not reach by default. */
+export function isNonPublicAddress(address: string): boolean {
+  const v4 = ipv4Octets(address);
+  if (v4) return isNonPublicIpv4(v4);
+  const g = ipv6Groups(address);
+  if (!g) return false;
+  const embedded = [g[6] >> 8, g[6] & 0xff, g[7] >> 8, g[7] & 0xff];
+  if (g.slice(0, 5).every((x) => x === 0) && (g[5] === 0xffff || g[5] === 0)) {
+    // ::ffff:a.b.c.d, ::a.b.c.d, ::1 and ::
+    return g[5] === 0 && g[6] === 0 && g[7] <= 1 ? true : isNonPublicIpv4(embedded);
+  }
+  if (g[0] === 0x64 && g[1] === 0xff9b) return isNonPublicIpv4(embedded);
+  return (
+    (g[0] & 0xfe00) === 0xfc00 ||
+    (g[0] & 0xffc0) === 0xfe80 ||
+    (g[0] & 0xff00) === 0xff00 ||
+    (g[0] === 0x2001 && g[1] === 0x0db8)
+  );
+}
+
+function isLoopbackHost(hostname: string): boolean {
+  const host = hostname.replace(/^\[|\]$/g, "");
+  return (
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host === "::1" ||
+    (ipv4Octets(host)?.[0] ?? -1) === 127
+  );
+}
+
 export function parseWebhookUrl(
   value: unknown,
-  options: { allowInsecureLoopback?: boolean } = {},
+  options: { allowInsecureLoopback?: boolean; allowPrivateNetwork?: boolean } = {},
 ): string {
   if (typeof value !== "string") {
     throw new WebhookError("INVALID_URL");
@@ -222,6 +314,18 @@ export function parseWebhookUrl(
     url.username ||
     url.password ||
     url.hash
+  ) {
+    throw new WebhookError("INVALID_URL");
+  }
+
+  const allowPrivate = options.allowPrivateNetwork ?? webhookPrivateNetworksAllowed();
+  const devLoopback = options.allowInsecureLoopback === true && isLoopbackHost(hostname);
+  if (
+    !allowPrivate &&
+    !devLoopback &&
+    (hostname === "localhost" ||
+      hostname.endsWith(".localhost") ||
+      isNonPublicAddress(hostname))
   ) {
     throw new WebhookError("INVALID_URL");
   }

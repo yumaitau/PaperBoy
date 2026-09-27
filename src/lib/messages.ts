@@ -7,8 +7,14 @@ import {
   messageAttachments,
   messages,
   orgs,
+  orgMembers,
 } from "@/db/schema";
 import type { ApiKeyPrincipal } from "@/lib/api-key-auth";
+import {
+  AuthorizationError,
+  isOrgRole,
+  requirePermission,
+} from "@/lib/authorization";
 import {
   attachmentStore as configuredAttachmentStore,
   attachmentStorageKey,
@@ -186,6 +192,27 @@ function replayMessage(
   };
 }
 
+// API keys act for their creator. Removing or demoting the creator must stop
+// the key from sending, as every other key operation already enforces.
+async function requireApiKeyCreatorCanSend(principal: MessageQueuePrincipal) {
+  if (!principal.apiKeyId) return;
+  if (!principal.actorUserId) throw new AuthorizationError("messages.send");
+  const [membership] = await db
+    .select({ role: orgMembers.role })
+    .from(orgMembers)
+    .where(
+      and(
+        eq(orgMembers.orgId, principal.orgId),
+        eq(orgMembers.userId, principal.actorUserId),
+      ),
+    )
+    .limit(1);
+  if (!membership || !isOrgRole(membership.role)) {
+    throw new AuthorizationError("messages.send");
+  }
+  requirePermission(membership.role, "messages.send");
+}
+
 export async function queueEmail(input: {
   allowAttachments?: boolean;
   attachmentStore?: AttachmentStore;
@@ -196,6 +223,7 @@ export async function queueEmail(input: {
   providerSenderDomains?: typeof providerVerifiedSenderDomains;
   rateLimitNow?: Date;
 }): Promise<QueuedMessageRecord> {
+  await requireApiKeyCreatorCanSend(input.principal);
   const payload = await materializeTemplateSendPayload({
     orgId: input.principal.orgId,
     payload: input.payload,

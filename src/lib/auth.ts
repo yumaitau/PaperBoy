@@ -8,10 +8,10 @@ import { twoFactor } from "better-auth/plugins";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import {
-  acceptPendingInvitationsForEmail,
   canCreateAccountForEmail,
   ensureDefaultOrganization,
 } from "@/lib/organizations";
+import { isOrganizationInvitationId } from "@/lib/organization-invite-access";
 import { configuredPasskeys } from "@/lib/passkey-configuration";
 import {
   defaultApplicationTimeZone,
@@ -27,6 +27,16 @@ if (!secret || secret.length < 32) {
 
 if (!baseURL) {
   throw new Error("BETTER_AUTH_URL is required");
+}
+
+// The invite page signs up with callbackURL "/invite/<id>"; that id is the
+// proof the sign-up came from the emailed invitation link.
+function signUpInvitationId(context: unknown): string | null {
+  const body = (context as { body?: { callbackURL?: unknown } } | null)?.body;
+  const match = /^\/invite\/([^/?#]+)/.exec(
+    typeof body?.callbackURL === "string" ? body.callbackURL : "",
+  );
+  return match && isOrganizationInvitationId(match[1]) ? match[1] : null;
 }
 
 export const auth = betterAuth({
@@ -45,8 +55,8 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (user) => {
-          if (await canCreateAccountForEmail(user.email)) {
+        before: async (user, context) => {
+          if (await canCreateAccountForEmail(user.email, signUpInvitationId(context))) {
             return { data: user };
           }
 
@@ -63,10 +73,6 @@ export const auth = betterAuth({
                   : null,
               id: user.id,
               name: user.name,
-            });
-            await acceptPendingInvitationsForEmail({
-              email: user.email,
-              userId: user.id,
             });
           } catch (error) {
             if (context) {

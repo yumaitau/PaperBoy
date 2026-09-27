@@ -45,7 +45,7 @@ export const PAPERBOY_API_KEY_MCP_TOOL_DEFINITIONS = [
   },
   {
     description:
-      "Create one scoped organization API key. The raw secret is shown only in this response; store it immediately. Omit scopes to grant the creator role's full permissions.",
+      "Create one scoped organization API key. The raw secret is shown only in this response; store it immediately. Omit scopes to inherit the calling key's scopes (the creator role's full permissions for an unscoped key). The environment defaults to, and must match, the calling key's environment.",
     mutating: true,
     name: PAPERBOY_API_KEY_MCP_TOOL_NAMES[1],
     schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
@@ -154,7 +154,7 @@ const apiKeyIdInputSchema = z.object({ apiKeyId: z.string().uuid() }).strict();
 
 const createApiKeyInputSchema = z
   .object({
-    environment: z.enum(["live", "test"]).default("live"),
+    environment: z.enum(["live", "test"]).optional(),
     name: z.string().min(1).max(80),
     scopes: z.array(z.string().min(1)).max(100).nullable().optional(),
   })

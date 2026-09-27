@@ -12,7 +12,7 @@ test(
     const [
       { and, eq },
       { db },
-      { apiKeys, messages, orgs, users },
+      { apiKeys, messages, orgMembers, orgs, users },
       { generateApiKey },
       { handleSendEmailRequest },
       { queueEmail },
@@ -87,6 +87,7 @@ test(
         name: "Idempotency operator",
         timezone: "Australia/Sydney",
       });
+      await db.insert(orgMembers).values({ orgId, role: "admin", userId });
       await db.insert(apiKeys).values([
         {
           createdByUserId: userId,

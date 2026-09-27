@@ -3,6 +3,7 @@ import "server-only";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  apiKeys,
   orgInvites,
   orgMembers,
   orgs,
@@ -39,6 +40,7 @@ export type OrganizationErrorCode =
   | "INVALID_NAME"
   | "INVALID_ROLE"
   | "INVITATION_NOT_FOUND"
+  | "INVITATION_REQUIRES_LINK"
   | "MEMBERSHIP_REQUIRED"
   | "USER_NOT_FOUND";
 
@@ -335,32 +337,26 @@ export async function findOrganizationInvitationById(invitationId: string) {
   return invitation ?? null;
 }
 
-export async function canCreateAccountForEmail(email: unknown): Promise<boolean> {
+/**
+ * With public sign-up off, an account can only be created from the emailed
+ * invitation link: the invitation id proves the sign-up came through the
+ * invited inbox, not merely from someone who knows or guesses the address.
+ */
+export async function canCreateAccountForEmail(
+  email: unknown,
+  invitationId?: string | null,
+): Promise<boolean> {
   if (publicSignUpEnabled()) {
     return true;
   }
 
   const normalized = normalizeInviteEmail(email);
-  if (!normalized) {
+  if (!normalized || !invitationId) {
     return false;
   }
 
   const pending = await listPendingInvitationsForUser(normalized);
-  return pending.length > 0;
-}
-
-export async function acceptPendingInvitationsForEmail(input: {
-  email: string;
-  userId: string;
-}) {
-  const pending = await listPendingInvitationsForUser(input.email);
-  for (const invitation of pending) {
-    await acceptOrganizationInvitation({
-      email: input.email,
-      invitationId: invitation.id,
-      userId: input.userId,
-    });
-  }
+  return pending.some((invitation) => invitation.id === invitationId);
 }
 
 export async function inviteOrganizationMember(input: {
@@ -452,9 +448,24 @@ export async function inviteOrganizationMember(input: {
 export async function acceptOrganizationInvitation(input: {
   email: string;
   invitationId: string;
+  /**
+   * "invite-link": the invitation id arrived from the emailed link, which proves
+   * inbox ownership and verifies the address. "verified-session": an in-app
+   * accept, allowed only once the account's email is already verified.
+   */
+  proof: "invite-link" | "verified-session";
   userId: string;
 }) {
   return db.transaction(async (tx) => {
+    const [account] = await tx
+      .select({ emailVerified: users.emailVerified })
+      .from(users)
+      .where(eq(users.id, input.userId))
+      .limit(1);
+    if (input.proof === "verified-session" && !account?.emailVerified) {
+      throw new OrganizationError("INVITATION_REQUIRES_LINK");
+    }
+
     const [invitation] = await tx
       .select({
         acceptedAt: orgInvites.acceptedAt,
@@ -501,7 +512,10 @@ export async function acceptOrganizationInvitation(input: {
 
     await tx
       .update(users)
-      .set({ activeOrgId: invitation.orgId })
+      .set({
+        activeOrgId: invitation.orgId,
+        ...(input.proof === "invite-link" ? { emailVerified: true } : {}),
+      })
       .where(eq(users.id, input.userId));
   });
 }
@@ -603,6 +617,18 @@ export async function removeOrganizationMember(input: {
     }
 
     await tx.delete(orgMembers).where(eq(orgMembers.id, input.membershipId));
+
+    // Keys act for their creator; a removed member's keys must stop working.
+    await tx
+      .update(apiKeys)
+      .set({ revokedAt: new Date() })
+      .where(
+        and(
+          eq(apiKeys.orgId, target.orgId),
+          eq(apiKeys.createdByUserId, target.userId),
+          isNull(apiKeys.revokedAt),
+        ),
+      );
 
     const [targetUser] = await tx
       .select({ defaultOrgId: users.defaultOrgId })

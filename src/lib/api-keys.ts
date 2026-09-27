@@ -5,8 +5,13 @@ import {
   generateApiKey,
   isApiKeyEnvironment,
 } from "@/lib/api-key-crypto";
-import { can, isOrgRole, requirePermission } from "@/lib/authorization";
-import type { OrgPermission, OrgRole } from "@/lib/authorization";
+import {
+  can,
+  isOrgRole,
+  ORG_PERMISSIONS,
+  requirePermission,
+} from "@/lib/authorization";
+import type { KeyScopes, OrgPermission, OrgRole } from "@/lib/authorization";
 
 export { authenticateApiKey } from "@/lib/api-key-auth";
 export type { ApiKeyPrincipal } from "@/lib/api-key-auth";
@@ -24,6 +29,35 @@ export class ApiKeyError extends Error {
     super(code);
     this.name = "ApiKeyError";
   }
+}
+
+/** The API key making a key-management call, when the caller is not a console session. */
+export type CallingApiKey = { environment: string; scopes: KeyScopes };
+
+function effectivePermissions(role: OrgRole, scopes: OrgPermission[] | null) {
+  return scopes ?? ORG_PERMISSIONS.filter((permission) => can(role, permission));
+}
+
+// A key may only hand out what it already holds: a narrowly scoped key must not
+// mint or widen keys to its creator's full role.
+function boundByCallingKey(
+  scopes: OrgPermission[] | null,
+  callingKey: CallingApiKey | undefined,
+): OrgPermission[] | null {
+  if (!callingKey?.scopes) return scopes;
+  if (scopes === null) return [...callingKey.scopes];
+  if (!scopes.every((scope) => callingKey.scopes?.includes(scope))) {
+    throw new ApiKeyError("INVALID_SCOPES");
+  }
+  return scopes;
+}
+
+const ROLE_RANK: Record<OrgRole, number> = { member: 0, agency: 1, admin: 2, owner: 3 };
+
+// Editing another member's key can disable it (scopes []), so it needs at least
+// that member's rank.
+function canManageKeysOf(actor: OrgRole, creator: OrgRole): boolean {
+  return ROLE_RANK[actor] >= ROLE_RANK[creator];
 }
 
 function normalizeKeyName(value: unknown): string | null {
@@ -64,6 +98,7 @@ function normalizeScopes(
 
 export async function createApiKey(input: {
   actorUserId: string;
+  callingKey?: CallingApiKey;
   environment: unknown;
   name: unknown;
   orgId: string;
@@ -77,6 +112,11 @@ export async function createApiKey(input: {
   }
 
   if (!isApiKeyEnvironment(environment)) {
+    throw new ApiKeyError("INVALID_ENVIRONMENT");
+  }
+
+  // A test key cannot mint a live key (or the reverse).
+  if (input.callingKey && input.callingKey.environment !== environment) {
     throw new ApiKeyError("INVALID_ENVIRONMENT");
   }
 
@@ -99,7 +139,10 @@ export async function createApiKey(input: {
     }
 
     requirePermission(membership.role, "apiKeys.create");
-    const scopes = normalizeScopes(input.scopes, membership.role);
+    const scopes = boundByCallingKey(
+      normalizeScopes(input.scopes, membership.role),
+      input.callingKey,
+    );
 
     const [created] = await tx
       .insert(apiKeys)
@@ -212,13 +255,18 @@ export async function getApiKey(input: {
 export async function updateApiKey(input: {
   actorUserId: string;
   apiKeyId: string;
+  callingKey?: CallingApiKey;
   name?: unknown;
   orgId: string;
   scopes?: unknown;
 }) {
   return db.transaction(async (tx) => {
     const [key] = await tx
-      .select({ orgId: apiKeys.orgId })
+      .select({
+        createdByUserId: apiKeys.createdByUserId,
+        environment: apiKeys.environment,
+        orgId: apiKeys.orgId,
+      })
       .from(apiKeys)
       .where(eq(apiKeys.id, input.apiKeyId))
       .for("update");
@@ -256,8 +304,42 @@ export async function updateApiKey(input: {
       patch.name = name;
     }
 
+    if (input.callingKey && input.callingKey.environment !== key.environment) {
+      throw new ApiKeyError("KEY_NOT_FOUND");
+    }
+
     if (input.scopes !== undefined) {
-      patch.scopes = normalizeScopes(input.scopes, membership.role);
+      const scopes = boundByCallingKey(
+        normalizeScopes(input.scopes, membership.role),
+        input.callingKey,
+      );
+      // A key runs with its creator's role, so an editor may only rescope keys
+      // of members they outrank or match, and only within their own role.
+      if (key.createdByUserId && key.createdByUserId !== input.actorUserId) {
+        const [creator] = await tx
+          .select({ role: orgMembers.role })
+          .from(orgMembers)
+          .where(
+            and(
+              eq(orgMembers.orgId, key.orgId),
+              eq(orgMembers.userId, key.createdByUserId),
+            ),
+          )
+          .limit(1);
+        const actorRole = membership.role;
+        if (creator && isOrgRole(creator.role)) {
+          const creatorRole = creator.role;
+          if (
+            !canManageKeysOf(actorRole, creatorRole) ||
+            !effectivePermissions(creatorRole, scopes).every((permission) =>
+              can(actorRole, permission),
+            )
+          ) {
+            throw new ApiKeyError("INVALID_SCOPES");
+          }
+        }
+      }
+      patch.scopes = scopes;
     }
 
     if (Object.keys(patch).length === 0) {

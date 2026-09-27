@@ -20,6 +20,7 @@ export async function acceptInvitationFromLinkAction(formData: FormData) {
     await acceptOrganizationInvitation({
       email: session.user.email,
       invitationId,
+      proof: "invite-link",
       userId: session.user.id,
     });
   } catch (error) {

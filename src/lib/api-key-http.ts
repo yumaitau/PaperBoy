@@ -309,7 +309,8 @@ export const apiKeyApiServices: ApiKeyHttpServices = {
 
     return createApiKey({
       actorUserId: principal.actorUserId,
-      environment: input["environment"] ?? "live",
+      callingKey: { environment: principal.environment, scopes: principal.scopes },
+      environment: input["environment"] ?? principal.environment,
       name: input["name"],
       orgId: principal.orgId,
       scopes: Object.hasOwn(input, "scopes") ? input["scopes"] : undefined,
@@ -370,6 +371,7 @@ export const apiKeyApiServices: ApiKeyHttpServices = {
     return updateApiKey({
       actorUserId: principal.actorUserId,
       apiKeyId,
+      callingKey: { environment: principal.environment, scopes: principal.scopes },
       name: Object.hasOwn(input, "name") ? input["name"] : undefined,
       orgId: principal.orgId,
       scopes: Object.hasOwn(input, "scopes") ? input["scopes"] : undefined,

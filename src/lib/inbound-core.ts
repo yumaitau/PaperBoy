@@ -411,6 +411,22 @@ function parseRawHeaders(raw: string): Map<string, string[]> {
   return headers;
 }
 
+/**
+ * SES prepends its own Received header, so the top-most one is trustworthy.
+ * For a single-recipient delivery it names the SMTP envelope recipient the
+ * receipt rule accepted ("... by inbound-smtp.<region>.amazonaws.com ... for
+ * <rcpt>;"). Sender-written To/Cc headers must not decide routing when this
+ * is available.
+ */
+export function sesEnvelopeRecipient(raw: string): string | null {
+  const top = parseRawHeaders(raw).get("received")?.[0];
+  if (!top || !/\bby inbound-smtp\.[a-z0-9-]+\.amazonaws\.com\b/i.test(top)) {
+    return null;
+  }
+  const match = /\bfor\s+<?([^\s<>;]+@[^\s<>;]+)>?\s*;/i.exec(top);
+  return match?.[1]?.toLowerCase() ?? null;
+}
+
 function bounceLocalPart(from: string | null): boolean {
   if (!from) return false;
   const parsed = parseEmailAddressField(from);

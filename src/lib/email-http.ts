@@ -1,6 +1,6 @@
 import type { ApiKeyPrincipal } from "@/lib/api-key-auth";
 import { AttachmentStorageError } from "@/lib/attachment-storage";
-import { isKeyScopeGranted } from "@/lib/authorization";
+import { AuthorizationError, isKeyScopeGranted } from "@/lib/authorization";
 import { DomainError } from "@/lib/domain-core";
 import { EmailError, normalizeIdempotencyKey } from "@/lib/email-core";
 import type { QueuedMessageRecord } from "@/lib/messages";
@@ -48,6 +48,19 @@ export function emailJson(
 }
 
 export function describeEmailFailure(error: unknown): EmailFailure {
+  if (error instanceof AuthorizationError) {
+    return {
+      body: {
+        error: {
+          code: "forbidden",
+          message:
+            "The API key's creator is no longer an organization member allowed to send email. Create a new key from a current owner, admin, or agency member.",
+        },
+      },
+      status: 403,
+    };
+  }
+
   if (error instanceof RateLimitError) {
     return {
       body: {

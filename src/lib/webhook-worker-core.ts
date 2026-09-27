@@ -1,7 +1,10 @@
+import { lookup } from "node:dns/promises";
 import {
   configuredWebhookEncryptionKey,
   decryptWebhookSigningSecret,
+  isNonPublicAddress,
   signWebhook,
+  webhookPrivateNetworksAllowed,
   WebhookError,
 } from "@/lib/webhook-core";
 import {
@@ -110,13 +113,57 @@ function deliveryFailure(error: unknown): WebhookFailure {
   };
 }
 
+async function resolveHost(hostname: string): Promise<string[]> {
+  const host = hostname.replace(/^\[|\]$/g, "");
+  if (/^[\d.]+$/.test(host) || host.includes(":")) return [host];
+  return (await lookup(host, { all: true, verbatim: true })).map((entry) => entry.address);
+}
+
+/**
+ * Re-check the destination right before each delivery: the stored URL may
+ * name a DNS host that resolves inward, or predate the save-time check.
+ * (DNS can still change between this lookup and the connection; operators
+ * should also restrict worker egress.)
+ */
+async function assertDeliverableDestination(
+  url: string,
+  resolve: (hostname: string) => Promise<string[]>,
+): Promise<void> {
+  if (webhookPrivateNetworksAllowed()) return;
+  const { hostname } = new URL(url);
+  let addresses: string[];
+  try {
+    addresses = await resolve(hostname);
+  } catch {
+    throw new WebhookDeliveryError({
+      code: "webhook_network_error",
+      reason: "Webhook endpoint could not be reached.",
+      responseStatus: null,
+      retryable: true,
+    });
+  }
+  const devLoopbackOnly =
+    process.env.NODE_ENV !== "production" &&
+    addresses.every((address) => address === "::1" || address.startsWith("127."));
+  if (!devLoopbackOnly && addresses.some(isNonPublicAddress)) {
+    throw new WebhookDeliveryError({
+      code: "webhook_destination_blocked",
+      reason: "Webhook endpoint resolves to a private or reserved network address.",
+      responseStatus: null,
+      retryable: false,
+    });
+  }
+}
+
 export async function postWebhook(input: {
   claim: WebhookClaim;
   encryptionKey?: Buffer;
   fetch?: typeof fetch;
   now?: Date;
+  resolve?: (hostname: string) => Promise<string[]>;
   timeoutMs?: number;
 }): Promise<number> {
+  await assertDeliverableDestination(input.claim.url, input.resolve ?? resolveHost);
   const now = input.now ?? new Date();
   const timestamp = Math.floor(now.getTime() / 1000);
   const secret = decryptWebhookSigningSecret({
@@ -161,6 +208,7 @@ export async function processNextWebhook(input: {
   encryptionKey?: Buffer;
   fetch?: typeof fetch;
   now?: () => Date;
+  resolve?: (hostname: string) => Promise<string[]>;
   store: WebhookStore;
   workerId: string;
 }): Promise<WebhookWorkerResult> {
@@ -183,6 +231,7 @@ export async function processNextWebhook(input: {
       encryptionKey: input.encryptionKey,
       fetch: input.fetch,
       now: claimedAt,
+      resolve: input.resolve,
     });
     const updated = await input.store.markDelivered({
       attemptCount: claim.attemptCount,

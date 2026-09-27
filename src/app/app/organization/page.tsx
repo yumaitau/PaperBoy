@@ -51,6 +51,8 @@ const errorMessages: Record<string, string> = {
   invalid_email: "Enter a valid email address.",
   invalid_name: "Enter an organization name of at most 120 characters.",
   invalid_role: "Choose the admin, agency, or member role.",
+  invitation_requires_link:
+    "Open the invitation link from your email to confirm your address before joining.",
   invalid_rate_limits:
     "Use whole-number limits, with the test limit higher than the live limit.",
   invalid_open_tracking: "Choose whether open tracking is enabled.",
@@ -223,16 +225,23 @@ export default async function OrganizationPage({
                 <br />
                 Role: {invitation.role}
               </p>
-              <form action={acceptInvitationAction}>
-                <input
-                  name="invitationId"
-                  type="hidden"
-                  value={invitation.id}
-                />
-                <button className="btn btn-primary" type="submit">
-                  Accept invitation
-                </button>
-              </form>
+              {session.user.emailVerified ? (
+                <form action={acceptInvitationAction}>
+                  <input
+                    name="invitationId"
+                    type="hidden"
+                    value={invitation.id}
+                  />
+                  <button className="btn btn-primary" type="submit">
+                    Accept invitation
+                  </button>
+                </form>
+              ) : (
+                <p className="field-help">
+                  Open the invitation link emailed to {session.user.email} to
+                  confirm the address and join.
+                </p>
+              )}
             </div>
           ))}
         </div>

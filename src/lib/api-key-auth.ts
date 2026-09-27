@@ -85,19 +85,14 @@ function normalizeScopes(value: unknown): OrgPermission[] | null {
     return null;
   }
 
+  // Fail closed: a malformed or unknown stored scope must never widen a key to
+  // unrestricted (null) access. Unknown entries are dropped.
   if (!Array.isArray(value)) {
-    return null;
+    return [];
   }
 
-  const scopes: OrgPermission[] = [];
-
-  for (const entry of value) {
-    if (typeof entry !== "string" || !KNOWN_PERMISSIONS.has(entry)) {
-      return null;
-    }
-
-    scopes.push(entry as OrgPermission);
-  }
-
-  return scopes;
+  return value.filter(
+    (entry): entry is OrgPermission =>
+      typeof entry === "string" && KNOWN_PERMISSIONS.has(entry),
+  );
 }

@@ -58,6 +58,7 @@ export const suppressionApiServices: SuppressionHttpServices = {
   update: (principal, suppressionId, payload) =>
     updateSuppression({
       actorUserId: actorUserId(principal, "suppressions.manage"),
+      keyScopes: principal.scopes,
       orgId: principal.orgId,
       payload,
       suppressionId,

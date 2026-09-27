@@ -284,10 +284,13 @@ async function claimRecipient(input: {
       return null;
     }
 
-    let authorized = false;
+    // API-key broadcasts act for the key's creator, so both the key and the
+    // creator's current membership must still allow sending.
+    let creatorId: string | null = broadcast.createdByUserId;
+    let keyUsable = true;
     if (broadcast.apiKeyId) {
       const [credential] = await tx
-        .select({ revokedAt: apiKeys.revokedAt })
+        .select({ createdByUserId: apiKeys.createdByUserId, revokedAt: apiKeys.revokedAt })
         .from(apiKeys)
         .where(
           and(
@@ -296,15 +299,19 @@ async function claimRecipient(input: {
           ),
         )
         .limit(1);
-      authorized = Boolean(credential && !credential.revokedAt);
-    } else if (broadcast.createdByUserId) {
+      keyUsable = Boolean(credential && !credential.revokedAt);
+      creatorId = credential?.createdByUserId ?? null;
+    }
+
+    let authorized = false;
+    if (keyUsable && creatorId) {
       const [membership] = await tx
         .select({ role: orgMembers.role })
         .from(orgMembers)
         .where(
           and(
             eq(orgMembers.orgId, broadcast.orgId),
-            eq(orgMembers.userId, broadcast.createdByUserId),
+            eq(orgMembers.userId, creatorId),
           ),
         )
         .limit(1);
@@ -423,11 +430,20 @@ async function deferRateLimitedBroadcast(input: {
   const delaySeconds = Math.max(1, input.retryAfterSeconds);
   const runAt = new Date(input.now.getTime() + delaySeconds * 1000);
   const [updated] = await db.transaction(async (tx) => {
+    // A pause or cancel may commit while queueEmail runs; never overwrite it.
+    const [current] = await tx
+      .select({ status: broadcasts.status })
+      .from(broadcasts)
+      .where(eq(broadcasts.id, input.broadcastId))
+      .for("update");
+    const running = current?.status === "running";
+
     await tx
       .update(broadcastRecipients)
       .set({
         failureCode: null,
-        status: "pending",
+        processedAt: current?.status === "cancelled" ? input.now : null,
+        status: current?.status === "cancelled" ? "cancelled" : "pending",
         updatedAt: input.now,
       })
       .where(
@@ -436,6 +452,8 @@ async function deferRateLimitedBroadcast(input: {
           eq(broadcastRecipients.status, "processing"),
         ),
       );
+    if (!running) return [];
+
     return tx
       .update(broadcasts)
       .set({
@@ -444,7 +462,9 @@ async function deferRateLimitedBroadcast(input: {
         status: "scheduled",
         updatedAt: input.now,
       })
-      .where(eq(broadcasts.id, input.broadcastId))
+      .where(
+        and(eq(broadcasts.id, input.broadcastId), eq(broadcasts.status, "running")),
+      )
       .returning({ id: broadcasts.id, orgId: broadcasts.orgId });
   });
   if (updated) {
