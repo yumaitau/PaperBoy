@@ -437,25 +437,25 @@ export const segmentApiServices: SegmentHttpServices = {
     }),
   deleteContact: (principal, contactId) =>
     deleteTopLevelContact({
-      actorUserId: scoped(principal, "audiences.manage"),
+      actorUserId: scoped(principal, "audiences.delete"),
       contactId,
       orgId: principal.orgId,
     }),
   deleteContactProperty: (principal, propertyId) =>
     deleteContactProperty({
-      actorUserId: scoped(principal, "contactProperties.manage"),
+      actorUserId: scoped(principal, "contactProperties.delete"),
       orgId: principal.orgId,
       propertyId,
     }),
   deleteSegment: (principal, segmentId) =>
     deleteSegment({
-      actorUserId: scoped(principal, "segments.manage"),
+      actorUserId: scoped(principal, "segments.delete"),
       orgId: principal.orgId,
       segmentId,
     }),
   deleteTopic: (principal, topicId) =>
     deleteTopic({
-      actorUserId: scoped(principal, "topics.manage"),
+      actorUserId: scoped(principal, "topics.delete"),
       orgId: principal.orgId,
       topicId,
     }),

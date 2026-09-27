@@ -167,7 +167,7 @@ function actorUserId(principal: ApiKeyPrincipal): string {
 
 function scoped(
   principal: ApiKeyPrincipal,
-  permission: "events.manage" | "events.read",
+  permission: "events.delete" | "events.manage" | "events.read",
 ): string {
   requireKeyScope(principal.scopes, permission);
   return actorUserId(principal);
@@ -182,7 +182,7 @@ export const customEventApiServices: CustomEventHttpServices = {
     }),
   delete: (principal, identifier) =>
     deleteEvent({
-      actorUserId: scoped(principal, "events.manage"),
+      actorUserId: scoped(principal, "events.delete"),
       identifier,
       orgId: principal.orgId,
     }),

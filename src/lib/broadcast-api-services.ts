@@ -53,7 +53,11 @@ export const broadcastApiServices: BroadcastHttpServices = {
     return createBroadcast({ payload, principal });
   },
   delete: (principal, broadcastId) =>
-    deleteBroadcast(controlContext(principal, broadcastId)),
+    deleteBroadcast({
+      actorUserId: actorUserId(principal, "broadcasts.delete"),
+      broadcastId,
+      orgId: principal.orgId,
+    }),
   get: (principal, broadcastId) =>
     getBroadcast(context(principal, broadcastId)),
   list: (principal) =>

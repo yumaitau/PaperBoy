@@ -33,7 +33,7 @@ export const suppressionApiServices: SuppressionHttpServices = {
     }),
   delete: (principal, suppressionId) =>
     deleteSuppression({
-      actorUserId: actorUserId(principal, "suppressions.manage"),
+      actorUserId: actorUserId(principal, "suppressions.delete"),
       orgId: principal.orgId,
       suppressionId,
     }),

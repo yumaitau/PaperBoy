@@ -188,7 +188,7 @@ function actorUserId(principal: ApiKeyPrincipal): string {
 
 function scoped(
   principal: ApiKeyPrincipal,
-  permission: "automations.manage" | "automations.read",
+  permission: "automations.delete" | "automations.manage" | "automations.read",
 ): string {
   requireKeyScope(principal.scopes, permission);
   return actorUserId(principal);
@@ -203,7 +203,7 @@ export const automationApiServices: AutomationHttpServices = {
     }),
   delete: (principal, automationId) =>
     deleteAutomation({
-      actorUserId: scoped(principal, "automations.manage"),
+      actorUserId: scoped(principal, "automations.delete"),
       automationId,
       orgId: principal.orgId,
     }),

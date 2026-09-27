@@ -36,9 +36,9 @@ function base(principal: ApiKeyPrincipal, permission: OrgPermission) {
 export const audienceApiServices = {
   createAudience: (principal, payload) => createAudience({ ...base(principal, "audiences.manage"), payload }),
   createContact: (principal, audienceId, payload) => createContact({ ...base(principal, "audiences.manage"), audienceId, payload }),
-  deleteAudience: (principal, audienceId) => deleteAudience({ ...base(principal, "audiences.manage"), audienceId }),
-  deleteContact: (principal, audienceId, contactId) => deleteContact({ ...base(principal, "audiences.manage"), audienceId, contactId }),
-  deleteUnsubscribedContacts: (principal, audienceId) => deleteUnsubscribedContacts({ ...base(principal, "audiences.manage"), audienceId }),
+  deleteAudience: (principal, audienceId) => deleteAudience({ ...base(principal, "audiences.delete"), audienceId }),
+  deleteContact: (principal, audienceId, contactId) => deleteContact({ ...base(principal, "audiences.delete"), audienceId, contactId }),
+  deleteUnsubscribedContacts: (principal, audienceId) => deleteUnsubscribedContacts({ ...base(principal, "audiences.delete"), audienceId }),
   getAudience: (principal, audienceId) => getAudience({ ...base(principal, "audiences.read"), audienceId }),
   getContact: (principal, audienceId, contactId) => getContact({ ...base(principal, "audiences.read"), audienceId, contactId }),
   importContacts: (principal, audienceId, csv) => importContacts({ ...base(principal, "audiences.manage"), audienceId, csv }),

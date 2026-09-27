@@ -32,7 +32,7 @@ export const webhookApiServices: WebhookHttpServices = {
     });
   },
   delete: (principal, webhookId) => {
-    requireKeyScope(principal.scopes, "webhooks.manage");
+    requireKeyScope(principal.scopes, "webhooks.delete");
     return deleteWebhook({
       actorUserId: principal.actorUserId,
       orgId: principal.orgId,
