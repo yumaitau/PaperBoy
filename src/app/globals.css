@@ -2169,6 +2169,43 @@ body:has(.broadcast-workspace) {
   grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
 }
 
+.shared-email-card {
+  max-width: 760px;
+  width: 100%;
+}
+
+.shared-email-meta {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 14px;
+}
+
+.shared-email-meta div {
+  display: flex;
+  gap: 8px;
+}
+
+.shared-email-meta dt {
+  color: var(--ink-soft);
+  min-width: 44px;
+}
+
+.shared-email-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.shared-email-frame {
+  background: #fff;
+  border: 1px solid var(--rule-heavy);
+  min-height: 480px;
+  width: 100%;
+}
+
+.shared-email-text {
+  white-space: pre-wrap;
+}
+
 .segment-card {
   margin-top: 20px;
 }
