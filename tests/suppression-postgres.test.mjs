@@ -144,6 +144,11 @@ test(
           }),
         AuthorizationError,
       );
+      await deleteSuppression({
+        actorUserId: adminId,
+        orgId: firstOrgId,
+        suppressionId: agencyCreated.id,
+      });
       await assert.rejects(
         () =>
           getSuppression({
