@@ -80,7 +80,16 @@ class BroadcastsApi
         'createBroadcast' => [
             'application/json',
         ],
+        'deleteBroadcast' => [
+            'application/json',
+        ],
         'getBroadcast' => [
+            'application/json',
+        ],
+        'listBroadcastClickedLinks' => [
+            'application/json',
+        ],
+        'listBroadcastRecipients' => [
             'application/json',
         ],
         'listBroadcasts' => [
@@ -90,6 +99,9 @@ class BroadcastsApi
             'application/json',
         ],
         'resumeBroadcast' => [
+            'application/json',
+        ],
+        'sendBroadcast' => [
             'application/json',
         ],
         'updateBroadcast' => [
@@ -855,6 +867,348 @@ class BroadcastsApi
     }
 
     /**
+     * Operation deleteBroadcast
+     *
+     * Delete a broadcast
+     *
+     * @param  string $broadcast_id broadcast_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['deleteBroadcast'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \PaperBoy\OpenApi\Model\DeletedResource|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope
+     */
+    public function deleteBroadcast($broadcast_id, string $contentType = self::contentTypes['deleteBroadcast'][0])
+    {
+        list($response) = $this->deleteBroadcastWithHttpInfo($broadcast_id, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation deleteBroadcastWithHttpInfo
+     *
+     * Delete a broadcast
+     *
+     * @param  string $broadcast_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['deleteBroadcast'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \PaperBoy\OpenApi\Model\DeletedResource|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function deleteBroadcastWithHttpInfo($broadcast_id, string $contentType = self::contentTypes['deleteBroadcast'][0])
+    {
+        $request = $this->deleteBroadcastRequest($broadcast_id, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\DeletedResource',
+                        $request,
+                        $response,
+                    );
+                case 401:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 403:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 404:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 409:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 500:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\PaperBoy\OpenApi\Model\DeletedResource',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\DeletedResource',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 401:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 404:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 409:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 500:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation deleteBroadcastAsync
+     *
+     * Delete a broadcast
+     *
+     * @param  string $broadcast_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['deleteBroadcast'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function deleteBroadcastAsync($broadcast_id, string $contentType = self::contentTypes['deleteBroadcast'][0])
+    {
+        return $this->deleteBroadcastAsyncWithHttpInfo($broadcast_id, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation deleteBroadcastAsyncWithHttpInfo
+     *
+     * Delete a broadcast
+     *
+     * @param  string $broadcast_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['deleteBroadcast'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function deleteBroadcastAsyncWithHttpInfo($broadcast_id, string $contentType = self::contentTypes['deleteBroadcast'][0])
+    {
+        $returnType = '\PaperBoy\OpenApi\Model\DeletedResource';
+        $request = $this->deleteBroadcastRequest($broadcast_id, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'deleteBroadcast'
+     *
+     * @param  string $broadcast_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['deleteBroadcast'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function deleteBroadcastRequest($broadcast_id, string $contentType = self::contentTypes['deleteBroadcast'][0])
+    {
+
+        // verify the required parameter 'broadcast_id' is set
+        if ($broadcast_id === null || (is_array($broadcast_id) && count($broadcast_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $broadcast_id when calling deleteBroadcast'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/broadcasts/{broadcastId}';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($broadcast_id !== null) {
+            $resourcePath = str_replace(
+                '{broadcastId}',
+                ObjectSerializer::toPathValue($broadcast_id),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (pb_live_... or pb_test_...) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'DELETE',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
      * Operation getBroadcast
      *
      * Get one broadcast
@@ -1113,6 +1467,742 @@ class BroadcastsApi
         $httpBody = '';
         $multipart = false;
 
+
+
+        // path params
+        if ($broadcast_id !== null) {
+            $resourcePath = str_replace(
+                '{broadcastId}',
+                ObjectSerializer::toPathValue($broadcast_id),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (pb_live_... or pb_test_...) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'GET',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation listBroadcastClickedLinks
+     *
+     * List one broadcast&#39;s clicked links
+     *
+     * @param  string $broadcast_id broadcast_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listBroadcastClickedLinks'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \PaperBoy\OpenApi\Model\BroadcastClickedLinkListEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope
+     */
+    public function listBroadcastClickedLinks($broadcast_id, string $contentType = self::contentTypes['listBroadcastClickedLinks'][0])
+    {
+        list($response) = $this->listBroadcastClickedLinksWithHttpInfo($broadcast_id, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation listBroadcastClickedLinksWithHttpInfo
+     *
+     * List one broadcast&#39;s clicked links
+     *
+     * @param  string $broadcast_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listBroadcastClickedLinks'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \PaperBoy\OpenApi\Model\BroadcastClickedLinkListEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function listBroadcastClickedLinksWithHttpInfo($broadcast_id, string $contentType = self::contentTypes['listBroadcastClickedLinks'][0])
+    {
+        $request = $this->listBroadcastClickedLinksRequest($broadcast_id, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\BroadcastClickedLinkListEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 401:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 403:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 404:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 500:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\PaperBoy\OpenApi\Model\BroadcastClickedLinkListEnvelope',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\BroadcastClickedLinkListEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 401:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 404:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 500:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation listBroadcastClickedLinksAsync
+     *
+     * List one broadcast&#39;s clicked links
+     *
+     * @param  string $broadcast_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listBroadcastClickedLinks'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function listBroadcastClickedLinksAsync($broadcast_id, string $contentType = self::contentTypes['listBroadcastClickedLinks'][0])
+    {
+        return $this->listBroadcastClickedLinksAsyncWithHttpInfo($broadcast_id, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation listBroadcastClickedLinksAsyncWithHttpInfo
+     *
+     * List one broadcast&#39;s clicked links
+     *
+     * @param  string $broadcast_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listBroadcastClickedLinks'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function listBroadcastClickedLinksAsyncWithHttpInfo($broadcast_id, string $contentType = self::contentTypes['listBroadcastClickedLinks'][0])
+    {
+        $returnType = '\PaperBoy\OpenApi\Model\BroadcastClickedLinkListEnvelope';
+        $request = $this->listBroadcastClickedLinksRequest($broadcast_id, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'listBroadcastClickedLinks'
+     *
+     * @param  string $broadcast_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listBroadcastClickedLinks'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function listBroadcastClickedLinksRequest($broadcast_id, string $contentType = self::contentTypes['listBroadcastClickedLinks'][0])
+    {
+
+        // verify the required parameter 'broadcast_id' is set
+        if ($broadcast_id === null || (is_array($broadcast_id) && count($broadcast_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $broadcast_id when calling listBroadcastClickedLinks'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/broadcasts/{broadcastId}/clicked-links';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($broadcast_id !== null) {
+            $resourcePath = str_replace(
+                '{broadcastId}',
+                ObjectSerializer::toPathValue($broadcast_id),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (pb_live_... or pb_test_...) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'GET',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation listBroadcastRecipients
+     *
+     * List one broadcast&#39;s recipients
+     *
+     * @param  string $broadcast_id broadcast_id (required)
+     * @param  string|null $type type (optional)
+     * @param  string|null $email email (optional)
+     * @param  string|null $bounce_type bounce_type (optional)
+     * @param  int|null $limit limit (optional, default to 100)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listBroadcastRecipients'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \PaperBoy\OpenApi\Model\BroadcastRecipientListEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope
+     */
+    public function listBroadcastRecipients($broadcast_id, $type = null, $email = null, $bounce_type = null, $limit = 100, string $contentType = self::contentTypes['listBroadcastRecipients'][0])
+    {
+        list($response) = $this->listBroadcastRecipientsWithHttpInfo($broadcast_id, $type, $email, $bounce_type, $limit, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation listBroadcastRecipientsWithHttpInfo
+     *
+     * List one broadcast&#39;s recipients
+     *
+     * @param  string $broadcast_id (required)
+     * @param  string|null $type (optional)
+     * @param  string|null $email (optional)
+     * @param  string|null $bounce_type (optional)
+     * @param  int|null $limit (optional, default to 100)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listBroadcastRecipients'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \PaperBoy\OpenApi\Model\BroadcastRecipientListEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function listBroadcastRecipientsWithHttpInfo($broadcast_id, $type = null, $email = null, $bounce_type = null, $limit = 100, string $contentType = self::contentTypes['listBroadcastRecipients'][0])
+    {
+        $request = $this->listBroadcastRecipientsRequest($broadcast_id, $type, $email, $bounce_type, $limit, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\BroadcastRecipientListEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 401:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 403:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 404:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 422:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 500:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\PaperBoy\OpenApi\Model\BroadcastRecipientListEnvelope',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\BroadcastRecipientListEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 401:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 404:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 422:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 500:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation listBroadcastRecipientsAsync
+     *
+     * List one broadcast&#39;s recipients
+     *
+     * @param  string $broadcast_id (required)
+     * @param  string|null $type (optional)
+     * @param  string|null $email (optional)
+     * @param  string|null $bounce_type (optional)
+     * @param  int|null $limit (optional, default to 100)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listBroadcastRecipients'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function listBroadcastRecipientsAsync($broadcast_id, $type = null, $email = null, $bounce_type = null, $limit = 100, string $contentType = self::contentTypes['listBroadcastRecipients'][0])
+    {
+        return $this->listBroadcastRecipientsAsyncWithHttpInfo($broadcast_id, $type, $email, $bounce_type, $limit, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation listBroadcastRecipientsAsyncWithHttpInfo
+     *
+     * List one broadcast&#39;s recipients
+     *
+     * @param  string $broadcast_id (required)
+     * @param  string|null $type (optional)
+     * @param  string|null $email (optional)
+     * @param  string|null $bounce_type (optional)
+     * @param  int|null $limit (optional, default to 100)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listBroadcastRecipients'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function listBroadcastRecipientsAsyncWithHttpInfo($broadcast_id, $type = null, $email = null, $bounce_type = null, $limit = 100, string $contentType = self::contentTypes['listBroadcastRecipients'][0])
+    {
+        $returnType = '\PaperBoy\OpenApi\Model\BroadcastRecipientListEnvelope';
+        $request = $this->listBroadcastRecipientsRequest($broadcast_id, $type, $email, $bounce_type, $limit, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'listBroadcastRecipients'
+     *
+     * @param  string $broadcast_id (required)
+     * @param  string|null $type (optional)
+     * @param  string|null $email (optional)
+     * @param  string|null $bounce_type (optional)
+     * @param  int|null $limit (optional, default to 100)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listBroadcastRecipients'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function listBroadcastRecipientsRequest($broadcast_id, $type = null, $email = null, $bounce_type = null, $limit = 100, string $contentType = self::contentTypes['listBroadcastRecipients'][0])
+    {
+
+        // verify the required parameter 'broadcast_id' is set
+        if ($broadcast_id === null || (is_array($broadcast_id) && count($broadcast_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $broadcast_id when calling listBroadcastRecipients'
+            );
+        }
+
+
+
+
+        if ($limit !== null && $limit > 100) {
+            throw new \InvalidArgumentException('invalid value for "$limit" when calling BroadcastsApi.listBroadcastRecipients, must be smaller than or equal to 100.');
+        }
+        if ($limit !== null && $limit < 1) {
+            throw new \InvalidArgumentException('invalid value for "$limit" when calling BroadcastsApi.listBroadcastRecipients, must be bigger than or equal to 1.');
+        }
+        
+
+        $resourcePath = '/api/v1/broadcasts/{broadcastId}/recipients';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $type,
+            'type', // param base name
+            'string', // openApiType
+            'form', // style
+            true, // explode
+            false // required
+        ) ?? []);
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $email,
+            'email', // param base name
+            'string', // openApiType
+            'form', // style
+            true, // explode
+            false // required
+        ) ?? []);
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $bounce_type,
+            'bounce_type', // param base name
+            'string', // openApiType
+            'form', // style
+            true, // explode
+            false // required
+        ) ?? []);
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $limit,
+            'limit', // param base name
+            'integer', // openApiType
+            'form', // style
+            true, // explode
+            false // required
+        ) ?? []);
 
 
         // path params
@@ -2111,6 +3201,389 @@ class BroadcastsApi
 
         // for model (json/xml)
         if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (pb_live_... or pb_test_...) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'POST',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation sendBroadcast
+     *
+     * Send or schedule a broadcast
+     *
+     * @param  string $broadcast_id broadcast_id (required)
+     * @param  \PaperBoy\OpenApi\Model\BroadcastSendInput|null $broadcast_send_input broadcast_send_input (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['sendBroadcast'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \PaperBoy\OpenApi\Model\BroadcastEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope
+     */
+    public function sendBroadcast($broadcast_id, $broadcast_send_input = null, string $contentType = self::contentTypes['sendBroadcast'][0])
+    {
+        list($response) = $this->sendBroadcastWithHttpInfo($broadcast_id, $broadcast_send_input, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation sendBroadcastWithHttpInfo
+     *
+     * Send or schedule a broadcast
+     *
+     * @param  string $broadcast_id (required)
+     * @param  \PaperBoy\OpenApi\Model\BroadcastSendInput|null $broadcast_send_input (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['sendBroadcast'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \PaperBoy\OpenApi\Model\BroadcastEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function sendBroadcastWithHttpInfo($broadcast_id, $broadcast_send_input = null, string $contentType = self::contentTypes['sendBroadcast'][0])
+    {
+        $request = $this->sendBroadcastRequest($broadcast_id, $broadcast_send_input, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\BroadcastEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 400:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 401:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 403:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 404:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 409:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 422:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 500:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\PaperBoy\OpenApi\Model\BroadcastEnvelope',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\BroadcastEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 400:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 401:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 404:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 409:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 422:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 500:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation sendBroadcastAsync
+     *
+     * Send or schedule a broadcast
+     *
+     * @param  string $broadcast_id (required)
+     * @param  \PaperBoy\OpenApi\Model\BroadcastSendInput|null $broadcast_send_input (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['sendBroadcast'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function sendBroadcastAsync($broadcast_id, $broadcast_send_input = null, string $contentType = self::contentTypes['sendBroadcast'][0])
+    {
+        return $this->sendBroadcastAsyncWithHttpInfo($broadcast_id, $broadcast_send_input, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation sendBroadcastAsyncWithHttpInfo
+     *
+     * Send or schedule a broadcast
+     *
+     * @param  string $broadcast_id (required)
+     * @param  \PaperBoy\OpenApi\Model\BroadcastSendInput|null $broadcast_send_input (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['sendBroadcast'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function sendBroadcastAsyncWithHttpInfo($broadcast_id, $broadcast_send_input = null, string $contentType = self::contentTypes['sendBroadcast'][0])
+    {
+        $returnType = '\PaperBoy\OpenApi\Model\BroadcastEnvelope';
+        $request = $this->sendBroadcastRequest($broadcast_id, $broadcast_send_input, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'sendBroadcast'
+     *
+     * @param  string $broadcast_id (required)
+     * @param  \PaperBoy\OpenApi\Model\BroadcastSendInput|null $broadcast_send_input (optional)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['sendBroadcast'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function sendBroadcastRequest($broadcast_id, $broadcast_send_input = null, string $contentType = self::contentTypes['sendBroadcast'][0])
+    {
+
+        // verify the required parameter 'broadcast_id' is set
+        if ($broadcast_id === null || (is_array($broadcast_id) && count($broadcast_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $broadcast_id when calling sendBroadcast'
+            );
+        }
+
+
+
+        $resourcePath = '/api/v1/broadcasts/{broadcastId}/send';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($broadcast_id !== null) {
+            $resourcePath = str_replace(
+                '{broadcastId}',
+                ObjectSerializer::toPathValue($broadcast_id),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (isset($broadcast_send_input)) {
+            if (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the body
+                $httpBody = \GuzzleHttp\Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($broadcast_send_input));
+            } else {
+                $httpBody = $broadcast_send_input;
+            }
+        } elseif (count($formParams) > 0) {
             if ($multipart) {
                 $multipartContents = [];
                 foreach ($formParams as $formParamName => $formParamValue) {

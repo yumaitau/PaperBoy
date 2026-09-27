@@ -31,6 +31,10 @@ export interface DeleteTemplateRequest {
     templateId: string;
 }
 
+export interface DuplicateTemplateRequest {
+    templateId: string;
+}
+
 export interface GetTemplateRequest {
     templateId: string;
 }
@@ -38,6 +42,10 @@ export interface GetTemplateRequest {
 export interface PreviewTemplateRequest {
     templateId: string;
     templatePreviewInput: TemplatePreviewInput;
+}
+
+export interface PublishTemplateRequest {
+    templateId: string;
 }
 
 export interface UpdateTemplateRequest {
@@ -155,6 +163,59 @@ export class TemplatesApi extends runtime.BaseAPI {
      */
     async deleteTemplate(requestParameters: DeleteTemplateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DeletedResource> {
         const response = await this.deleteTemplateRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for duplicateTemplate without sending the request
+     */
+    async duplicateTemplateRequestOpts(requestParameters: DuplicateTemplateRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['templateId'] == null) {
+            throw new runtime.RequiredError(
+                'templateId',
+                'Required parameter "templateId" was null or undefined when calling duplicateTemplate().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/templates/{templateId}/duplicate`;
+        urlPath = urlPath.replace('{templateId}', encodeURIComponent(String(requestParameters['templateId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Duplicate one template as a new draft
+     */
+    async duplicateTemplateRaw(requestParameters: DuplicateTemplateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Template>> {
+        const requestOptions = await this.duplicateTemplateRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * Duplicate one template as a new draft
+     */
+    async duplicateTemplate(requestParameters: DuplicateTemplateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Template> {
+        const response = await this.duplicateTemplateRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -316,6 +377,59 @@ export class TemplatesApi extends runtime.BaseAPI {
      */
     async previewTemplate(requestParameters: PreviewTemplateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TemplatePreview> {
         const response = await this.previewTemplateRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for publishTemplate without sending the request
+     */
+    async publishTemplateRequestOpts(requestParameters: PublishTemplateRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['templateId'] == null) {
+            throw new runtime.RequiredError(
+                'templateId',
+                'Required parameter "templateId" was null or undefined when calling publishTemplate().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/templates/{templateId}/publish`;
+        urlPath = urlPath.replace('{templateId}', encodeURIComponent(String(requestParameters['templateId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Publish one template
+     */
+    async publishTemplateRaw(requestParameters: PublishTemplateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Template>> {
+        const requestOptions = await this.publishTemplateRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * Publish one template
+     */
+    async publishTemplate(requestParameters: PublishTemplateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Template> {
+        const response = await this.publishTemplateRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

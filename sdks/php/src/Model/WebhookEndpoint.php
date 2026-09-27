@@ -58,6 +58,7 @@ class WebhookEndpoint implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $openAPITypes = [
         'created_at' => '\DateTime',
+        'enabled' => 'bool',
         'id' => 'string',
         'updated_at' => '\DateTime',
         'url' => 'string'
@@ -72,6 +73,7 @@ class WebhookEndpoint implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $openAPIFormats = [
         'created_at' => 'date-time',
+        'enabled' => null,
         'id' => 'uuid',
         'updated_at' => 'date-time',
         'url' => 'uri'
@@ -84,6 +86,7 @@ class WebhookEndpoint implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static array $openAPINullables = [
         'created_at' => false,
+        'enabled' => false,
         'id' => false,
         'updated_at' => false,
         'url' => false
@@ -176,6 +179,7 @@ class WebhookEndpoint implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $attributeMap = [
         'created_at' => 'created_at',
+        'enabled' => 'enabled',
         'id' => 'id',
         'updated_at' => 'updated_at',
         'url' => 'url'
@@ -188,6 +192,7 @@ class WebhookEndpoint implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $setters = [
         'created_at' => 'setCreatedAt',
+        'enabled' => 'setEnabled',
         'id' => 'setId',
         'updated_at' => 'setUpdatedAt',
         'url' => 'setUrl'
@@ -200,6 +205,7 @@ class WebhookEndpoint implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $getters = [
         'created_at' => 'getCreatedAt',
+        'enabled' => 'getEnabled',
         'id' => 'getId',
         'updated_at' => 'getUpdatedAt',
         'url' => 'getUrl'
@@ -263,6 +269,7 @@ class WebhookEndpoint implements ModelInterface, ArrayAccess, \JsonSerializable
     public function __construct(?array $data = null)
     {
         $this->setIfExists('created_at', $data ?? [], null);
+        $this->setIfExists('enabled', $data ?? [], null);
         $this->setIfExists('id', $data ?? [], null);
         $this->setIfExists('updated_at', $data ?? [], null);
         $this->setIfExists('url', $data ?? [], null);
@@ -297,6 +304,9 @@ class WebhookEndpoint implements ModelInterface, ArrayAccess, \JsonSerializable
 
         if ($this->container['created_at'] === null) {
             $invalidProperties[] = "'created_at' can't be null";
+        }
+        if ($this->container['enabled'] === null) {
+            $invalidProperties[] = "'enabled' can't be null";
         }
         if ($this->container['id'] === null) {
             $invalidProperties[] = "'id' can't be null";
@@ -345,6 +355,33 @@ class WebhookEndpoint implements ModelInterface, ArrayAccess, \JsonSerializable
             throw new \InvalidArgumentException('non-nullable created_at cannot be null');
         }
         $this->container['created_at'] = $created_at;
+
+        return $this;
+    }
+
+    /**
+     * Gets enabled
+     *
+     * @return bool
+     */
+    public function getEnabled()
+    {
+        return $this->container['enabled'];
+    }
+
+    /**
+     * Sets enabled
+     *
+     * @param bool $enabled enabled
+     *
+     * @return self
+     */
+    public function setEnabled($enabled)
+    {
+        if (is_null($enabled)) {
+            throw new \InvalidArgumentException('non-nullable enabled cannot be null');
+        }
+        $this->container['enabled'] = $enabled;
 
         return $this;
     }

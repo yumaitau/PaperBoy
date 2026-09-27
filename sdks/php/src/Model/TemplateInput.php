@@ -59,6 +59,7 @@ class TemplateInput implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $openAPITypes = [
         'html' => 'string',
         'name' => 'string',
+        'react' => 'string',
         'required_variables' => 'string[]',
         'subject' => 'string',
         'text' => 'string'
@@ -74,6 +75,7 @@ class TemplateInput implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $openAPIFormats = [
         'html' => null,
         'name' => null,
+        'react' => null,
         'required_variables' => null,
         'subject' => null,
         'text' => null
@@ -87,6 +89,7 @@ class TemplateInput implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static array $openAPINullables = [
         'html' => true,
         'name' => false,
+        'react' => true,
         'required_variables' => false,
         'subject' => false,
         'text' => true
@@ -180,6 +183,7 @@ class TemplateInput implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $attributeMap = [
         'html' => 'html',
         'name' => 'name',
+        'react' => 'react',
         'required_variables' => 'required_variables',
         'subject' => 'subject',
         'text' => 'text'
@@ -193,6 +197,7 @@ class TemplateInput implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $setters = [
         'html' => 'setHtml',
         'name' => 'setName',
+        'react' => 'setReact',
         'required_variables' => 'setRequiredVariables',
         'subject' => 'setSubject',
         'text' => 'setText'
@@ -206,6 +211,7 @@ class TemplateInput implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $getters = [
         'html' => 'getHtml',
         'name' => 'getName',
+        'react' => 'getReact',
         'required_variables' => 'getRequiredVariables',
         'subject' => 'getSubject',
         'text' => 'getText'
@@ -270,6 +276,7 @@ class TemplateInput implements ModelInterface, ArrayAccess, \JsonSerializable
     {
         $this->setIfExists('html', $data ?? [], null);
         $this->setIfExists('name', $data ?? [], null);
+        $this->setIfExists('react', $data ?? [], null);
         $this->setIfExists('required_variables', $data ?? [], null);
         $this->setIfExists('subject', $data ?? [], null);
         $this->setIfExists('text', $data ?? [], null);
@@ -305,6 +312,10 @@ class TemplateInput implements ModelInterface, ArrayAccess, \JsonSerializable
         if ($this->container['name'] === null) {
             $invalidProperties[] = "'name' can't be null";
         }
+        if (!is_null($this->container['react']) && (mb_strlen($this->container['react']) > 524288)) {
+            $invalidProperties[] = "invalid value for 'react', the character length must be smaller than or equal to 524288.";
+        }
+
         if ($this->container['subject'] === null) {
             $invalidProperties[] = "'subject' can't be null";
         }
@@ -380,6 +391,44 @@ class TemplateInput implements ModelInterface, ArrayAccess, \JsonSerializable
             throw new \InvalidArgumentException('non-nullable name cannot be null');
         }
         $this->container['name'] = $name;
+
+        return $this;
+    }
+
+    /**
+     * Gets react
+     *
+     * @return string|null
+     */
+    public function getReact()
+    {
+        return $this->container['react'];
+    }
+
+    /**
+     * Sets react
+     *
+     * @param string|null $react react
+     *
+     * @return self
+     */
+    public function setReact($react)
+    {
+        if (is_null($react)) {
+            array_push($this->openAPINullablesSetToNull, 'react');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('react', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        if (!is_null($react) && (mb_strlen($react) > 524288)) {
+            throw new \InvalidArgumentException('invalid length for $react when calling TemplateInput., must be smaller than or equal to 524288.');
+        }
+
+        $this->container['react'] = $react;
 
         return $this;
     }

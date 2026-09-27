@@ -15,8 +15,10 @@
 import * as runtime from '../runtime';
 import type {
     Email,
+    EmailAttachment,
     EmailBatchEnvelope,
     EmailListEnvelope,
+    EmailMetrics,
     ErrorEnvelope,
     QueuedEmail,
     RateLimitErrorEnvelope,
@@ -25,24 +27,66 @@ import type {
     ReceivedEmailAccepted,
     ReceivedEmailDiscarded,
     RescheduleEmailInput,
+    RetrievedEmailAttachmentListEnvelope,
     SendEmailInput,
+    ShareEmailInput,
+    SharedEmail,
+    SharedEmailContent,
 } from '../models/index';
 
 export interface CancelEmailRequest {
     emailId: string;
 }
 
+export interface DownloadAttachmentRequest {
+    token: string;
+}
+
 export interface GetEmailRequest {
     emailId: string;
+}
+
+export interface GetEmailAttachmentRequest {
+    emailId: string;
+    attachmentId: string;
+}
+
+export interface GetEmailMetricsRequest {
+    startDate?: string;
+    endDate?: string;
+    timezone?: string;
+    granularity?: GetEmailMetricsGranularityEnum;
+    metrics?: string;
+    dimensions?: string;
+    domainId?: string;
+    emailId?: string;
+    broadcastId?: string;
 }
 
 export interface GetReceivedEmailRequest {
     emailId: string;
 }
 
+export interface GetReceivedEmailAttachmentRequest {
+    emailId: string;
+    attachmentId: string;
+}
+
+export interface GetSharedEmailRequest {
+    token: string;
+}
+
+export interface ListEmailAttachmentsRequest {
+    emailId: string;
+}
+
 export interface ListEmailsRequest {
     page?: number;
     limit?: number;
+}
+
+export interface ListReceivedEmailAttachmentsRequest {
+    emailId: string;
 }
 
 export interface ReceiveInboundEmailRequest {
@@ -61,6 +105,11 @@ export interface SendEmailRequest {
 
 export interface SendEmailBatchRequest {
     sendEmailInput: Array<SendEmailInput>;
+}
+
+export interface ShareEmailRequest {
+    emailId: string;
+    shareEmailInput?: ShareEmailInput;
 }
 
 /**
@@ -124,6 +173,56 @@ export class EmailsApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for downloadAttachment without sending the request
+     */
+    async downloadAttachmentRequestOpts(requestParameters: DownloadAttachmentRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['token'] == null) {
+            throw new runtime.RequiredError(
+                'token',
+                'Required parameter "token" was null or undefined when calling downloadAttachment().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['token'] != null) {
+            queryParameters['token'] = requestParameters['token'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/attachments/download`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Public signed link access. No API key required.
+     * Download shared attachment bytes
+     */
+    async downloadAttachmentRaw(requestParameters: DownloadAttachmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
+        const requestOptions = await this.downloadAttachmentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.BlobApiResponse(response);
+    }
+
+    /**
+     * Public signed link access. No API key required.
+     * Download shared attachment bytes
+     */
+    async downloadAttachment(requestParameters: DownloadAttachmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
+        const response = await this.downloadAttachmentRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for getEmail without sending the request
      */
     async getEmailRequestOpts(requestParameters: GetEmailRequest): Promise<runtime.RequestOpts> {
@@ -175,6 +274,150 @@ export class EmailsApi extends runtime.BaseAPI {
      */
     async getEmail(requestParameters: GetEmailRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Email> {
         const response = await this.getEmailRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getEmailAttachment without sending the request
+     */
+    async getEmailAttachmentRequestOpts(requestParameters: GetEmailAttachmentRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['emailId'] == null) {
+            throw new runtime.RequiredError(
+                'emailId',
+                'Required parameter "emailId" was null or undefined when calling getEmailAttachment().'
+            );
+        }
+
+        if (requestParameters['attachmentId'] == null) {
+            throw new runtime.RequiredError(
+                'attachmentId',
+                'Required parameter "attachmentId" was null or undefined when calling getEmailAttachment().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/emails/{emailId}/attachments/{attachmentId}`;
+        urlPath = urlPath.replace('{emailId}', encodeURIComponent(String(requestParameters['emailId'])));
+        urlPath = urlPath.replace('{attachmentId}', encodeURIComponent(String(requestParameters['attachmentId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get one email attachment
+     */
+    async getEmailAttachmentRaw(requestParameters: GetEmailAttachmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<EmailAttachment>> {
+        const requestOptions = await this.getEmailAttachmentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * Get one email attachment
+     */
+    async getEmailAttachment(requestParameters: GetEmailAttachmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<EmailAttachment> {
+        const response = await this.getEmailAttachmentRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getEmailMetrics without sending the request
+     */
+    async getEmailMetricsRequestOpts(requestParameters: GetEmailMetricsRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['startDate'] != null) {
+            queryParameters['start_date'] = requestParameters['startDate'];
+        }
+
+        if (requestParameters['endDate'] != null) {
+            queryParameters['end_date'] = requestParameters['endDate'];
+        }
+
+        if (requestParameters['timezone'] != null) {
+            queryParameters['timezone'] = requestParameters['timezone'];
+        }
+
+        if (requestParameters['granularity'] != null) {
+            queryParameters['granularity'] = requestParameters['granularity'];
+        }
+
+        if (requestParameters['metrics'] != null) {
+            queryParameters['metrics'] = requestParameters['metrics'];
+        }
+
+        if (requestParameters['dimensions'] != null) {
+            queryParameters['dimensions'] = requestParameters['dimensions'];
+        }
+
+        if (requestParameters['domainId'] != null) {
+            queryParameters['domain_id'] = requestParameters['domainId'];
+        }
+
+        if (requestParameters['emailId'] != null) {
+            queryParameters['email_id'] = requestParameters['emailId'];
+        }
+
+        if (requestParameters['broadcastId'] != null) {
+            queryParameters['broadcast_id'] = requestParameters['broadcastId'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/emails/metrics`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Totals always cover the range; data rows appear when a dimension is requested. Email and broadcast dimensions cannot be combined.
+     * Aggregate email metrics
+     */
+    async getEmailMetricsRaw(requestParameters: GetEmailMetricsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<EmailMetrics>> {
+        const requestOptions = await this.getEmailMetricsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * Totals always cover the range; data rows appear when a dimension is requested. Email and broadcast dimensions cannot be combined.
+     * Aggregate email metrics
+     */
+    async getEmailMetrics(requestParameters: GetEmailMetricsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<EmailMetrics> {
+        const response = await this.getEmailMetricsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -234,6 +477,167 @@ export class EmailsApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for getReceivedEmailAttachment without sending the request
+     */
+    async getReceivedEmailAttachmentRequestOpts(requestParameters: GetReceivedEmailAttachmentRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['emailId'] == null) {
+            throw new runtime.RequiredError(
+                'emailId',
+                'Required parameter "emailId" was null or undefined when calling getReceivedEmailAttachment().'
+            );
+        }
+
+        if (requestParameters['attachmentId'] == null) {
+            throw new runtime.RequiredError(
+                'attachmentId',
+                'Required parameter "attachmentId" was null or undefined when calling getReceivedEmailAttachment().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/received-emails/{emailId}/attachments/{attachmentId}`;
+        urlPath = urlPath.replace('{emailId}', encodeURIComponent(String(requestParameters['emailId'])));
+        urlPath = urlPath.replace('{attachmentId}', encodeURIComponent(String(requestParameters['attachmentId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get one inbound email attachment
+     */
+    async getReceivedEmailAttachmentRaw(requestParameters: GetReceivedEmailAttachmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<EmailAttachment>> {
+        const requestOptions = await this.getReceivedEmailAttachmentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * Get one inbound email attachment
+     */
+    async getReceivedEmailAttachment(requestParameters: GetReceivedEmailAttachmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<EmailAttachment> {
+        const response = await this.getReceivedEmailAttachmentRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getSharedEmail without sending the request
+     */
+    async getSharedEmailRequestOpts(requestParameters: GetSharedEmailRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['token'] == null) {
+            throw new runtime.RequiredError(
+                'token',
+                'Required parameter "token" was null or undefined when calling getSharedEmail().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/shared/{token}`;
+        urlPath = urlPath.replace('{token}', encodeURIComponent(String(requestParameters['token'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Public signed link access. No API key required.
+     * Read a shared email
+     */
+    async getSharedEmailRaw(requestParameters: GetSharedEmailRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SharedEmailContent>> {
+        const requestOptions = await this.getSharedEmailRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * Public signed link access. No API key required.
+     * Read a shared email
+     */
+    async getSharedEmail(requestParameters: GetSharedEmailRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SharedEmailContent> {
+        const response = await this.getSharedEmailRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listEmailAttachments without sending the request
+     */
+    async listEmailAttachmentsRequestOpts(requestParameters: ListEmailAttachmentsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['emailId'] == null) {
+            throw new runtime.RequiredError(
+                'emailId',
+                'Required parameter "emailId" was null or undefined when calling listEmailAttachments().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/emails/{emailId}/attachments`;
+        urlPath = urlPath.replace('{emailId}', encodeURIComponent(String(requestParameters['emailId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * List one email\'s attachments
+     */
+    async listEmailAttachmentsRaw(requestParameters: ListEmailAttachmentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RetrievedEmailAttachmentListEnvelope>> {
+        const requestOptions = await this.listEmailAttachmentsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * List one email\'s attachments
+     */
+    async listEmailAttachments(requestParameters: ListEmailAttachmentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RetrievedEmailAttachmentListEnvelope> {
+        const response = await this.listEmailAttachmentsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for listEmails without sending the request
      */
     async listEmailsRequestOpts(requestParameters: ListEmailsRequest): Promise<runtime.RequestOpts> {
@@ -285,6 +689,59 @@ export class EmailsApi extends runtime.BaseAPI {
      */
     async listEmails(requestParameters: ListEmailsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<EmailListEnvelope> {
         const response = await this.listEmailsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listReceivedEmailAttachments without sending the request
+     */
+    async listReceivedEmailAttachmentsRequestOpts(requestParameters: ListReceivedEmailAttachmentsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['emailId'] == null) {
+            throw new runtime.RequiredError(
+                'emailId',
+                'Required parameter "emailId" was null or undefined when calling listReceivedEmailAttachments().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/received-emails/{emailId}/attachments`;
+        urlPath = urlPath.replace('{emailId}', encodeURIComponent(String(requestParameters['emailId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * List one inbound email\'s attachments
+     */
+    async listReceivedEmailAttachmentsRaw(requestParameters: ListReceivedEmailAttachmentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RetrievedEmailAttachmentListEnvelope>> {
+        const requestOptions = await this.listReceivedEmailAttachmentsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * List one inbound email\'s attachments
+     */
+    async listReceivedEmailAttachments(requestParameters: ListReceivedEmailAttachmentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RetrievedEmailAttachmentListEnvelope> {
+        const response = await this.listReceivedEmailAttachmentsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -528,4 +985,73 @@ export class EmailsApi extends runtime.BaseAPI {
         return await response.value();
     }
 
+    /**
+     * Creates request options for shareEmail without sending the request
+     */
+    async shareEmailRequestOpts(requestParameters: ShareEmailRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['emailId'] == null) {
+            throw new runtime.RequiredError(
+                'emailId',
+                'Required parameter "emailId" was null or undefined when calling shareEmail().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/emails/{emailId}/share`;
+        urlPath = urlPath.replace('{emailId}', encodeURIComponent(String(requestParameters['emailId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['shareEmailInput'],
+        };
+    }
+
+    /**
+     * Links expire after at most 48 hours.
+     * Create a shareable link for one email
+     */
+    async shareEmailRaw(requestParameters: ShareEmailRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SharedEmail>> {
+        const requestOptions = await this.shareEmailRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * Links expire after at most 48 hours.
+     * Create a shareable link for one email
+     */
+    async shareEmail(requestParameters: ShareEmailRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SharedEmail> {
+        const response = await this.shareEmailRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
 }
+
+/**
+ * @export
+ */
+export const GetEmailMetricsGranularityEnum = {
+    hourly: 'hourly',
+    daily: 'daily',
+    weekly: 'weekly',
+    monthly: 'monthly'
+} as const;
+export type GetEmailMetricsGranularityEnum = typeof GetEmailMetricsGranularityEnum[keyof typeof GetEmailMetricsGranularityEnum];

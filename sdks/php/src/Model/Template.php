@@ -61,10 +61,15 @@ class Template implements ModelInterface, ArrayAccess, \JsonSerializable
         'html' => 'string',
         'id' => 'string',
         'name' => 'string',
+        'published_at' => 'mixed',
+        'published_version' => 'int',
+        'react' => 'string',
         'required_variables' => 'string[]',
+        'status' => 'string',
         'subject' => 'string',
         'text' => 'string',
-        'updated_at' => '\DateTime'
+        'updated_at' => '\DateTime',
+        'version' => 'int'
     ];
 
     /**
@@ -79,10 +84,15 @@ class Template implements ModelInterface, ArrayAccess, \JsonSerializable
         'html' => null,
         'id' => 'uuid',
         'name' => null,
+        'published_at' => null,
+        'published_version' => null,
+        'react' => null,
         'required_variables' => null,
+        'status' => null,
         'subject' => null,
         'text' => null,
-        'updated_at' => 'date-time'
+        'updated_at' => 'date-time',
+        'version' => null
     ];
 
     /**
@@ -95,10 +105,15 @@ class Template implements ModelInterface, ArrayAccess, \JsonSerializable
         'html' => true,
         'id' => false,
         'name' => false,
+        'published_at' => true,
+        'published_version' => true,
+        'react' => true,
         'required_variables' => false,
+        'status' => false,
         'subject' => false,
         'text' => true,
-        'updated_at' => false
+        'updated_at' => false,
+        'version' => false
     ];
 
     /**
@@ -191,10 +206,15 @@ class Template implements ModelInterface, ArrayAccess, \JsonSerializable
         'html' => 'html',
         'id' => 'id',
         'name' => 'name',
+        'published_at' => 'published_at',
+        'published_version' => 'published_version',
+        'react' => 'react',
         'required_variables' => 'required_variables',
+        'status' => 'status',
         'subject' => 'subject',
         'text' => 'text',
-        'updated_at' => 'updated_at'
+        'updated_at' => 'updated_at',
+        'version' => 'version'
     ];
 
     /**
@@ -207,10 +227,15 @@ class Template implements ModelInterface, ArrayAccess, \JsonSerializable
         'html' => 'setHtml',
         'id' => 'setId',
         'name' => 'setName',
+        'published_at' => 'setPublishedAt',
+        'published_version' => 'setPublishedVersion',
+        'react' => 'setReact',
         'required_variables' => 'setRequiredVariables',
+        'status' => 'setStatus',
         'subject' => 'setSubject',
         'text' => 'setText',
-        'updated_at' => 'setUpdatedAt'
+        'updated_at' => 'setUpdatedAt',
+        'version' => 'setVersion'
     ];
 
     /**
@@ -223,10 +248,15 @@ class Template implements ModelInterface, ArrayAccess, \JsonSerializable
         'html' => 'getHtml',
         'id' => 'getId',
         'name' => 'getName',
+        'published_at' => 'getPublishedAt',
+        'published_version' => 'getPublishedVersion',
+        'react' => 'getReact',
         'required_variables' => 'getRequiredVariables',
+        'status' => 'getStatus',
         'subject' => 'getSubject',
         'text' => 'getText',
-        'updated_at' => 'getUpdatedAt'
+        'updated_at' => 'getUpdatedAt',
+        'version' => 'getVersion'
     ];
 
     /**
@@ -270,6 +300,21 @@ class Template implements ModelInterface, ArrayAccess, \JsonSerializable
         return self::$openAPIModelName;
     }
 
+    public const STATUS_DRAFT = 'draft';
+    public const STATUS_PUBLISHED = 'published';
+
+    /**
+     * Gets allowable values of the enum
+     *
+     * @return string[]
+     */
+    public function getStatusAllowableValues()
+    {
+        return [
+            self::STATUS_DRAFT,
+            self::STATUS_PUBLISHED,
+        ];
+    }
 
     /**
      * Associative array for storing property values
@@ -290,10 +335,15 @@ class Template implements ModelInterface, ArrayAccess, \JsonSerializable
         $this->setIfExists('html', $data ?? [], null);
         $this->setIfExists('id', $data ?? [], null);
         $this->setIfExists('name', $data ?? [], null);
+        $this->setIfExists('published_at', $data ?? [], null);
+        $this->setIfExists('published_version', $data ?? [], null);
+        $this->setIfExists('react', $data ?? [], null);
         $this->setIfExists('required_variables', $data ?? [], null);
+        $this->setIfExists('status', $data ?? [], null);
         $this->setIfExists('subject', $data ?? [], null);
         $this->setIfExists('text', $data ?? [], null);
         $this->setIfExists('updated_at', $data ?? [], null);
+        $this->setIfExists('version', $data ?? [], null);
     }
 
     /**
@@ -335,9 +385,38 @@ class Template implements ModelInterface, ArrayAccess, \JsonSerializable
         if ($this->container['name'] === null) {
             $invalidProperties[] = "'name' can't be null";
         }
+        if ($this->container['published_at'] === null && !$this->isNullableSetToNull('published_at')) {
+            $invalidProperties[] = "'published_at' is required";
+        }
+        if ($this->container['published_version'] === null && !$this->isNullableSetToNull('published_version')) {
+            $invalidProperties[] = "'published_version' is required";
+        }
+        if (!is_null($this->container['published_version']) && ($this->container['published_version'] < 1)) {
+            $invalidProperties[] = "invalid value for 'published_version', must be bigger than or equal to 1.";
+        }
+
+        if ($this->container['react'] === null && !$this->isNullableSetToNull('react')) {
+            $invalidProperties[] = "'react' is required";
+        }
+        if (!is_null($this->container['react']) && (mb_strlen($this->container['react']) > 524288)) {
+            $invalidProperties[] = "invalid value for 'react', the character length must be smaller than or equal to 524288.";
+        }
+
         if ($this->container['required_variables'] === null) {
             $invalidProperties[] = "'required_variables' can't be null";
         }
+        if ($this->container['status'] === null) {
+            $invalidProperties[] = "'status' can't be null";
+        }
+        $allowedValues = $this->getStatusAllowableValues();
+        if (!is_null($this->container['status']) && !in_array($this->container['status'], $allowedValues, true)) {
+            $invalidProperties[] = sprintf(
+                "invalid value '%s' for 'status', must be one of '%s'",
+                $this->container['status'],
+                implode("', '", $allowedValues)
+            );
+        }
+
         if ($this->container['subject'] === null) {
             $invalidProperties[] = "'subject' can't be null";
         }
@@ -347,6 +426,13 @@ class Template implements ModelInterface, ArrayAccess, \JsonSerializable
         if ($this->container['updated_at'] === null) {
             $invalidProperties[] = "'updated_at' can't be null";
         }
+        if ($this->container['version'] === null) {
+            $invalidProperties[] = "'version' can't be null";
+        }
+        if (($this->container['version'] < 1)) {
+            $invalidProperties[] = "invalid value for 'version', must be bigger than or equal to 1.";
+        }
+
         return $invalidProperties;
     }
 
@@ -478,6 +564,116 @@ class Template implements ModelInterface, ArrayAccess, \JsonSerializable
     }
 
     /**
+     * Gets published_at
+     *
+     * @return mixed|null
+     */
+    public function getPublishedAt()
+    {
+        return $this->container['published_at'];
+    }
+
+    /**
+     * Sets published_at
+     *
+     * @param mixed|null $published_at published_at
+     *
+     * @return self
+     */
+    public function setPublishedAt($published_at)
+    {
+        if (is_null($published_at)) {
+            array_push($this->openAPINullablesSetToNull, 'published_at');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('published_at', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        $this->container['published_at'] = $published_at;
+
+        return $this;
+    }
+
+    /**
+     * Gets published_version
+     *
+     * @return int|null
+     */
+    public function getPublishedVersion()
+    {
+        return $this->container['published_version'];
+    }
+
+    /**
+     * Sets published_version
+     *
+     * @param int|null $published_version published_version
+     *
+     * @return self
+     */
+    public function setPublishedVersion($published_version)
+    {
+        if (is_null($published_version)) {
+            array_push($this->openAPINullablesSetToNull, 'published_version');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('published_version', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        if (!is_null($published_version) && ($published_version < 1)) {
+            throw new \InvalidArgumentException('invalid value for $published_version when calling Template., must be bigger than or equal to 1.');
+        }
+
+        $this->container['published_version'] = $published_version;
+
+        return $this;
+    }
+
+    /**
+     * Gets react
+     *
+     * @return string|null
+     */
+    public function getReact()
+    {
+        return $this->container['react'];
+    }
+
+    /**
+     * Sets react
+     *
+     * @param string|null $react react
+     *
+     * @return self
+     */
+    public function setReact($react)
+    {
+        if (is_null($react)) {
+            array_push($this->openAPINullablesSetToNull, 'react');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('react', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        if (!is_null($react) && (mb_strlen($react) > 524288)) {
+            throw new \InvalidArgumentException('invalid length for $react when calling Template., must be smaller than or equal to 524288.');
+        }
+
+        $this->container['react'] = $react;
+
+        return $this;
+    }
+
+    /**
      * Gets required_variables
      *
      * @return string[]
@@ -500,6 +696,43 @@ class Template implements ModelInterface, ArrayAccess, \JsonSerializable
             throw new \InvalidArgumentException('non-nullable required_variables cannot be null');
         }
         $this->container['required_variables'] = $required_variables;
+
+        return $this;
+    }
+
+    /**
+     * Gets status
+     *
+     * @return string
+     */
+    public function getStatus()
+    {
+        return $this->container['status'];
+    }
+
+    /**
+     * Sets status
+     *
+     * @param string $status status
+     *
+     * @return self
+     */
+    public function setStatus($status)
+    {
+        if (is_null($status)) {
+            throw new \InvalidArgumentException('non-nullable status cannot be null');
+        }
+        $allowedValues = $this->getStatusAllowableValues();
+        if (!in_array($status, $allowedValues, true)) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    "Invalid value '%s' for 'status', must be one of '%s'",
+                    $status,
+                    implode("', '", $allowedValues)
+                )
+            );
+        }
+        $this->container['status'] = $status;
 
         return $this;
     }
@@ -588,6 +821,37 @@ class Template implements ModelInterface, ArrayAccess, \JsonSerializable
             throw new \InvalidArgumentException('non-nullable updated_at cannot be null');
         }
         $this->container['updated_at'] = $updated_at;
+
+        return $this;
+    }
+
+    /**
+     * Gets version
+     *
+     * @return int
+     */
+    public function getVersion()
+    {
+        return $this->container['version'];
+    }
+
+    /**
+     * Sets version
+     *
+     * @param int $version version
+     *
+     * @return self
+     */
+    public function setVersion($version)
+    {
+        if (is_null($version)) {
+            throw new \InvalidArgumentException('non-nullable version cannot be null');
+        }
+        if (($version < 1)) {
+            throw new \InvalidArgumentException('invalid value for $version when calling Template., must be bigger than or equal to 1.');
+        }
+
+        $this->container['version'] = $version;
 
         return $this;
     }

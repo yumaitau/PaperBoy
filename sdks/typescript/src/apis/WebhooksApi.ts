@@ -14,14 +14,58 @@
 
 import * as runtime from '../runtime';
 import type {
+    DeletedResource,
     ErrorEnvelope,
+    Webhook,
     WebhookConfigurationEnvelope,
     WebhookConfigurationInput,
-    WebhookReadEnvelope,
+    WebhookCreateEnvelope,
+    WebhookCreateInput,
+    WebhookDelivery,
+    WebhookDeliveryAttemptListEnvelope,
+    WebhookDeliveryListEnvelope,
+    WebhookListEnvelope,
+    WebhookUpdateInput,
 } from '../models/index';
 
 export interface ConfigureWebhookRequest {
     webhookConfigurationInput: WebhookConfigurationInput;
+}
+
+export interface CreateWebhookRequest {
+    webhookCreateInput: WebhookCreateInput;
+}
+
+export interface DeleteWebhookRequest {
+    webhookId: string;
+}
+
+export interface GetWebhookByIdRequest {
+    webhookId: string;
+}
+
+export interface GetWebhookEventRequest {
+    webhookId: string;
+    eventId: string;
+}
+
+export interface ListWebhookEventAttemptsRequest {
+    webhookId: string;
+    eventId: string;
+}
+
+export interface ListWebhookEventsRequest {
+    webhookId: string;
+}
+
+export interface ReplayWebhookEventRequest {
+    webhookId: string;
+    eventId: string;
+}
+
+export interface UpdateWebhookRequest {
+    webhookId: string;
+    webhookUpdateInput: WebhookUpdateInput;
 }
 
 /**
@@ -87,9 +131,349 @@ export class WebhooksApi extends runtime.BaseAPI {
     }
 
     /**
-     * Creates request options for getWebhook without sending the request
+     * Creates request options for createWebhook without sending the request
      */
-    async getWebhookRequestOpts(): Promise<runtime.RequestOpts> {
+    async createWebhookRequestOpts(requestParameters: CreateWebhookRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['webhookCreateInput'] == null) {
+            throw new runtime.RequiredError(
+                'webhookCreateInput',
+                'Required parameter "webhookCreateInput" was null or undefined when calling createWebhook().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/webhooks`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['webhookCreateInput'],
+        };
+    }
+
+    /**
+     * The signing secret is shown only in this response.
+     * Create one webhook
+     */
+    async createWebhookRaw(requestParameters: CreateWebhookRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WebhookCreateEnvelope>> {
+        const requestOptions = await this.createWebhookRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * The signing secret is shown only in this response.
+     * Create one webhook
+     */
+    async createWebhook(requestParameters: CreateWebhookRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WebhookCreateEnvelope> {
+        const response = await this.createWebhookRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for deleteWebhook without sending the request
+     */
+    async deleteWebhookRequestOpts(requestParameters: DeleteWebhookRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['webhookId'] == null) {
+            throw new runtime.RequiredError(
+                'webhookId',
+                'Required parameter "webhookId" was null or undefined when calling deleteWebhook().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/webhooks/{webhookId}`;
+        urlPath = urlPath.replace('{webhookId}', encodeURIComponent(String(requestParameters['webhookId'])));
+
+        return {
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Delete one webhook
+     */
+    async deleteWebhookRaw(requestParameters: DeleteWebhookRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DeletedResource>> {
+        const requestOptions = await this.deleteWebhookRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * Delete one webhook
+     */
+    async deleteWebhook(requestParameters: DeleteWebhookRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DeletedResource> {
+        const response = await this.deleteWebhookRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getWebhookById without sending the request
+     */
+    async getWebhookByIdRequestOpts(requestParameters: GetWebhookByIdRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['webhookId'] == null) {
+            throw new runtime.RequiredError(
+                'webhookId',
+                'Required parameter "webhookId" was null or undefined when calling getWebhookById().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/webhooks/{webhookId}`;
+        urlPath = urlPath.replace('{webhookId}', encodeURIComponent(String(requestParameters['webhookId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get one webhook
+     */
+    async getWebhookByIdRaw(requestParameters: GetWebhookByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Webhook>> {
+        const requestOptions = await this.getWebhookByIdRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * Get one webhook
+     */
+    async getWebhookById(requestParameters: GetWebhookByIdRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Webhook> {
+        const response = await this.getWebhookByIdRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getWebhookEvent without sending the request
+     */
+    async getWebhookEventRequestOpts(requestParameters: GetWebhookEventRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['webhookId'] == null) {
+            throw new runtime.RequiredError(
+                'webhookId',
+                'Required parameter "webhookId" was null or undefined when calling getWebhookEvent().'
+            );
+        }
+
+        if (requestParameters['eventId'] == null) {
+            throw new runtime.RequiredError(
+                'eventId',
+                'Required parameter "eventId" was null or undefined when calling getWebhookEvent().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/webhooks/{webhookId}/events/{eventId}`;
+        urlPath = urlPath.replace('{webhookId}', encodeURIComponent(String(requestParameters['webhookId'])));
+        urlPath = urlPath.replace('{eventId}', encodeURIComponent(String(requestParameters['eventId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get one webhook event
+     */
+    async getWebhookEventRaw(requestParameters: GetWebhookEventRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WebhookDelivery>> {
+        const requestOptions = await this.getWebhookEventRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * Get one webhook event
+     */
+    async getWebhookEvent(requestParameters: GetWebhookEventRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WebhookDelivery> {
+        const response = await this.getWebhookEventRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listWebhookEventAttempts without sending the request
+     */
+    async listWebhookEventAttemptsRequestOpts(requestParameters: ListWebhookEventAttemptsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['webhookId'] == null) {
+            throw new runtime.RequiredError(
+                'webhookId',
+                'Required parameter "webhookId" was null or undefined when calling listWebhookEventAttempts().'
+            );
+        }
+
+        if (requestParameters['eventId'] == null) {
+            throw new runtime.RequiredError(
+                'eventId',
+                'Required parameter "eventId" was null or undefined when calling listWebhookEventAttempts().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/webhooks/{webhookId}/events/{eventId}/attempts`;
+        urlPath = urlPath.replace('{webhookId}', encodeURIComponent(String(requestParameters['webhookId'])));
+        urlPath = urlPath.replace('{eventId}', encodeURIComponent(String(requestParameters['eventId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * PaperBoy tracks aggregate attempt state per delivery.
+     * List one webhook event\'s attempts
+     */
+    async listWebhookEventAttemptsRaw(requestParameters: ListWebhookEventAttemptsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WebhookDeliveryAttemptListEnvelope>> {
+        const requestOptions = await this.listWebhookEventAttemptsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * PaperBoy tracks aggregate attempt state per delivery.
+     * List one webhook event\'s attempts
+     */
+    async listWebhookEventAttempts(requestParameters: ListWebhookEventAttemptsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WebhookDeliveryAttemptListEnvelope> {
+        const response = await this.listWebhookEventAttemptsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listWebhookEvents without sending the request
+     */
+    async listWebhookEventsRequestOpts(requestParameters: ListWebhookEventsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['webhookId'] == null) {
+            throw new runtime.RequiredError(
+                'webhookId',
+                'Required parameter "webhookId" was null or undefined when calling listWebhookEvents().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/webhooks/{webhookId}/events`;
+        urlPath = urlPath.replace('{webhookId}', encodeURIComponent(String(requestParameters['webhookId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * List one webhook\'s events
+     */
+    async listWebhookEventsRaw(requestParameters: ListWebhookEventsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WebhookDeliveryListEnvelope>> {
+        const requestOptions = await this.listWebhookEventsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * List one webhook\'s events
+     */
+    async listWebhookEvents(requestParameters: ListWebhookEventsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WebhookDeliveryListEnvelope> {
+        const response = await this.listWebhookEventsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listWebhooks without sending the request
+     */
+    async listWebhooksRequestOpts(): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -115,10 +499,10 @@ export class WebhooksApi extends runtime.BaseAPI {
 
     /**
      * Returns safe endpoint metadata and never returns signing secret material.
-     * Read webhook configuration
+     * List webhooks
      */
-    async getWebhookRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WebhookReadEnvelope>> {
-        const requestOptions = await this.getWebhookRequestOpts();
+    async listWebhooksRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WebhookListEnvelope>> {
+        const requestOptions = await this.listWebhooksRequestOpts();
         const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response);
@@ -126,10 +510,136 @@ export class WebhooksApi extends runtime.BaseAPI {
 
     /**
      * Returns safe endpoint metadata and never returns signing secret material.
-     * Read webhook configuration
+     * List webhooks
      */
-    async getWebhook(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WebhookReadEnvelope> {
-        const response = await this.getWebhookRaw(initOverrides);
+    async listWebhooks(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WebhookListEnvelope> {
+        const response = await this.listWebhooksRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for replayWebhookEvent without sending the request
+     */
+    async replayWebhookEventRequestOpts(requestParameters: ReplayWebhookEventRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['webhookId'] == null) {
+            throw new runtime.RequiredError(
+                'webhookId',
+                'Required parameter "webhookId" was null or undefined when calling replayWebhookEvent().'
+            );
+        }
+
+        if (requestParameters['eventId'] == null) {
+            throw new runtime.RequiredError(
+                'eventId',
+                'Required parameter "eventId" was null or undefined when calling replayWebhookEvent().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/webhooks/{webhookId}/events/{eventId}/replay`;
+        urlPath = urlPath.replace('{webhookId}', encodeURIComponent(String(requestParameters['webhookId'])));
+        urlPath = urlPath.replace('{eventId}', encodeURIComponent(String(requestParameters['eventId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Requeues the delivery. Disabled webhooks return 422.
+     * Replay one webhook event
+     */
+    async replayWebhookEventRaw(requestParameters: ReplayWebhookEventRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WebhookDelivery>> {
+        const requestOptions = await this.replayWebhookEventRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * Requeues the delivery. Disabled webhooks return 422.
+     * Replay one webhook event
+     */
+    async replayWebhookEvent(requestParameters: ReplayWebhookEventRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WebhookDelivery> {
+        const response = await this.replayWebhookEventRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for updateWebhook without sending the request
+     */
+    async updateWebhookRequestOpts(requestParameters: UpdateWebhookRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['webhookId'] == null) {
+            throw new runtime.RequiredError(
+                'webhookId',
+                'Required parameter "webhookId" was null or undefined when calling updateWebhook().'
+            );
+        }
+
+        if (requestParameters['webhookUpdateInput'] == null) {
+            throw new runtime.RequiredError(
+                'webhookUpdateInput',
+                'Required parameter "webhookUpdateInput" was null or undefined when calling updateWebhook().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/webhooks/{webhookId}`;
+        urlPath = urlPath.replace('{webhookId}', encodeURIComponent(String(requestParameters['webhookId'])));
+
+        return {
+            path: urlPath,
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['webhookUpdateInput'],
+        };
+    }
+
+    /**
+     * Update one webhook
+     */
+    async updateWebhookRaw(requestParameters: UpdateWebhookRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Webhook>> {
+        const requestOptions = await this.updateWebhookRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * Update one webhook
+     */
+    async updateWebhook(requestParameters: UpdateWebhookRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Webhook> {
+        const response = await this.updateWebhookRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

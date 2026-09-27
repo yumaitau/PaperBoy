@@ -3,6 +3,306 @@
 /**
  * 
  * @export
+ * @interface ApiKey
+ */
+export interface ApiKey {
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof ApiKey
+     */
+    created_at: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiKey
+     */
+    display: string | null;
+    /**
+     * 
+     * @type {ApiKeyEnvironmentEnum}
+     * @memberof ApiKey
+     */
+    environment: ApiKeyEnvironmentEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiKey
+     */
+    id: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiKey
+     */
+    key_id: string;
+    /**
+     * 
+     * @type {any}
+     * @memberof ApiKey
+     */
+    last_used_at: any | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiKey
+     */
+    name: string;
+    /**
+     * 
+     * @type {any}
+     * @memberof ApiKey
+     */
+    revoked_at: any | null;
+    /**
+     * Granted organization permissions. Null grants the creator role's full permissions.
+     * @type {Array<string>}
+     * @memberof ApiKey
+     */
+    scopes: Array<string> | null;
+}
+
+
+/**
+ * @export
+ */
+export const ApiKeyEnvironmentEnum = {
+    live: 'live',
+    test: 'test'
+} as const;
+export type ApiKeyEnvironmentEnum = typeof ApiKeyEnvironmentEnum[keyof typeof ApiKeyEnvironmentEnum];
+
+/**
+ * 
+ * @export
+ * @interface ApiKeyInput
+ */
+export interface ApiKeyInput {
+    /**
+     * 
+     * @type {ApiKeyInputEnvironmentEnum}
+     * @memberof ApiKeyInput
+     */
+    environment?: ApiKeyInputEnvironmentEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiKeyInput
+     */
+    name: string;
+    /**
+     * Subset of the creator role's permissions. Omit for full role access.
+     * @type {Array<string>}
+     * @memberof ApiKeyInput
+     */
+    scopes?: Array<string> | null;
+}
+
+
+/**
+ * @export
+ */
+export const ApiKeyInputEnvironmentEnum = {
+    live: 'live',
+    test: 'test'
+} as const;
+export type ApiKeyInputEnvironmentEnum = typeof ApiKeyInputEnvironmentEnum[keyof typeof ApiKeyInputEnvironmentEnum];
+
+/**
+ * 
+ * @export
+ * @interface ApiKeyListEnvelope
+ */
+export interface ApiKeyListEnvelope {
+    /**
+     * 
+     * @type {Array<ApiKey>}
+     * @memberof ApiKeyListEnvelope
+     */
+    data: Array<ApiKey>;
+}
+/**
+ * 
+ * @export
+ * @interface ApiKeySecret
+ */
+export interface ApiKeySecret {
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiKeySecret
+     */
+    display: string;
+    /**
+     * 
+     * @type {ApiKeySecretEnvironmentEnum}
+     * @memberof ApiKeySecret
+     */
+    environment: ApiKeySecretEnvironmentEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiKeySecret
+     */
+    id: string;
+    /**
+     * Raw bearer secret. Shown only once.
+     * @type {string}
+     * @memberof ApiKeySecret
+     */
+    key: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiKeySecret
+     */
+    name: string;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof ApiKeySecret
+     */
+    scopes: Array<string> | null;
+}
+
+
+/**
+ * @export
+ */
+export const ApiKeySecretEnvironmentEnum = {
+    live: 'live',
+    test: 'test'
+} as const;
+export type ApiKeySecretEnvironmentEnum = typeof ApiKeySecretEnvironmentEnum[keyof typeof ApiKeySecretEnvironmentEnum];
+
+/**
+ * 
+ * @export
+ * @interface ApiKeyUpdateInput
+ */
+export interface ApiKeyUpdateInput {
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiKeyUpdateInput
+     */
+    name?: string;
+    /**
+     * Replacement scope list, or null to restore full role access.
+     * @type {Array<string>}
+     * @memberof ApiKeyUpdateInput
+     */
+    scopes?: Array<string> | null;
+}
+/**
+ * 
+ * @export
+ * @interface ApiLog
+ */
+export interface ApiLog {
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiLog
+     */
+    api_key_id: string | null;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof ApiLog
+     */
+    created_at: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof ApiLog
+     */
+    duration_ms: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiLog
+     */
+    environment: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiLog
+     */
+    id: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiLog
+     */
+    method: string;
+    /**
+     * 
+     * @type {ApiLogObjectEnum}
+     * @memberof ApiLog
+     */
+    object: ApiLogObjectEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiLog
+     */
+    path: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof ApiLog
+     */
+    response_status: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiLog
+     */
+    user_agent: string | null;
+}
+
+
+/**
+ * @export
+ */
+export const ApiLogObjectEnum = {
+    log: 'log'
+} as const;
+export type ApiLogObjectEnum = typeof ApiLogObjectEnum[keyof typeof ApiLogObjectEnum];
+
+/**
+ * 
+ * @export
+ * @interface ApiLogListEnvelope
+ */
+export interface ApiLogListEnvelope {
+    /**
+     * 
+     * @type {Array<ApiLog>}
+     * @memberof ApiLogListEnvelope
+     */
+    data: Array<ApiLog>;
+    /**
+     * 
+     * @type {ApiLogListEnvelopeObjectEnum}
+     * @memberof ApiLogListEnvelope
+     */
+    object: ApiLogListEnvelopeObjectEnum;
+}
+
+
+/**
+ * @export
+ */
+export const ApiLogListEnvelopeObjectEnum = {
+    list: 'list'
+} as const;
+export type ApiLogListEnvelopeObjectEnum = typeof ApiLogListEnvelopeObjectEnum[keyof typeof ApiLogListEnvelopeObjectEnum];
+
+/**
+ * 
+ * @export
  * @interface Audience
  */
 export interface Audience {
@@ -84,6 +384,236 @@ export const AudienceListEnvelopeProtocolTimeZoneEnum = {
     UTC: 'UTC'
 } as const;
 export type AudienceListEnvelopeProtocolTimeZoneEnum = typeof AudienceListEnvelopeProtocolTimeZoneEnum[keyof typeof AudienceListEnvelopeProtocolTimeZoneEnum];
+
+/**
+ * 
+ * @export
+ * @interface Automation
+ */
+export interface Automation {
+    /**
+     * 
+     * @type {Array<any>}
+     * @memberof Automation
+     */
+    connections: Array<any>;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof Automation
+     */
+    created_at: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Automation
+     */
+    id: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Automation
+     */
+    name: string;
+    /**
+     * 
+     * @type {AutomationStatusEnum}
+     * @memberof Automation
+     */
+    status: AutomationStatusEnum;
+    /**
+     * 
+     * @type {Array<any>}
+     * @memberof Automation
+     */
+    steps: Array<any>;
+    /**
+     * 
+     * @type {string}
+     * @memberof Automation
+     */
+    trigger_event: string;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof Automation
+     */
+    updated_at: string;
+}
+
+
+/**
+ * @export
+ */
+export const AutomationStatusEnum = {
+    enabled: 'enabled',
+    disabled: 'disabled'
+} as const;
+export type AutomationStatusEnum = typeof AutomationStatusEnum[keyof typeof AutomationStatusEnum];
+
+/**
+ * 
+ * @export
+ * @interface AutomationInput
+ */
+export interface AutomationInput {
+    /**
+     * 
+     * @type {Array<any>}
+     * @memberof AutomationInput
+     */
+    connections?: Array<any>;
+    /**
+     * 
+     * @type {string}
+     * @memberof AutomationInput
+     */
+    name: string;
+    /**
+     * 
+     * @type {AutomationInputStatusEnum}
+     * @memberof AutomationInput
+     */
+    status?: AutomationInputStatusEnum;
+    /**
+     * 
+     * @type {Array<any>}
+     * @memberof AutomationInput
+     */
+    steps: Array<any>;
+}
+
+
+/**
+ * @export
+ */
+export const AutomationInputStatusEnum = {
+    enabled: 'enabled',
+    disabled: 'disabled'
+} as const;
+export type AutomationInputStatusEnum = typeof AutomationInputStatusEnum[keyof typeof AutomationInputStatusEnum];
+
+/**
+ * 
+ * @export
+ * @interface AutomationListEnvelope
+ */
+export interface AutomationListEnvelope {
+    /**
+     * 
+     * @type {Array<Automation>}
+     * @memberof AutomationListEnvelope
+     */
+    data: Array<Automation>;
+}
+/**
+ * 
+ * @export
+ * @interface AutomationRun
+ */
+export interface AutomationRun {
+    /**
+     * 
+     * @type {string}
+     * @memberof AutomationRun
+     */
+    automation_id: string;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof AutomationRun
+     */
+    created_at: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof AutomationRun
+     */
+    id: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof AutomationRun
+     */
+    occurrence_id: string | null;
+    /**
+     * 
+     * @type {AutomationRunStatusEnum}
+     * @memberof AutomationRun
+     */
+    status: AutomationRunStatusEnum;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof AutomationRun
+     */
+    updated_at: string;
+}
+
+
+/**
+ * @export
+ */
+export const AutomationRunStatusEnum = {
+    completed: 'completed',
+    failed: 'failed'
+} as const;
+export type AutomationRunStatusEnum = typeof AutomationRunStatusEnum[keyof typeof AutomationRunStatusEnum];
+
+/**
+ * 
+ * @export
+ * @interface AutomationRunListEnvelope
+ */
+export interface AutomationRunListEnvelope {
+    /**
+     * 
+     * @type {Array<AutomationRun>}
+     * @memberof AutomationRunListEnvelope
+     */
+    data: Array<AutomationRun>;
+}
+/**
+ * 
+ * @export
+ * @interface AutomationUpdateInput
+ */
+export interface AutomationUpdateInput {
+    /**
+     * 
+     * @type {Array<any>}
+     * @memberof AutomationUpdateInput
+     */
+    connections?: Array<any>;
+    /**
+     * 
+     * @type {string}
+     * @memberof AutomationUpdateInput
+     */
+    name?: string;
+    /**
+     * 
+     * @type {AutomationUpdateInputStatusEnum}
+     * @memberof AutomationUpdateInput
+     */
+    status?: AutomationUpdateInputStatusEnum;
+    /**
+     * 
+     * @type {Array<any>}
+     * @memberof AutomationUpdateInput
+     */
+    steps?: Array<any>;
+}
+
+
+/**
+ * @export
+ */
+export const AutomationUpdateInputStatusEnum = {
+    enabled: 'enabled',
+    disabled: 'disabled'
+} as const;
+export type AutomationUpdateInputStatusEnum = typeof AutomationUpdateInputStatusEnum[keyof typeof AutomationUpdateInputStatusEnum];
 
 /**
  * 
@@ -291,6 +821,44 @@ export type BroadcastStatusEnum = typeof BroadcastStatusEnum[keyof typeof Broadc
 /**
  * 
  * @export
+ * @interface BroadcastClickedLink
+ */
+export interface BroadcastClickedLink {
+    /**
+     * 
+     * @type {number}
+     * @memberof BroadcastClickedLink
+     */
+    click_count: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof BroadcastClickedLink
+     */
+    unique_clicks: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof BroadcastClickedLink
+     */
+    url: string;
+}
+/**
+ * 
+ * @export
+ * @interface BroadcastClickedLinkListEnvelope
+ */
+export interface BroadcastClickedLinkListEnvelope {
+    /**
+     * 
+     * @type {Array<BroadcastClickedLink>}
+     * @memberof BroadcastClickedLinkListEnvelope
+     */
+    data: Array<BroadcastClickedLink>;
+}
+/**
+ * 
+ * @export
  * @interface BroadcastCreateInput
  */
 export interface BroadcastCreateInput {
@@ -403,6 +971,111 @@ export interface BroadcastProgress {
 /**
  * 
  * @export
+ * @interface BroadcastRecipient
+ */
+export interface BroadcastRecipient {
+    /**
+     * 
+     * @type {any}
+     * @memberof BroadcastRecipient
+     */
+    bounced_at: any | null;
+    /**
+     * 
+     * @type {any}
+     * @memberof BroadcastRecipient
+     */
+    clicked_at: any | null;
+    /**
+     * 
+     * @type {any}
+     * @memberof BroadcastRecipient
+     */
+    complained_at: any | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof BroadcastRecipient
+     */
+    contact_id: string | null;
+    /**
+     * 
+     * @type {any}
+     * @memberof BroadcastRecipient
+     */
+    delivered_at: any | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof BroadcastRecipient
+     */
+    email: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof BroadcastRecipient
+     */
+    message_id: string | null;
+    /**
+     * 
+     * @type {any}
+     * @memberof BroadcastRecipient
+     */
+    opened_at: any | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof BroadcastRecipient
+     */
+    position: number;
+    /**
+     * 
+     * @type {any}
+     * @memberof BroadcastRecipient
+     */
+    sent_at: any | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof BroadcastRecipient
+     */
+    status: string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof BroadcastRecipient
+     */
+    unsubscribed: boolean;
+}
+/**
+ * 
+ * @export
+ * @interface BroadcastRecipientListEnvelope
+ */
+export interface BroadcastRecipientListEnvelope {
+    /**
+     * 
+     * @type {Array<BroadcastRecipient>}
+     * @memberof BroadcastRecipientListEnvelope
+     */
+    data: Array<BroadcastRecipient>;
+}
+/**
+ * 
+ * @export
+ * @interface BroadcastSendInput
+ */
+export interface BroadcastSendInput {
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof BroadcastSendInput
+     */
+    scheduled_at?: string;
+}
+/**
+ * 
+ * @export
  * @interface BroadcastUpdateInput
  */
 export interface BroadcastUpdateInput {
@@ -501,6 +1174,153 @@ export interface Contact {
 /**
  * 
  * @export
+ * @interface ContactImport
+ */
+export interface ContactImport {
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof ContactImport
+     */
+    created_at: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof ContactImport
+     */
+    created_rows: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof ContactImport
+     */
+    error: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ContactImport
+     */
+    file_name: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ContactImport
+     */
+    id: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof ContactImport
+     */
+    skipped_rows: number;
+    /**
+     * 
+     * @type {ContactImportStatusEnum}
+     * @memberof ContactImport
+     */
+    status: ContactImportStatusEnum;
+    /**
+     * 
+     * @type {number}
+     * @memberof ContactImport
+     */
+    total_rows: number;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof ContactImport
+     */
+    updated_at: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof ContactImport
+     */
+    updated_rows: number;
+}
+
+
+/**
+ * @export
+ */
+export const ContactImportStatusEnum = {
+    queued: 'queued',
+    in_progress: 'in_progress',
+    completed: 'completed',
+    failed: 'failed'
+} as const;
+export type ContactImportStatusEnum = typeof ContactImportStatusEnum[keyof typeof ContactImportStatusEnum];
+
+/**
+ * 
+ * @export
+ * @interface ContactImportInput
+ */
+export interface ContactImportInput {
+    /**
+     * 
+     * @type {{ [key: string]: string; }}
+     * @memberof ContactImportInput
+     */
+    column_map?: { [key: string]: string; };
+    /**
+     * 
+     * @type {string}
+     * @memberof ContactImportInput
+     */
+    csv: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ContactImportInput
+     */
+    file_name?: string | null;
+    /**
+     * 
+     * @type {ContactImportInputOnConflictEnum}
+     * @memberof ContactImportInput
+     */
+    on_conflict?: ContactImportInputOnConflictEnum;
+    /**
+     * 
+     * @type {Array<OrgContactInputSegmentsInner>}
+     * @memberof ContactImportInput
+     */
+    segments?: Array<OrgContactInputSegmentsInner>;
+    /**
+     * 
+     * @type {Array<OrgContactInputTopicsInner>}
+     * @memberof ContactImportInput
+     */
+    topics?: Array<OrgContactInputTopicsInner>;
+}
+
+
+/**
+ * @export
+ */
+export const ContactImportInputOnConflictEnum = {
+    skip: 'skip',
+    upsert: 'upsert'
+} as const;
+export type ContactImportInputOnConflictEnum = typeof ContactImportInputOnConflictEnum[keyof typeof ContactImportInputOnConflictEnum];
+
+/**
+ * 
+ * @export
+ * @interface ContactImportListEnvelope
+ */
+export interface ContactImportListEnvelope {
+    /**
+     * 
+     * @type {Array<ContactImport>}
+     * @memberof ContactImportListEnvelope
+     */
+    data: Array<ContactImport>;
+}
+/**
+ * 
+ * @export
  * @interface ContactInput
  */
 export interface ContactInput {
@@ -546,6 +1366,327 @@ export const ContactListEnvelopeProtocolTimeZoneEnum = {
 } as const;
 export type ContactListEnvelopeProtocolTimeZoneEnum = typeof ContactListEnvelopeProtocolTimeZoneEnum[keyof typeof ContactListEnvelopeProtocolTimeZoneEnum];
 
+/**
+ * 
+ * @export
+ * @interface ContactProperty
+ */
+export interface ContactProperty {
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof ContactProperty
+     */
+    created_at: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ContactProperty
+     */
+    fallback_value: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ContactProperty
+     */
+    id: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ContactProperty
+     */
+    key: string;
+    /**
+     * 
+     * @type {ContactPropertyTypeEnum}
+     * @memberof ContactProperty
+     */
+    type: ContactPropertyTypeEnum;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof ContactProperty
+     */
+    updated_at: string;
+}
+
+
+/**
+ * @export
+ */
+export const ContactPropertyTypeEnum = {
+    string: 'string',
+    number: 'number'
+} as const;
+export type ContactPropertyTypeEnum = typeof ContactPropertyTypeEnum[keyof typeof ContactPropertyTypeEnum];
+
+/**
+ * 
+ * @export
+ * @interface ContactPropertyInput
+ */
+export interface ContactPropertyInput {
+    /**
+     * 
+     * @type {ContactPropertyInputFallbackValue}
+     * @memberof ContactPropertyInput
+     */
+    fallback_value?: ContactPropertyInputFallbackValue | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ContactPropertyInput
+     */
+    key: string;
+    /**
+     * 
+     * @type {ContactPropertyInputTypeEnum}
+     * @memberof ContactPropertyInput
+     */
+    type: ContactPropertyInputTypeEnum;
+}
+
+
+/**
+ * @export
+ */
+export const ContactPropertyInputTypeEnum = {
+    string: 'string',
+    number: 'number'
+} as const;
+export type ContactPropertyInputTypeEnum = typeof ContactPropertyInputTypeEnum[keyof typeof ContactPropertyInputTypeEnum];
+
+/**
+ * 
+ * @export
+ * @interface ContactPropertyInputFallbackValue
+ */
+export interface ContactPropertyInputFallbackValue {
+}
+/**
+ * 
+ * @export
+ * @interface ContactPropertyListEnvelope
+ */
+export interface ContactPropertyListEnvelope {
+    /**
+     * 
+     * @type {Array<ContactProperty>}
+     * @memberof ContactPropertyListEnvelope
+     */
+    data: Array<ContactProperty>;
+}
+/**
+ * 
+ * @export
+ * @interface ContactPropertyUpdateInput
+ */
+export interface ContactPropertyUpdateInput {
+    /**
+     * 
+     * @type {ContactPropertyInputFallbackValue}
+     * @memberof ContactPropertyUpdateInput
+     */
+    fallback_value?: ContactPropertyInputFallbackValue | null;
+}
+/**
+ * 
+ * @export
+ * @interface ContactSegmentListEnvelope
+ */
+export interface ContactSegmentListEnvelope {
+    /**
+     * 
+     * @type {Array<ContactSegmentRef>}
+     * @memberof ContactSegmentListEnvelope
+     */
+    data: Array<ContactSegmentRef>;
+}
+/**
+ * 
+ * @export
+ * @interface ContactSegmentRef
+ */
+export interface ContactSegmentRef {
+    /**
+     * 
+     * @type {string}
+     * @memberof ContactSegmentRef
+     */
+    id: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ContactSegmentRef
+     */
+    name: string;
+}
+/**
+ * 
+ * @export
+ * @interface ContactTopicListEnvelope
+ */
+export interface ContactTopicListEnvelope {
+    /**
+     * 
+     * @type {Array<ContactTopicRef>}
+     * @memberof ContactTopicListEnvelope
+     */
+    data: Array<ContactTopicRef>;
+}
+/**
+ * 
+ * @export
+ * @interface ContactTopicRef
+ */
+export interface ContactTopicRef {
+    /**
+     * 
+     * @type {string}
+     * @memberof ContactTopicRef
+     */
+    id: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ContactTopicRef
+     */
+    name: string;
+    /**
+     * 
+     * @type {ContactTopicRefSubscriptionEnum}
+     * @memberof ContactTopicRef
+     */
+    subscription: ContactTopicRefSubscriptionEnum;
+}
+
+
+/**
+ * @export
+ */
+export const ContactTopicRefSubscriptionEnum = {
+    opt_in: 'opt_in',
+    opt_out: 'opt_out'
+} as const;
+export type ContactTopicRefSubscriptionEnum = typeof ContactTopicRefSubscriptionEnum[keyof typeof ContactTopicRefSubscriptionEnum];
+
+/**
+ * 
+ * @export
+ * @interface ContactTopicsUpdateInput
+ */
+export interface ContactTopicsUpdateInput {
+    /**
+     * 
+     * @type {Array<OrgContactInputTopicsInner>}
+     * @memberof ContactTopicsUpdateInput
+     */
+    topics: Array<OrgContactInputTopicsInner>;
+}
+/**
+ * 
+ * @export
+ * @interface CustomEvent
+ */
+export interface CustomEvent {
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof CustomEvent
+     */
+    created_at: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CustomEvent
+     */
+    id: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CustomEvent
+     */
+    name: string;
+    /**
+     * 
+     * @type {CustomEventObjectEnum}
+     * @memberof CustomEvent
+     */
+    object: CustomEventObjectEnum;
+    /**
+     * 
+     * @type {{ [key: string]: string; }}
+     * @memberof CustomEvent
+     */
+    schema: { [key: string]: string; };
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof CustomEvent
+     */
+    updated_at: string;
+}
+
+
+/**
+ * @export
+ */
+export const CustomEventObjectEnum = {
+    event: 'event'
+} as const;
+export type CustomEventObjectEnum = typeof CustomEventObjectEnum[keyof typeof CustomEventObjectEnum];
+
+/**
+ * 
+ * @export
+ * @interface CustomEventInput
+ */
+export interface CustomEventInput {
+    /**
+     * 
+     * @type {string}
+     * @memberof CustomEventInput
+     */
+    name: string;
+    /**
+     * 
+     * @type {{ [key: string]: string; }}
+     * @memberof CustomEventInput
+     */
+    schema?: { [key: string]: string; };
+}
+/**
+ * 
+ * @export
+ * @interface CustomEventListEnvelope
+ */
+export interface CustomEventListEnvelope {
+    /**
+     * 
+     * @type {Array<CustomEvent>}
+     * @memberof CustomEventListEnvelope
+     */
+    data: Array<CustomEvent>;
+}
+/**
+ * 
+ * @export
+ * @interface CustomEventUpdateInput
+ */
+export interface CustomEventUpdateInput {
+    /**
+     * 
+     * @type {string}
+     * @memberof CustomEventUpdateInput
+     */
+    name?: string;
+    /**
+     * 
+     * @type {{ [key: string]: string; }}
+     * @memberof CustomEventUpdateInput
+     */
+    schema?: { [key: string]: string; };
+}
 /**
  * 
  * @export
@@ -905,6 +2046,87 @@ export interface EmailListEnvelope {
 /**
  * 
  * @export
+ * @interface EmailMetrics
+ */
+export interface EmailMetrics {
+    /**
+     * 
+     * @type {Array<EmailMetricsDataInner>}
+     * @memberof EmailMetrics
+     */
+    data: Array<EmailMetricsDataInner>;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof EmailMetrics
+     */
+    end_date: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof EmailMetrics
+     */
+    granularity: string;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof EmailMetrics
+     */
+    start_date: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof EmailMetrics
+     */
+    timezone: string;
+    /**
+     * 
+     * @type {{ [key: string]: number; }}
+     * @memberof EmailMetrics
+     */
+    totals: { [key: string]: number; };
+}
+/**
+ * 
+ * @export
+ * @interface EmailMetricsDataInner
+ */
+export interface EmailMetricsDataInner {
+    /**
+     * 
+     * @type {Array<EmailMetricsDataInnerDataInner>}
+     * @memberof EmailMetricsDataInner
+     */
+    data: Array<EmailMetricsDataInnerDataInner>;
+    /**
+     * 
+     * @type {{ [key: string]: string | null; }}
+     * @memberof EmailMetricsDataInner
+     */
+    dimensions: { [key: string]: string | null; };
+}
+/**
+ * 
+ * @export
+ * @interface EmailMetricsDataInnerDataInner
+ */
+export interface EmailMetricsDataInnerDataInner {
+    /**
+     * 
+     * @type {string}
+     * @memberof EmailMetricsDataInnerDataInner
+     */
+    metric: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof EmailMetricsDataInnerDataInner
+     */
+    value: number;
+}
+/**
+ * 
+ * @export
  * @interface EmailSummary
  */
 export interface EmailSummary {
@@ -1116,6 +2338,62 @@ export const ErrorEnvelopeErrorEnvironmentEnum = {
 } as const;
 export type ErrorEnvelopeErrorEnvironmentEnum = typeof ErrorEnvelopeErrorEnvironmentEnum[keyof typeof ErrorEnvelopeErrorEnvironmentEnum];
 
+/**
+ * 
+ * @export
+ * @interface EventOccurrence
+ */
+export interface EventOccurrence {
+    /**
+     * 
+     * @type {string}
+     * @memberof EventOccurrence
+     */
+    contact_email: string | null;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof EventOccurrence
+     */
+    created_at: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof EventOccurrence
+     */
+    event_id: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof EventOccurrence
+     */
+    id: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof EventOccurrence
+     */
+    name: string;
+    /**
+     * 
+     * @type {{ [key: string]: any; }}
+     * @memberof EventOccurrence
+     */
+    payload: { [key: string]: any; };
+}
+/**
+ * 
+ * @export
+ * @interface EventOccurrenceEnvelope
+ */
+export interface EventOccurrenceEnvelope {
+    /**
+     * 
+     * @type {EventOccurrence}
+     * @memberof EventOccurrenceEnvelope
+     */
+    data: EventOccurrence;
+}
 /**
  * 
  * @export
@@ -1356,6 +2634,227 @@ export interface OpenTrackingUpdateInput {
      * @memberof OpenTrackingUpdateInput
      */
     enabled: boolean;
+}
+/**
+ * 
+ * @export
+ * @interface OrgContact
+ */
+export interface OrgContact {
+    /**
+     * 
+     * @type {string}
+     * @memberof OrgContact
+     */
+    audience_id: string | null;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof OrgContact
+     */
+    created_at: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof OrgContact
+     */
+    email: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof OrgContact
+     */
+    first_name: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof OrgContact
+     */
+    id: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof OrgContact
+     */
+    last_name: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof OrgContact
+     */
+    name: string | null;
+    /**
+     * 
+     * @type {{ [key: string]: any; }}
+     * @memberof OrgContact
+     */
+    properties: { [key: string]: any; };
+    /**
+     * 
+     * @type {Array<ContactSegmentRef>}
+     * @memberof OrgContact
+     */
+    segments: Array<ContactSegmentRef>;
+    /**
+     * 
+     * @type {Array<ContactTopicRef>}
+     * @memberof OrgContact
+     */
+    topics: Array<ContactTopicRef>;
+    /**
+     * 
+     * @type {any}
+     * @memberof OrgContact
+     */
+    unsubscribed_at: any | null;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof OrgContact
+     */
+    updated_at: string;
+}
+/**
+ * 
+ * @export
+ * @interface OrgContactInput
+ */
+export interface OrgContactInput {
+    /**
+     * 
+     * @type {string}
+     * @memberof OrgContactInput
+     */
+    email: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof OrgContactInput
+     */
+    first_name?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof OrgContactInput
+     */
+    last_name?: string | null;
+    /**
+     * 
+     * @type {{ [key: string]: any; }}
+     * @memberof OrgContactInput
+     */
+    properties?: { [key: string]: any; };
+    /**
+     * 
+     * @type {Array<OrgContactInputSegmentsInner>}
+     * @memberof OrgContactInput
+     */
+    segments?: Array<OrgContactInputSegmentsInner>;
+    /**
+     * 
+     * @type {Array<OrgContactInputTopicsInner>}
+     * @memberof OrgContactInput
+     */
+    topics?: Array<OrgContactInputTopicsInner>;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof OrgContactInput
+     */
+    unsubscribed?: boolean;
+}
+/**
+ * 
+ * @export
+ * @interface OrgContactInputSegmentsInner
+ */
+export interface OrgContactInputSegmentsInner {
+    /**
+     * 
+     * @type {string}
+     * @memberof OrgContactInputSegmentsInner
+     */
+    id: string;
+}
+/**
+ * 
+ * @export
+ * @interface OrgContactInputTopicsInner
+ */
+export interface OrgContactInputTopicsInner {
+    /**
+     * 
+     * @type {string}
+     * @memberof OrgContactInputTopicsInner
+     */
+    id: string;
+    /**
+     * 
+     * @type {OrgContactInputTopicsInnerSubscriptionEnum}
+     * @memberof OrgContactInputTopicsInner
+     */
+    subscription: OrgContactInputTopicsInnerSubscriptionEnum;
+}
+
+
+/**
+ * @export
+ */
+export const OrgContactInputTopicsInnerSubscriptionEnum = {
+    opt_in: 'opt_in',
+    opt_out: 'opt_out'
+} as const;
+export type OrgContactInputTopicsInnerSubscriptionEnum = typeof OrgContactInputTopicsInnerSubscriptionEnum[keyof typeof OrgContactInputTopicsInnerSubscriptionEnum];
+
+/**
+ * 
+ * @export
+ * @interface OrgContactListEnvelope
+ */
+export interface OrgContactListEnvelope {
+    /**
+     * 
+     * @type {Array<OrgContact>}
+     * @memberof OrgContactListEnvelope
+     */
+    data: Array<OrgContact>;
+}
+/**
+ * 
+ * @export
+ * @interface OrgContactUpdateInput
+ */
+export interface OrgContactUpdateInput {
+    /**
+     * 
+     * @type {string}
+     * @memberof OrgContactUpdateInput
+     */
+    email?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof OrgContactUpdateInput
+     */
+    first_name?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof OrgContactUpdateInput
+     */
+    last_name?: string | null;
+    /**
+     * 
+     * @type {{ [key: string]: any; }}
+     * @memberof OrgContactUpdateInput
+     */
+    properties?: { [key: string]: any; };
+    /**
+     * 
+     * @type {boolean}
+     * @memberof OrgContactUpdateInput
+     */
+    unsubscribed?: boolean;
 }
 
 /**
@@ -2217,11 +3716,258 @@ export interface RescheduleEmailInput {
     scheduled_at: string;
 }
 /**
+ * 
+ * @export
+ * @interface RetrievedEmailAttachment
+ */
+export interface RetrievedEmailAttachment {
+    /**
+     * 
+     * @type {string}
+     * @memberof RetrievedEmailAttachment
+     */
+    content_id: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof RetrievedEmailAttachment
+     */
+    content_type: string;
+    /**
+     * Signed expiring download URL.
+     * @type {string}
+     * @memberof RetrievedEmailAttachment
+     */
+    download_url: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof RetrievedEmailAttachment
+     */
+    filename: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof RetrievedEmailAttachment
+     */
+    id: string;
+}
+/**
+ * 
+ * @export
+ * @interface RetrievedEmailAttachmentListEnvelope
+ */
+export interface RetrievedEmailAttachmentListEnvelope {
+    /**
+     * 
+     * @type {Array<RetrievedEmailAttachment>}
+     * @memberof RetrievedEmailAttachmentListEnvelope
+     */
+    data: Array<RetrievedEmailAttachment>;
+    /**
+     * 
+     * @type {RetrievedEmailAttachmentListEnvelopeObjectEnum}
+     * @memberof RetrievedEmailAttachmentListEnvelope
+     */
+    object: RetrievedEmailAttachmentListEnvelopeObjectEnum;
+}
+
+
+/**
+ * @export
+ */
+export const RetrievedEmailAttachmentListEnvelopeObjectEnum = {
+    list: 'list'
+} as const;
+export type RetrievedEmailAttachmentListEnvelopeObjectEnum = typeof RetrievedEmailAttachmentListEnvelopeObjectEnum[keyof typeof RetrievedEmailAttachmentListEnvelopeObjectEnum];
+
+/**
+ * 
+ * @export
+ * @interface Segment
+ */
+export interface Segment {
+    /**
+     * 
+     * @type {number}
+     * @memberof Segment
+     */
+    contact_count: number;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof Segment
+     */
+    created_at: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Segment
+     */
+    id: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Segment
+     */
+    name: string;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof Segment
+     */
+    updated_at: string;
+}
+/**
+ * 
+ * @export
+ * @interface SegmentInput
+ */
+export interface SegmentInput {
+    /**
+     * 
+     * @type {string}
+     * @memberof SegmentInput
+     */
+    name: string;
+}
+/**
+ * 
+ * @export
+ * @interface SegmentListEnvelope
+ */
+export interface SegmentListEnvelope {
+    /**
+     * 
+     * @type {Array<Segment>}
+     * @memberof SegmentListEnvelope
+     */
+    data: Array<Segment>;
+}
+/**
  * @type SendEmailInput
  * 
  * @export
  */
 export type SendEmailInput = InlineEmailInput | TemplateEmailInput;
+/**
+ * 
+ * @export
+ * @interface SendEventInput
+ */
+export interface SendEventInput {
+    /**
+     * 
+     * @type {string}
+     * @memberof SendEventInput
+     */
+    contact_id?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SendEventInput
+     */
+    email?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SendEventInput
+     */
+    event: string;
+    /**
+     * 
+     * @type {{ [key: string]: any; }}
+     * @memberof SendEventInput
+     */
+    payload?: { [key: string]: any; };
+}
+/**
+ * 
+ * @export
+ * @interface ShareEmailInput
+ */
+export interface ShareEmailInput {
+    /**
+     * Duration like 10m, 2 hours, or 1 day. Defaults to 48h and cannot exceed 48 hours.
+     * @type {string}
+     * @memberof ShareEmailInput
+     */
+    expires_in?: string;
+}
+/**
+ * 
+ * @export
+ * @interface SharedEmail
+ */
+export interface SharedEmail {
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof SharedEmail
+     */
+    expires_at: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SharedEmail
+     */
+    id: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SharedEmail
+     */
+    url: string;
+}
+/**
+ * 
+ * @export
+ * @interface SharedEmailContent
+ */
+export interface SharedEmailContent {
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof SharedEmailContent
+     */
+    expires_at: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SharedEmailContent
+     */
+    from: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SharedEmailContent
+     */
+    html: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SharedEmailContent
+     */
+    id: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SharedEmailContent
+     */
+    subject: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SharedEmailContent
+     */
+    text: string | null;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof SharedEmailContent
+     */
+    to: Array<string>;
+}
 /**
  * 
  * @export
@@ -2414,10 +4160,34 @@ export interface Template {
     name: string;
     /**
      * 
+     * @type {any}
+     * @memberof Template
+     */
+    published_at: any | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof Template
+     */
+    published_version: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Template
+     */
+    react: string | null;
+    /**
+     * 
      * @type {Array<string>}
      * @memberof Template
      */
     required_variables: Array<string>;
+    /**
+     * 
+     * @type {TemplateStatusEnum}
+     * @memberof Template
+     */
+    status: TemplateStatusEnum;
     /**
      * 
      * @type {string}
@@ -2436,7 +4206,24 @@ export interface Template {
      * @memberof Template
      */
     updated_at: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof Template
+     */
+    version: number;
 }
+
+
+/**
+ * @export
+ */
+export const TemplateStatusEnum = {
+    draft: 'draft',
+    published: 'published'
+} as const;
+export type TemplateStatusEnum = typeof TemplateStatusEnum[keyof typeof TemplateStatusEnum];
+
 /**
  * 
  * @export
@@ -2536,6 +4323,12 @@ export interface TemplateInput {
     name: string;
     /**
      * 
+     * @type {string}
+     * @memberof TemplateInput
+     */
+    react?: string | null;
+    /**
+     * 
      * @type {Array<string>}
      * @memberof TemplateInput
      */
@@ -2619,6 +4412,175 @@ export interface TemplatePreviewInput {
 /**
  * 
  * @export
+ * @interface Topic
+ */
+export interface Topic {
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof Topic
+     */
+    created_at: string;
+    /**
+     * 
+     * @type {TopicDefaultSubscriptionEnum}
+     * @memberof Topic
+     */
+    default_subscription: TopicDefaultSubscriptionEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof Topic
+     */
+    description: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof Topic
+     */
+    id: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Topic
+     */
+    name: string;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof Topic
+     */
+    updated_at: string;
+    /**
+     * 
+     * @type {TopicVisibilityEnum}
+     * @memberof Topic
+     */
+    visibility: TopicVisibilityEnum;
+}
+
+
+/**
+ * @export
+ */
+export const TopicDefaultSubscriptionEnum = {
+    opt_in: 'opt_in',
+    opt_out: 'opt_out'
+} as const;
+export type TopicDefaultSubscriptionEnum = typeof TopicDefaultSubscriptionEnum[keyof typeof TopicDefaultSubscriptionEnum];
+
+/**
+ * @export
+ */
+export const TopicVisibilityEnum = {
+    public: 'public',
+    private: 'private'
+} as const;
+export type TopicVisibilityEnum = typeof TopicVisibilityEnum[keyof typeof TopicVisibilityEnum];
+
+/**
+ * 
+ * @export
+ * @interface TopicInput
+ */
+export interface TopicInput {
+    /**
+     * 
+     * @type {TopicInputDefaultSubscriptionEnum}
+     * @memberof TopicInput
+     */
+    default_subscription: TopicInputDefaultSubscriptionEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof TopicInput
+     */
+    description?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof TopicInput
+     */
+    name: string;
+    /**
+     * 
+     * @type {TopicInputVisibilityEnum}
+     * @memberof TopicInput
+     */
+    visibility?: TopicInputVisibilityEnum;
+}
+
+
+/**
+ * @export
+ */
+export const TopicInputDefaultSubscriptionEnum = {
+    opt_in: 'opt_in',
+    opt_out: 'opt_out'
+} as const;
+export type TopicInputDefaultSubscriptionEnum = typeof TopicInputDefaultSubscriptionEnum[keyof typeof TopicInputDefaultSubscriptionEnum];
+
+/**
+ * @export
+ */
+export const TopicInputVisibilityEnum = {
+    public: 'public',
+    private: 'private'
+} as const;
+export type TopicInputVisibilityEnum = typeof TopicInputVisibilityEnum[keyof typeof TopicInputVisibilityEnum];
+
+/**
+ * 
+ * @export
+ * @interface TopicListEnvelope
+ */
+export interface TopicListEnvelope {
+    /**
+     * 
+     * @type {Array<Topic>}
+     * @memberof TopicListEnvelope
+     */
+    data: Array<Topic>;
+}
+/**
+ * 
+ * @export
+ * @interface TopicUpdateInput
+ */
+export interface TopicUpdateInput {
+    /**
+     * 
+     * @type {string}
+     * @memberof TopicUpdateInput
+     */
+    description?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof TopicUpdateInput
+     */
+    name?: string;
+    /**
+     * 
+     * @type {TopicUpdateInputVisibilityEnum}
+     * @memberof TopicUpdateInput
+     */
+    visibility?: TopicUpdateInputVisibilityEnum;
+}
+
+
+/**
+ * @export
+ */
+export const TopicUpdateInputVisibilityEnum = {
+    public: 'public',
+    private: 'private'
+} as const;
+export type TopicUpdateInputVisibilityEnum = typeof TopicUpdateInputVisibilityEnum[keyof typeof TopicUpdateInputVisibilityEnum];
+
+/**
+ * 
+ * @export
  * @interface ValidationIssue
  */
 export interface ValidationIssue {
@@ -2634,6 +4596,43 @@ export interface ValidationIssue {
      * @memberof ValidationIssue
      */
     message: string;
+}
+/**
+ * 
+ * @export
+ * @interface Webhook
+ */
+export interface Webhook {
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof Webhook
+     */
+    created_at: string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof Webhook
+     */
+    enabled: boolean;
+    /**
+     * 
+     * @type {string}
+     * @memberof Webhook
+     */
+    id: string;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof Webhook
+     */
+    updated_at: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Webhook
+     */
+    url: string;
 }
 /**
  * 
@@ -2655,7 +4654,7 @@ export interface WebhookConfigurationEnvelope {
  */
 export interface WebhookConfigurationInput {
     /**
-     * HTTPS URL without embedded credentials or a fragment.
+     * Public HTTPS URL without embedded credentials or a fragment. Loopback, private, link-local, CGNAT, and reserved addresses are rejected unless the operator sets PAPERBOY_WEBHOOK_ALLOW_PRIVATE_NETWORKS.
      * @type {string}
      * @memberof WebhookConfigurationInput
      */
@@ -2701,6 +4700,228 @@ export interface WebhookConfiguredEndpoint {
 /**
  * 
  * @export
+ * @interface WebhookCreateEnvelope
+ */
+export interface WebhookCreateEnvelope {
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof WebhookCreateEnvelope
+     */
+    created_at: string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof WebhookCreateEnvelope
+     */
+    enabled: boolean;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebhookCreateEnvelope
+     */
+    id: string;
+    /**
+     * Returned only on creation and never by GET.
+     * @type {string}
+     * @memberof WebhookCreateEnvelope
+     */
+    signing_secret: string;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof WebhookCreateEnvelope
+     */
+    updated_at: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebhookCreateEnvelope
+     */
+    url: string;
+}
+/**
+ * 
+ * @export
+ * @interface WebhookCreateInput
+ */
+export interface WebhookCreateInput {
+    /**
+     * 
+     * @type {boolean}
+     * @memberof WebhookCreateInput
+     */
+    enabled?: boolean;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebhookCreateInput
+     */
+    url: string;
+}
+/**
+ * 
+ * @export
+ * @interface WebhookDelivery
+ */
+export interface WebhookDelivery {
+    /**
+     * 
+     * @type {number}
+     * @memberof WebhookDelivery
+     */
+    attempt_count: number;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof WebhookDelivery
+     */
+    created_at: string;
+    /**
+     * 
+     * @type {any}
+     * @memberof WebhookDelivery
+     */
+    delivered_at: any | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebhookDelivery
+     */
+    endpoint_id: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebhookDelivery
+     */
+    event_type: string | null;
+    /**
+     * 
+     * @type {any}
+     * @memberof WebhookDelivery
+     */
+    failed_at: any | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebhookDelivery
+     */
+    failure_reason: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebhookDelivery
+     */
+    id: string;
+    /**
+     * 
+     * @type {any}
+     * @memberof WebhookDelivery
+     */
+    last_attempt_at: any | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebhookDelivery
+     */
+    last_error_code: string | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof WebhookDelivery
+     */
+    response_status: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebhookDelivery
+     */
+    status: string;
+    /**
+     * RFC 3339 UTC instant. PaperBoy serializes this with a trailing `Z`.
+     * @type {string}
+     * @memberof WebhookDelivery
+     */
+    updated_at: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebhookDelivery
+     */
+    url: string;
+}
+/**
+ * 
+ * @export
+ * @interface WebhookDeliveryAttempt
+ */
+export interface WebhookDeliveryAttempt {
+    /**
+     * 
+     * @type {number}
+     * @memberof WebhookDeliveryAttempt
+     */
+    attempt_count: number;
+    /**
+     * 
+     * @type {any}
+     * @memberof WebhookDeliveryAttempt
+     */
+    attempted_at: any | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebhookDeliveryAttempt
+     */
+    failure_reason: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebhookDeliveryAttempt
+     */
+    last_error_code: string | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof WebhookDeliveryAttempt
+     */
+    response_status: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebhookDeliveryAttempt
+     */
+    status: string;
+}
+/**
+ * 
+ * @export
+ * @interface WebhookDeliveryAttemptListEnvelope
+ */
+export interface WebhookDeliveryAttemptListEnvelope {
+    /**
+     * 
+     * @type {Array<WebhookDeliveryAttempt>}
+     * @memberof WebhookDeliveryAttemptListEnvelope
+     */
+    data: Array<WebhookDeliveryAttempt>;
+}
+/**
+ * 
+ * @export
+ * @interface WebhookDeliveryListEnvelope
+ */
+export interface WebhookDeliveryListEnvelope {
+    /**
+     * 
+     * @type {Array<WebhookDelivery>}
+     * @memberof WebhookDeliveryListEnvelope
+     */
+    data: Array<WebhookDelivery>;
+}
+/**
+ * 
+ * @export
  * @interface WebhookEndpoint
  */
 export interface WebhookEndpoint {
@@ -2710,6 +4931,12 @@ export interface WebhookEndpoint {
      * @memberof WebhookEndpoint
      */
     created_at: string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof WebhookEndpoint
+     */
+    enabled: boolean;
     /**
      * 
      * @type {string}
@@ -2805,6 +5032,19 @@ export type WebhookEventDataEnvironmentEnum = typeof WebhookEventDataEnvironment
 /**
  * 
  * @export
+ * @interface WebhookListEnvelope
+ */
+export interface WebhookListEnvelope {
+    /**
+     * 
+     * @type {Array<Webhook>}
+     * @memberof WebhookListEnvelope
+     */
+    data: Array<Webhook>;
+}
+/**
+ * 
+ * @export
  * @interface WebhookReadEnvelope
  */
 export interface WebhookReadEnvelope {
@@ -2814,4 +5054,23 @@ export interface WebhookReadEnvelope {
      * @memberof WebhookReadEnvelope
      */
     data: WebhookEndpoint | null;
+}
+/**
+ * 
+ * @export
+ * @interface WebhookUpdateInput
+ */
+export interface WebhookUpdateInput {
+    /**
+     * 
+     * @type {boolean}
+     * @memberof WebhookUpdateInput
+     */
+    enabled?: boolean;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebhookUpdateInput
+     */
+    url?: string;
 }

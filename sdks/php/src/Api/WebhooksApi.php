@@ -77,7 +77,31 @@ class WebhooksApi
         'configureWebhook' => [
             'application/json',
         ],
-        'getWebhook' => [
+        'createWebhook' => [
+            'application/json',
+        ],
+        'deleteWebhook' => [
+            'application/json',
+        ],
+        'getWebhookById' => [
+            'application/json',
+        ],
+        'getWebhookEvent' => [
+            'application/json',
+        ],
+        'listWebhookEventAttempts' => [
+            'application/json',
+        ],
+        'listWebhookEvents' => [
+            'application/json',
+        ],
+        'listWebhooks' => [
+            'application/json',
+        ],
+        'replayWebhookEvent' => [
+            'application/json',
+        ],
+        'updateWebhook' => [
             'application/json',
         ],
     ];
@@ -484,36 +508,393 @@ class WebhooksApi
     }
 
     /**
-     * Operation getWebhook
+     * Operation createWebhook
      *
-     * Read webhook configuration
+     * Create one webhook
      *
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getWebhook'] to see the possible values for this operation
+     * @param  \PaperBoy\OpenApi\Model\WebhookCreateInput $webhook_create_input webhook_create_input (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['createWebhook'] to see the possible values for this operation
      *
      * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return \PaperBoy\OpenApi\Model\WebhookReadEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope
+     * @return \PaperBoy\OpenApi\Model\WebhookCreateEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope
      */
-    public function getWebhook(string $contentType = self::contentTypes['getWebhook'][0])
+    public function createWebhook($webhook_create_input, string $contentType = self::contentTypes['createWebhook'][0])
     {
-        list($response) = $this->getWebhookWithHttpInfo($contentType);
+        list($response) = $this->createWebhookWithHttpInfo($webhook_create_input, $contentType);
         return $response;
     }
 
     /**
-     * Operation getWebhookWithHttpInfo
+     * Operation createWebhookWithHttpInfo
      *
-     * Read webhook configuration
+     * Create one webhook
      *
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getWebhook'] to see the possible values for this operation
+     * @param  \PaperBoy\OpenApi\Model\WebhookCreateInput $webhook_create_input (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['createWebhook'] to see the possible values for this operation
      *
      * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return array of \PaperBoy\OpenApi\Model\WebhookReadEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope, HTTP status code, HTTP response headers (array of strings)
+     * @return array of \PaperBoy\OpenApi\Model\WebhookCreateEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope, HTTP status code, HTTP response headers (array of strings)
      */
-    public function getWebhookWithHttpInfo(string $contentType = self::contentTypes['getWebhook'][0])
+    public function createWebhookWithHttpInfo($webhook_create_input, string $contentType = self::contentTypes['createWebhook'][0])
     {
-        $request = $this->getWebhookRequest($contentType);
+        $request = $this->createWebhookRequest($webhook_create_input, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 201:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\WebhookCreateEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 400:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 401:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 403:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 422:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 500:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 503:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\PaperBoy\OpenApi\Model\WebhookCreateEnvelope',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 201:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\WebhookCreateEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 400:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 401:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 422:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 500:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 503:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation createWebhookAsync
+     *
+     * Create one webhook
+     *
+     * @param  \PaperBoy\OpenApi\Model\WebhookCreateInput $webhook_create_input (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['createWebhook'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function createWebhookAsync($webhook_create_input, string $contentType = self::contentTypes['createWebhook'][0])
+    {
+        return $this->createWebhookAsyncWithHttpInfo($webhook_create_input, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation createWebhookAsyncWithHttpInfo
+     *
+     * Create one webhook
+     *
+     * @param  \PaperBoy\OpenApi\Model\WebhookCreateInput $webhook_create_input (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['createWebhook'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function createWebhookAsyncWithHttpInfo($webhook_create_input, string $contentType = self::contentTypes['createWebhook'][0])
+    {
+        $returnType = '\PaperBoy\OpenApi\Model\WebhookCreateEnvelope';
+        $request = $this->createWebhookRequest($webhook_create_input, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'createWebhook'
+     *
+     * @param  \PaperBoy\OpenApi\Model\WebhookCreateInput $webhook_create_input (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['createWebhook'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function createWebhookRequest($webhook_create_input, string $contentType = self::contentTypes['createWebhook'][0])
+    {
+
+        // verify the required parameter 'webhook_create_input' is set
+        if ($webhook_create_input === null || (is_array($webhook_create_input) && count($webhook_create_input) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $webhook_create_input when calling createWebhook'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/webhooks';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (isset($webhook_create_input)) {
+            if (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the body
+                $httpBody = \GuzzleHttp\Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($webhook_create_input));
+            } else {
+                $httpBody = $webhook_create_input;
+            }
+        } elseif (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (pb_live_... or pb_test_...) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'POST',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation deleteWebhook
+     *
+     * Delete one webhook
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['deleteWebhook'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \PaperBoy\OpenApi\Model\DeletedResource|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope
+     */
+    public function deleteWebhook($webhook_id, string $contentType = self::contentTypes['deleteWebhook'][0])
+    {
+        list($response) = $this->deleteWebhookWithHttpInfo($webhook_id, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation deleteWebhookWithHttpInfo
+     *
+     * Delete one webhook
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['deleteWebhook'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \PaperBoy\OpenApi\Model\DeletedResource|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function deleteWebhookWithHttpInfo($webhook_id, string $contentType = self::contentTypes['deleteWebhook'][0])
+    {
+        $request = $this->deleteWebhookRequest($webhook_id, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -541,7 +922,1685 @@ class WebhooksApi
             switch($statusCode) {
                 case 200:
                     return $this->handleResponseWithDataType(
-                        '\PaperBoy\OpenApi\Model\WebhookReadEnvelope',
+                        '\PaperBoy\OpenApi\Model\DeletedResource',
+                        $request,
+                        $response,
+                    );
+                case 401:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 403:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 404:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 500:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\PaperBoy\OpenApi\Model\DeletedResource',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\DeletedResource',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 401:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 404:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 500:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation deleteWebhookAsync
+     *
+     * Delete one webhook
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['deleteWebhook'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function deleteWebhookAsync($webhook_id, string $contentType = self::contentTypes['deleteWebhook'][0])
+    {
+        return $this->deleteWebhookAsyncWithHttpInfo($webhook_id, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation deleteWebhookAsyncWithHttpInfo
+     *
+     * Delete one webhook
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['deleteWebhook'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function deleteWebhookAsyncWithHttpInfo($webhook_id, string $contentType = self::contentTypes['deleteWebhook'][0])
+    {
+        $returnType = '\PaperBoy\OpenApi\Model\DeletedResource';
+        $request = $this->deleteWebhookRequest($webhook_id, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'deleteWebhook'
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['deleteWebhook'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function deleteWebhookRequest($webhook_id, string $contentType = self::contentTypes['deleteWebhook'][0])
+    {
+
+        // verify the required parameter 'webhook_id' is set
+        if ($webhook_id === null || (is_array($webhook_id) && count($webhook_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $webhook_id when calling deleteWebhook'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/webhooks/{webhookId}';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($webhook_id !== null) {
+            $resourcePath = str_replace(
+                '{webhookId}',
+                ObjectSerializer::toPathValue($webhook_id),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (pb_live_... or pb_test_...) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'DELETE',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation getWebhookById
+     *
+     * Get one webhook
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getWebhookById'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \PaperBoy\OpenApi\Model\Webhook|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope
+     */
+    public function getWebhookById($webhook_id, string $contentType = self::contentTypes['getWebhookById'][0])
+    {
+        list($response) = $this->getWebhookByIdWithHttpInfo($webhook_id, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation getWebhookByIdWithHttpInfo
+     *
+     * Get one webhook
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getWebhookById'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \PaperBoy\OpenApi\Model\Webhook|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function getWebhookByIdWithHttpInfo($webhook_id, string $contentType = self::contentTypes['getWebhookById'][0])
+    {
+        $request = $this->getWebhookByIdRequest($webhook_id, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\Webhook',
+                        $request,
+                        $response,
+                    );
+                case 401:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 403:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 404:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 500:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\PaperBoy\OpenApi\Model\Webhook',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\Webhook',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 401:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 404:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 500:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation getWebhookByIdAsync
+     *
+     * Get one webhook
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getWebhookById'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function getWebhookByIdAsync($webhook_id, string $contentType = self::contentTypes['getWebhookById'][0])
+    {
+        return $this->getWebhookByIdAsyncWithHttpInfo($webhook_id, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation getWebhookByIdAsyncWithHttpInfo
+     *
+     * Get one webhook
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getWebhookById'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function getWebhookByIdAsyncWithHttpInfo($webhook_id, string $contentType = self::contentTypes['getWebhookById'][0])
+    {
+        $returnType = '\PaperBoy\OpenApi\Model\Webhook';
+        $request = $this->getWebhookByIdRequest($webhook_id, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'getWebhookById'
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getWebhookById'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function getWebhookByIdRequest($webhook_id, string $contentType = self::contentTypes['getWebhookById'][0])
+    {
+
+        // verify the required parameter 'webhook_id' is set
+        if ($webhook_id === null || (is_array($webhook_id) && count($webhook_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $webhook_id when calling getWebhookById'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/webhooks/{webhookId}';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($webhook_id !== null) {
+            $resourcePath = str_replace(
+                '{webhookId}',
+                ObjectSerializer::toPathValue($webhook_id),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (pb_live_... or pb_test_...) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'GET',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation getWebhookEvent
+     *
+     * Get one webhook event
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $event_id Webhook delivery UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getWebhookEvent'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \PaperBoy\OpenApi\Model\WebhookDelivery|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope
+     */
+    public function getWebhookEvent($webhook_id, $event_id, string $contentType = self::contentTypes['getWebhookEvent'][0])
+    {
+        list($response) = $this->getWebhookEventWithHttpInfo($webhook_id, $event_id, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation getWebhookEventWithHttpInfo
+     *
+     * Get one webhook event
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $event_id Webhook delivery UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getWebhookEvent'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \PaperBoy\OpenApi\Model\WebhookDelivery|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function getWebhookEventWithHttpInfo($webhook_id, $event_id, string $contentType = self::contentTypes['getWebhookEvent'][0])
+    {
+        $request = $this->getWebhookEventRequest($webhook_id, $event_id, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\WebhookDelivery',
+                        $request,
+                        $response,
+                    );
+                case 401:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 403:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 404:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 500:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\PaperBoy\OpenApi\Model\WebhookDelivery',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\WebhookDelivery',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 401:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 404:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 500:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation getWebhookEventAsync
+     *
+     * Get one webhook event
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $event_id Webhook delivery UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getWebhookEvent'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function getWebhookEventAsync($webhook_id, $event_id, string $contentType = self::contentTypes['getWebhookEvent'][0])
+    {
+        return $this->getWebhookEventAsyncWithHttpInfo($webhook_id, $event_id, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation getWebhookEventAsyncWithHttpInfo
+     *
+     * Get one webhook event
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $event_id Webhook delivery UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getWebhookEvent'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function getWebhookEventAsyncWithHttpInfo($webhook_id, $event_id, string $contentType = self::contentTypes['getWebhookEvent'][0])
+    {
+        $returnType = '\PaperBoy\OpenApi\Model\WebhookDelivery';
+        $request = $this->getWebhookEventRequest($webhook_id, $event_id, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'getWebhookEvent'
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $event_id Webhook delivery UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getWebhookEvent'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function getWebhookEventRequest($webhook_id, $event_id, string $contentType = self::contentTypes['getWebhookEvent'][0])
+    {
+
+        // verify the required parameter 'webhook_id' is set
+        if ($webhook_id === null || (is_array($webhook_id) && count($webhook_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $webhook_id when calling getWebhookEvent'
+            );
+        }
+
+        // verify the required parameter 'event_id' is set
+        if ($event_id === null || (is_array($event_id) && count($event_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $event_id when calling getWebhookEvent'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/webhooks/{webhookId}/events/{eventId}';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($webhook_id !== null) {
+            $resourcePath = str_replace(
+                '{webhookId}',
+                ObjectSerializer::toPathValue($webhook_id),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($event_id !== null) {
+            $resourcePath = str_replace(
+                '{eventId}',
+                ObjectSerializer::toPathValue($event_id),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (pb_live_... or pb_test_...) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'GET',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation listWebhookEventAttempts
+     *
+     * List one webhook event&#39;s attempts
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $event_id Webhook delivery UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listWebhookEventAttempts'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \PaperBoy\OpenApi\Model\WebhookDeliveryAttemptListEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope
+     */
+    public function listWebhookEventAttempts($webhook_id, $event_id, string $contentType = self::contentTypes['listWebhookEventAttempts'][0])
+    {
+        list($response) = $this->listWebhookEventAttemptsWithHttpInfo($webhook_id, $event_id, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation listWebhookEventAttemptsWithHttpInfo
+     *
+     * List one webhook event&#39;s attempts
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $event_id Webhook delivery UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listWebhookEventAttempts'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \PaperBoy\OpenApi\Model\WebhookDeliveryAttemptListEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function listWebhookEventAttemptsWithHttpInfo($webhook_id, $event_id, string $contentType = self::contentTypes['listWebhookEventAttempts'][0])
+    {
+        $request = $this->listWebhookEventAttemptsRequest($webhook_id, $event_id, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\WebhookDeliveryAttemptListEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 401:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 403:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 404:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 500:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\PaperBoy\OpenApi\Model\WebhookDeliveryAttemptListEnvelope',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\WebhookDeliveryAttemptListEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 401:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 404:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 500:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation listWebhookEventAttemptsAsync
+     *
+     * List one webhook event&#39;s attempts
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $event_id Webhook delivery UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listWebhookEventAttempts'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function listWebhookEventAttemptsAsync($webhook_id, $event_id, string $contentType = self::contentTypes['listWebhookEventAttempts'][0])
+    {
+        return $this->listWebhookEventAttemptsAsyncWithHttpInfo($webhook_id, $event_id, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation listWebhookEventAttemptsAsyncWithHttpInfo
+     *
+     * List one webhook event&#39;s attempts
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $event_id Webhook delivery UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listWebhookEventAttempts'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function listWebhookEventAttemptsAsyncWithHttpInfo($webhook_id, $event_id, string $contentType = self::contentTypes['listWebhookEventAttempts'][0])
+    {
+        $returnType = '\PaperBoy\OpenApi\Model\WebhookDeliveryAttemptListEnvelope';
+        $request = $this->listWebhookEventAttemptsRequest($webhook_id, $event_id, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'listWebhookEventAttempts'
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $event_id Webhook delivery UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listWebhookEventAttempts'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function listWebhookEventAttemptsRequest($webhook_id, $event_id, string $contentType = self::contentTypes['listWebhookEventAttempts'][0])
+    {
+
+        // verify the required parameter 'webhook_id' is set
+        if ($webhook_id === null || (is_array($webhook_id) && count($webhook_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $webhook_id when calling listWebhookEventAttempts'
+            );
+        }
+
+        // verify the required parameter 'event_id' is set
+        if ($event_id === null || (is_array($event_id) && count($event_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $event_id when calling listWebhookEventAttempts'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/webhooks/{webhookId}/events/{eventId}/attempts';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($webhook_id !== null) {
+            $resourcePath = str_replace(
+                '{webhookId}',
+                ObjectSerializer::toPathValue($webhook_id),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($event_id !== null) {
+            $resourcePath = str_replace(
+                '{eventId}',
+                ObjectSerializer::toPathValue($event_id),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (pb_live_... or pb_test_...) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'GET',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation listWebhookEvents
+     *
+     * List one webhook&#39;s events
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listWebhookEvents'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \PaperBoy\OpenApi\Model\WebhookDeliveryListEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope
+     */
+    public function listWebhookEvents($webhook_id, string $contentType = self::contentTypes['listWebhookEvents'][0])
+    {
+        list($response) = $this->listWebhookEventsWithHttpInfo($webhook_id, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation listWebhookEventsWithHttpInfo
+     *
+     * List one webhook&#39;s events
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listWebhookEvents'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \PaperBoy\OpenApi\Model\WebhookDeliveryListEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function listWebhookEventsWithHttpInfo($webhook_id, string $contentType = self::contentTypes['listWebhookEvents'][0])
+    {
+        $request = $this->listWebhookEventsRequest($webhook_id, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\WebhookDeliveryListEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 401:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 403:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 404:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 500:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\PaperBoy\OpenApi\Model\WebhookDeliveryListEnvelope',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\WebhookDeliveryListEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 401:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 404:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 500:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation listWebhookEventsAsync
+     *
+     * List one webhook&#39;s events
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listWebhookEvents'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function listWebhookEventsAsync($webhook_id, string $contentType = self::contentTypes['listWebhookEvents'][0])
+    {
+        return $this->listWebhookEventsAsyncWithHttpInfo($webhook_id, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation listWebhookEventsAsyncWithHttpInfo
+     *
+     * List one webhook&#39;s events
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listWebhookEvents'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function listWebhookEventsAsyncWithHttpInfo($webhook_id, string $contentType = self::contentTypes['listWebhookEvents'][0])
+    {
+        $returnType = '\PaperBoy\OpenApi\Model\WebhookDeliveryListEnvelope';
+        $request = $this->listWebhookEventsRequest($webhook_id, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'listWebhookEvents'
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listWebhookEvents'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function listWebhookEventsRequest($webhook_id, string $contentType = self::contentTypes['listWebhookEvents'][0])
+    {
+
+        // verify the required parameter 'webhook_id' is set
+        if ($webhook_id === null || (is_array($webhook_id) && count($webhook_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $webhook_id when calling listWebhookEvents'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/webhooks/{webhookId}/events';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($webhook_id !== null) {
+            $resourcePath = str_replace(
+                '{webhookId}',
+                ObjectSerializer::toPathValue($webhook_id),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (pb_live_... or pb_test_...) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'GET',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation listWebhooks
+     *
+     * List webhooks
+     *
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listWebhooks'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \PaperBoy\OpenApi\Model\WebhookListEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope
+     */
+    public function listWebhooks(string $contentType = self::contentTypes['listWebhooks'][0])
+    {
+        list($response) = $this->listWebhooksWithHttpInfo($contentType);
+        return $response;
+    }
+
+    /**
+     * Operation listWebhooksWithHttpInfo
+     *
+     * List webhooks
+     *
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listWebhooks'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \PaperBoy\OpenApi\Model\WebhookListEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function listWebhooksWithHttpInfo(string $contentType = self::contentTypes['listWebhooks'][0])
+    {
+        $request = $this->listWebhooksRequest($contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\WebhookListEnvelope',
                         $request,
                         $response,
                     );
@@ -581,7 +2640,7 @@ class WebhooksApi
             }
 
             return $this->handleResponseWithDataType(
-                '\PaperBoy\OpenApi\Model\WebhookReadEnvelope',
+                '\PaperBoy\OpenApi\Model\WebhookListEnvelope',
                 $request,
                 $response,
             );
@@ -590,7 +2649,7 @@ class WebhooksApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\PaperBoy\OpenApi\Model\WebhookReadEnvelope',
+                        '\PaperBoy\OpenApi\Model\WebhookListEnvelope',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -627,18 +2686,18 @@ class WebhooksApi
     }
 
     /**
-     * Operation getWebhookAsync
+     * Operation listWebhooksAsync
      *
-     * Read webhook configuration
+     * List webhooks
      *
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getWebhook'] to see the possible values for this operation
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listWebhooks'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function getWebhookAsync(string $contentType = self::contentTypes['getWebhook'][0])
+    public function listWebhooksAsync(string $contentType = self::contentTypes['listWebhooks'][0])
     {
-        return $this->getWebhookAsyncWithHttpInfo($contentType)
+        return $this->listWebhooksAsyncWithHttpInfo($contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -647,19 +2706,19 @@ class WebhooksApi
     }
 
     /**
-     * Operation getWebhookAsyncWithHttpInfo
+     * Operation listWebhooksAsyncWithHttpInfo
      *
-     * Read webhook configuration
+     * List webhooks
      *
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getWebhook'] to see the possible values for this operation
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listWebhooks'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function getWebhookAsyncWithHttpInfo(string $contentType = self::contentTypes['getWebhook'][0])
+    public function listWebhooksAsyncWithHttpInfo(string $contentType = self::contentTypes['listWebhooks'][0])
     {
-        $returnType = '\PaperBoy\OpenApi\Model\WebhookReadEnvelope';
-        $request = $this->getWebhookRequest($contentType);
+        $returnType = '\PaperBoy\OpenApi\Model\WebhookListEnvelope';
+        $request = $this->listWebhooksRequest($contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -698,14 +2757,14 @@ class WebhooksApi
     }
 
     /**
-     * Create request for operation 'getWebhook'
+     * Create request for operation 'listWebhooks'
      *
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getWebhook'] to see the possible values for this operation
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['listWebhooks'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function getWebhookRequest(string $contentType = self::contentTypes['getWebhook'][0])
+    public function listWebhooksRequest(string $contentType = self::contentTypes['listWebhooks'][0])
     {
 
 
@@ -771,6 +2830,743 @@ class WebhooksApi
         $query = ObjectSerializer::buildQuery($queryParams);
         return new Request(
             'GET',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation replayWebhookEvent
+     *
+     * Replay one webhook event
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $event_id Webhook delivery UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['replayWebhookEvent'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \PaperBoy\OpenApi\Model\WebhookDelivery|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope
+     */
+    public function replayWebhookEvent($webhook_id, $event_id, string $contentType = self::contentTypes['replayWebhookEvent'][0])
+    {
+        list($response) = $this->replayWebhookEventWithHttpInfo($webhook_id, $event_id, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation replayWebhookEventWithHttpInfo
+     *
+     * Replay one webhook event
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $event_id Webhook delivery UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['replayWebhookEvent'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \PaperBoy\OpenApi\Model\WebhookDelivery|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function replayWebhookEventWithHttpInfo($webhook_id, $event_id, string $contentType = self::contentTypes['replayWebhookEvent'][0])
+    {
+        $request = $this->replayWebhookEventRequest($webhook_id, $event_id, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\WebhookDelivery',
+                        $request,
+                        $response,
+                    );
+                case 401:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 403:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 404:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 422:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 500:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\PaperBoy\OpenApi\Model\WebhookDelivery',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\WebhookDelivery',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 401:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 404:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 422:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 500:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation replayWebhookEventAsync
+     *
+     * Replay one webhook event
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $event_id Webhook delivery UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['replayWebhookEvent'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function replayWebhookEventAsync($webhook_id, $event_id, string $contentType = self::contentTypes['replayWebhookEvent'][0])
+    {
+        return $this->replayWebhookEventAsyncWithHttpInfo($webhook_id, $event_id, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation replayWebhookEventAsyncWithHttpInfo
+     *
+     * Replay one webhook event
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $event_id Webhook delivery UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['replayWebhookEvent'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function replayWebhookEventAsyncWithHttpInfo($webhook_id, $event_id, string $contentType = self::contentTypes['replayWebhookEvent'][0])
+    {
+        $returnType = '\PaperBoy\OpenApi\Model\WebhookDelivery';
+        $request = $this->replayWebhookEventRequest($webhook_id, $event_id, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'replayWebhookEvent'
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  string $event_id Webhook delivery UUID. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['replayWebhookEvent'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function replayWebhookEventRequest($webhook_id, $event_id, string $contentType = self::contentTypes['replayWebhookEvent'][0])
+    {
+
+        // verify the required parameter 'webhook_id' is set
+        if ($webhook_id === null || (is_array($webhook_id) && count($webhook_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $webhook_id when calling replayWebhookEvent'
+            );
+        }
+
+        // verify the required parameter 'event_id' is set
+        if ($event_id === null || (is_array($event_id) && count($event_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $event_id when calling replayWebhookEvent'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/webhooks/{webhookId}/events/{eventId}/replay';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($webhook_id !== null) {
+            $resourcePath = str_replace(
+                '{webhookId}',
+                ObjectSerializer::toPathValue($webhook_id),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($event_id !== null) {
+            $resourcePath = str_replace(
+                '{eventId}',
+                ObjectSerializer::toPathValue($event_id),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (pb_live_... or pb_test_...) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'POST',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation updateWebhook
+     *
+     * Update one webhook
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  \PaperBoy\OpenApi\Model\WebhookUpdateInput $webhook_update_input webhook_update_input (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['updateWebhook'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \PaperBoy\OpenApi\Model\Webhook|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope
+     */
+    public function updateWebhook($webhook_id, $webhook_update_input, string $contentType = self::contentTypes['updateWebhook'][0])
+    {
+        list($response) = $this->updateWebhookWithHttpInfo($webhook_id, $webhook_update_input, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation updateWebhookWithHttpInfo
+     *
+     * Update one webhook
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  \PaperBoy\OpenApi\Model\WebhookUpdateInput $webhook_update_input (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['updateWebhook'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \PaperBoy\OpenApi\Model\Webhook|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function updateWebhookWithHttpInfo($webhook_id, $webhook_update_input, string $contentType = self::contentTypes['updateWebhook'][0])
+    {
+        $request = $this->updateWebhookRequest($webhook_id, $webhook_update_input, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\Webhook',
+                        $request,
+                        $response,
+                    );
+                case 400:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 401:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 403:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 404:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 422:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 500:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\PaperBoy\OpenApi\Model\Webhook',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\Webhook',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 400:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 401:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 404:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 422:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 500:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation updateWebhookAsync
+     *
+     * Update one webhook
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  \PaperBoy\OpenApi\Model\WebhookUpdateInput $webhook_update_input (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['updateWebhook'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function updateWebhookAsync($webhook_id, $webhook_update_input, string $contentType = self::contentTypes['updateWebhook'][0])
+    {
+        return $this->updateWebhookAsyncWithHttpInfo($webhook_id, $webhook_update_input, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation updateWebhookAsyncWithHttpInfo
+     *
+     * Update one webhook
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  \PaperBoy\OpenApi\Model\WebhookUpdateInput $webhook_update_input (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['updateWebhook'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function updateWebhookAsyncWithHttpInfo($webhook_id, $webhook_update_input, string $contentType = self::contentTypes['updateWebhook'][0])
+    {
+        $returnType = '\PaperBoy\OpenApi\Model\Webhook';
+        $request = $this->updateWebhookRequest($webhook_id, $webhook_update_input, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'updateWebhook'
+     *
+     * @param  string $webhook_id Webhook UUID. (required)
+     * @param  \PaperBoy\OpenApi\Model\WebhookUpdateInput $webhook_update_input (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['updateWebhook'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function updateWebhookRequest($webhook_id, $webhook_update_input, string $contentType = self::contentTypes['updateWebhook'][0])
+    {
+
+        // verify the required parameter 'webhook_id' is set
+        if ($webhook_id === null || (is_array($webhook_id) && count($webhook_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $webhook_id when calling updateWebhook'
+            );
+        }
+
+        // verify the required parameter 'webhook_update_input' is set
+        if ($webhook_update_input === null || (is_array($webhook_update_input) && count($webhook_update_input) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $webhook_update_input when calling updateWebhook'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/webhooks/{webhookId}';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($webhook_id !== null) {
+            $resourcePath = str_replace(
+                '{webhookId}',
+                ObjectSerializer::toPathValue($webhook_id),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (isset($webhook_update_input)) {
+            if (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the body
+                $httpBody = \GuzzleHttp\Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($webhook_update_input));
+            } else {
+                $httpBody = $webhook_update_input;
+            }
+        } elseif (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (pb_live_... or pb_test_...) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'PATCH',
             $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
             $headers,
             $httpBody

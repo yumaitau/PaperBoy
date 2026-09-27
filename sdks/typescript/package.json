@@ -1,7 +1,6 @@
 {
   "name": "@paperboy/openapi",
   "version": "1.0.0",
-  "license": "MIT",
   "description": "OpenAPI client for @paperboy/openapi",
   "author": "OpenAPI-Generator",
   "repository": {

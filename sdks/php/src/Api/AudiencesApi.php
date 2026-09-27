@@ -1233,7 +1233,7 @@ class AudiencesApi
      * Delete one contact
      *
      * @param  string $audience_id audience_id (required)
-     * @param  string $contact_id contact_id (required)
+     * @param  string $contact_id Contact UUID or email address. (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['deleteContact'] to see the possible values for this operation
      *
      * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
@@ -1252,7 +1252,7 @@ class AudiencesApi
      * Delete one contact
      *
      * @param  string $audience_id (required)
-     * @param  string $contact_id (required)
+     * @param  string $contact_id Contact UUID or email address. (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['deleteContact'] to see the possible values for this operation
      *
      * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
@@ -1394,7 +1394,7 @@ class AudiencesApi
      * Delete one contact
      *
      * @param  string $audience_id (required)
-     * @param  string $contact_id (required)
+     * @param  string $contact_id Contact UUID or email address. (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['deleteContact'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -1416,7 +1416,7 @@ class AudiencesApi
      * Delete one contact
      *
      * @param  string $audience_id (required)
-     * @param  string $contact_id (required)
+     * @param  string $contact_id Contact UUID or email address. (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['deleteContact'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -1467,7 +1467,7 @@ class AudiencesApi
      * Create request for operation 'deleteContact'
      *
      * @param  string $audience_id (required)
-     * @param  string $contact_id (required)
+     * @param  string $contact_id Contact UUID or email address. (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['deleteContact'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -1909,7 +1909,7 @@ class AudiencesApi
      * Get one contact
      *
      * @param  string $audience_id audience_id (required)
-     * @param  string $contact_id contact_id (required)
+     * @param  string $contact_id Contact UUID or email address. (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getContact'] to see the possible values for this operation
      *
      * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
@@ -1928,7 +1928,7 @@ class AudiencesApi
      * Get one contact
      *
      * @param  string $audience_id (required)
-     * @param  string $contact_id (required)
+     * @param  string $contact_id Contact UUID or email address. (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getContact'] to see the possible values for this operation
      *
      * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
@@ -2070,7 +2070,7 @@ class AudiencesApi
      * Get one contact
      *
      * @param  string $audience_id (required)
-     * @param  string $contact_id (required)
+     * @param  string $contact_id Contact UUID or email address. (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getContact'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -2092,7 +2092,7 @@ class AudiencesApi
      * Get one contact
      *
      * @param  string $audience_id (required)
-     * @param  string $contact_id (required)
+     * @param  string $contact_id Contact UUID or email address. (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getContact'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -2143,7 +2143,7 @@ class AudiencesApi
      * Create request for operation 'getContact'
      *
      * @param  string $audience_id (required)
-     * @param  string $contact_id (required)
+     * @param  string $contact_id Contact UUID or email address. (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['getContact'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -3657,7 +3657,7 @@ class AudiencesApi
      * Update one contact
      *
      * @param  string $audience_id audience_id (required)
-     * @param  string $contact_id contact_id (required)
+     * @param  string $contact_id Contact UUID or email address. (required)
      * @param  \PaperBoy\OpenApi\Model\ContactInput $contact_input contact_input (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['updateContact'] to see the possible values for this operation
      *
@@ -3677,7 +3677,7 @@ class AudiencesApi
      * Update one contact
      *
      * @param  string $audience_id (required)
-     * @param  string $contact_id (required)
+     * @param  string $contact_id Contact UUID or email address. (required)
      * @param  \PaperBoy\OpenApi\Model\ContactInput $contact_input (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['updateContact'] to see the possible values for this operation
      *
@@ -3848,7 +3848,7 @@ class AudiencesApi
      * Update one contact
      *
      * @param  string $audience_id (required)
-     * @param  string $contact_id (required)
+     * @param  string $contact_id Contact UUID or email address. (required)
      * @param  \PaperBoy\OpenApi\Model\ContactInput $contact_input (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['updateContact'] to see the possible values for this operation
      *
@@ -3871,7 +3871,7 @@ class AudiencesApi
      * Update one contact
      *
      * @param  string $audience_id (required)
-     * @param  string $contact_id (required)
+     * @param  string $contact_id Contact UUID or email address. (required)
      * @param  \PaperBoy\OpenApi\Model\ContactInput $contact_input (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['updateContact'] to see the possible values for this operation
      *
@@ -3923,7 +3923,7 @@ class AudiencesApi
      * Create request for operation 'updateContact'
      *
      * @param  string $audience_id (required)
-     * @param  string $contact_id (required)
+     * @param  string $contact_id Contact UUID or email address. (required)
      * @param  \PaperBoy\OpenApi\Model\ContactInput $contact_input (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['updateContact'] to see the possible values for this operation
      *

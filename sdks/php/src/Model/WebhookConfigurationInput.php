@@ -309,7 +309,7 @@ class WebhookConfigurationInput implements ModelInterface, ArrayAccess, \JsonSer
     /**
      * Sets url
      *
-     * @param string $url HTTPS URL without embedded credentials or a fragment.
+     * @param string $url Public HTTPS URL without embedded credentials or a fragment. Loopback, private, link-local, CGNAT, and reserved addresses are rejected unless the operator sets PAPERBOY_WEBHOOK_ALLOW_PRIVATE_NETWORKS.
      *
      * @return self
      */

@@ -80,6 +80,9 @@ class TemplatesApi
         'deleteTemplate' => [
             'application/json',
         ],
+        'duplicateTemplate' => [
+            'application/json',
+        ],
         'getTemplate' => [
             'application/json',
         ],
@@ -87,6 +90,9 @@ class TemplatesApi
             'application/json',
         ],
         'previewTemplate' => [
+            'application/json',
+        ],
+        'publishTemplate' => [
             'application/json',
         ],
         'updateTemplate' => [
@@ -817,6 +823,348 @@ class TemplatesApi
         $query = ObjectSerializer::buildQuery($queryParams);
         return new Request(
             'DELETE',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation duplicateTemplate
+     *
+     * Duplicate one template as a new draft
+     *
+     * @param  string $template_id template_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['duplicateTemplate'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \PaperBoy\OpenApi\Model\Template|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope
+     */
+    public function duplicateTemplate($template_id, string $contentType = self::contentTypes['duplicateTemplate'][0])
+    {
+        list($response) = $this->duplicateTemplateWithHttpInfo($template_id, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation duplicateTemplateWithHttpInfo
+     *
+     * Duplicate one template as a new draft
+     *
+     * @param  string $template_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['duplicateTemplate'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \PaperBoy\OpenApi\Model\Template|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function duplicateTemplateWithHttpInfo($template_id, string $contentType = self::contentTypes['duplicateTemplate'][0])
+    {
+        $request = $this->duplicateTemplateRequest($template_id, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 201:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\Template',
+                        $request,
+                        $response,
+                    );
+                case 401:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 403:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 404:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 409:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 500:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\PaperBoy\OpenApi\Model\Template',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 201:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\Template',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 401:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 404:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 409:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 500:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation duplicateTemplateAsync
+     *
+     * Duplicate one template as a new draft
+     *
+     * @param  string $template_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['duplicateTemplate'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function duplicateTemplateAsync($template_id, string $contentType = self::contentTypes['duplicateTemplate'][0])
+    {
+        return $this->duplicateTemplateAsyncWithHttpInfo($template_id, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation duplicateTemplateAsyncWithHttpInfo
+     *
+     * Duplicate one template as a new draft
+     *
+     * @param  string $template_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['duplicateTemplate'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function duplicateTemplateAsyncWithHttpInfo($template_id, string $contentType = self::contentTypes['duplicateTemplate'][0])
+    {
+        $returnType = '\PaperBoy\OpenApi\Model\Template';
+        $request = $this->duplicateTemplateRequest($template_id, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'duplicateTemplate'
+     *
+     * @param  string $template_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['duplicateTemplate'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function duplicateTemplateRequest($template_id, string $contentType = self::contentTypes['duplicateTemplate'][0])
+    {
+
+        // verify the required parameter 'template_id' is set
+        if ($template_id === null || (is_array($template_id) && count($template_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $template_id when calling duplicateTemplate'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/templates/{templateId}/duplicate';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($template_id !== null) {
+            $resourcePath = str_replace(
+                '{templateId}',
+                ObjectSerializer::toPathValue($template_id),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (pb_live_... or pb_test_...) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'POST',
             $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
             $headers,
             $httpBody
@@ -1771,6 +2119,334 @@ class TemplatesApi
                 $httpBody = $template_preview_input;
             }
         } elseif (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer (pb_live_... or pb_test_...) authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'POST',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation publishTemplate
+     *
+     * Publish one template
+     *
+     * @param  string $template_id template_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['publishTemplate'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \PaperBoy\OpenApi\Model\Template|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope
+     */
+    public function publishTemplate($template_id, string $contentType = self::contentTypes['publishTemplate'][0])
+    {
+        list($response) = $this->publishTemplateWithHttpInfo($template_id, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation publishTemplateWithHttpInfo
+     *
+     * Publish one template
+     *
+     * @param  string $template_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['publishTemplate'] to see the possible values for this operation
+     *
+     * @throws \PaperBoy\OpenApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \PaperBoy\OpenApi\Model\Template|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope|\PaperBoy\OpenApi\Model\ErrorEnvelope, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function publishTemplateWithHttpInfo($template_id, string $contentType = self::contentTypes['publishTemplate'][0])
+    {
+        $request = $this->publishTemplateRequest($template_id, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\Template',
+                        $request,
+                        $response,
+                    );
+                case 401:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 403:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 404:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+                case 500:
+                    return $this->handleResponseWithDataType(
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\PaperBoy\OpenApi\Model\Template',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\Template',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 401:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 403:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 404:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+                case 500:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\PaperBoy\OpenApi\Model\ErrorEnvelope',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation publishTemplateAsync
+     *
+     * Publish one template
+     *
+     * @param  string $template_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['publishTemplate'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function publishTemplateAsync($template_id, string $contentType = self::contentTypes['publishTemplate'][0])
+    {
+        return $this->publishTemplateAsyncWithHttpInfo($template_id, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation publishTemplateAsyncWithHttpInfo
+     *
+     * Publish one template
+     *
+     * @param  string $template_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['publishTemplate'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function publishTemplateAsyncWithHttpInfo($template_id, string $contentType = self::contentTypes['publishTemplate'][0])
+    {
+        $returnType = '\PaperBoy\OpenApi\Model\Template';
+        $request = $this->publishTemplateRequest($template_id, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'publishTemplate'
+     *
+     * @param  string $template_id (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['publishTemplate'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function publishTemplateRequest($template_id, string $contentType = self::contentTypes['publishTemplate'][0])
+    {
+
+        // verify the required parameter 'template_id' is set
+        if ($template_id === null || (is_array($template_id) && count($template_id) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $template_id when calling publishTemplate'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/templates/{templateId}/publish';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($template_id !== null) {
+            $resourcePath = str_replace(
+                '{templateId}',
+                ObjectSerializer::toPathValue($template_id),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
             if ($multipart) {
                 $multipartContents = [];
                 foreach ($formParams as $formParamName => $formParamValue) {

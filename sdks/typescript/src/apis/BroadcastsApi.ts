@@ -14,10 +14,14 @@
 
 import * as runtime from '../runtime';
 import type {
+    BroadcastClickedLinkListEnvelope,
     BroadcastCreateInput,
     BroadcastEnvelope,
     BroadcastListEnvelope,
+    BroadcastRecipientListEnvelope,
+    BroadcastSendInput,
     BroadcastUpdateInput,
+    DeletedResource,
     ErrorEnvelope,
 } from '../models/index';
 
@@ -29,8 +33,24 @@ export interface CreateBroadcastRequest {
     broadcastCreateInput: BroadcastCreateInput;
 }
 
+export interface DeleteBroadcastRequest {
+    broadcastId: string;
+}
+
 export interface GetBroadcastRequest {
     broadcastId: string;
+}
+
+export interface ListBroadcastClickedLinksRequest {
+    broadcastId: string;
+}
+
+export interface ListBroadcastRecipientsRequest {
+    broadcastId: string;
+    type?: ListBroadcastRecipientsTypeEnum;
+    email?: string;
+    bounceType?: ListBroadcastRecipientsBounceTypeEnum;
+    limit?: number;
 }
 
 export interface PauseBroadcastRequest {
@@ -39,6 +59,11 @@ export interface PauseBroadcastRequest {
 
 export interface ResumeBroadcastRequest {
     broadcastId: string;
+}
+
+export interface SendBroadcastRequest {
+    broadcastId: string;
+    broadcastSendInput?: BroadcastSendInput;
 }
 
 export interface UpdateBroadcastRequest {
@@ -164,6 +189,61 @@ export class BroadcastsApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for deleteBroadcast without sending the request
+     */
+    async deleteBroadcastRequestOpts(requestParameters: DeleteBroadcastRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['broadcastId'] == null) {
+            throw new runtime.RequiredError(
+                'broadcastId',
+                'Required parameter "broadcastId" was null or undefined when calling deleteBroadcast().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/broadcasts/{broadcastId}`;
+        urlPath = urlPath.replace('{broadcastId}', encodeURIComponent(String(requestParameters['broadcastId'])));
+
+        return {
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Deletes a scheduled, completed, or cancelled broadcast and its recipient rows. Cancel a running or paused broadcast first. Delivered messages stay in delivery logs. Requires the broadcasts.delete permission.
+     * Delete a broadcast
+     */
+    async deleteBroadcastRaw(requestParameters: DeleteBroadcastRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DeletedResource>> {
+        const requestOptions = await this.deleteBroadcastRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * Deletes a scheduled, completed, or cancelled broadcast and its recipient rows. Cancel a running or paused broadcast first. Delivered messages stay in delivery logs. Requires the broadcasts.delete permission.
+     * Delete a broadcast
+     */
+    async deleteBroadcast(requestParameters: DeleteBroadcastRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DeletedResource> {
+        const response = await this.deleteBroadcastRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for getBroadcast without sending the request
      */
     async getBroadcastRequestOpts(requestParameters: GetBroadcastRequest): Promise<runtime.RequestOpts> {
@@ -213,6 +293,128 @@ export class BroadcastsApi extends runtime.BaseAPI {
      */
     async getBroadcast(requestParameters: GetBroadcastRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<BroadcastEnvelope> {
         const response = await this.getBroadcastRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listBroadcastClickedLinks without sending the request
+     */
+    async listBroadcastClickedLinksRequestOpts(requestParameters: ListBroadcastClickedLinksRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['broadcastId'] == null) {
+            throw new runtime.RequiredError(
+                'broadcastId',
+                'Required parameter "broadcastId" was null or undefined when calling listBroadcastClickedLinks().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/broadcasts/{broadcastId}/clicked-links`;
+        urlPath = urlPath.replace('{broadcastId}', encodeURIComponent(String(requestParameters['broadcastId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * List one broadcast\'s clicked links
+     */
+    async listBroadcastClickedLinksRaw(requestParameters: ListBroadcastClickedLinksRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<BroadcastClickedLinkListEnvelope>> {
+        const requestOptions = await this.listBroadcastClickedLinksRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * List one broadcast\'s clicked links
+     */
+    async listBroadcastClickedLinks(requestParameters: ListBroadcastClickedLinksRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<BroadcastClickedLinkListEnvelope> {
+        const response = await this.listBroadcastClickedLinksRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listBroadcastRecipients without sending the request
+     */
+    async listBroadcastRecipientsRequestOpts(requestParameters: ListBroadcastRecipientsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['broadcastId'] == null) {
+            throw new runtime.RequiredError(
+                'broadcastId',
+                'Required parameter "broadcastId" was null or undefined when calling listBroadcastRecipients().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['type'] != null) {
+            queryParameters['type'] = requestParameters['type'];
+        }
+
+        if (requestParameters['email'] != null) {
+            queryParameters['email'] = requestParameters['email'];
+        }
+
+        if (requestParameters['bounceType'] != null) {
+            queryParameters['bounce_type'] = requestParameters['bounceType'];
+        }
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/broadcasts/{broadcastId}/recipients`;
+        urlPath = urlPath.replace('{broadcastId}', encodeURIComponent(String(requestParameters['broadcastId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * List one broadcast\'s recipients
+     */
+    async listBroadcastRecipientsRaw(requestParameters: ListBroadcastRecipientsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<BroadcastRecipientListEnvelope>> {
+        const requestOptions = await this.listBroadcastRecipientsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * List one broadcast\'s recipients
+     */
+    async listBroadcastRecipients(requestParameters: ListBroadcastRecipientsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<BroadcastRecipientListEnvelope> {
+        const response = await this.listBroadcastRecipientsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -368,6 +570,64 @@ export class BroadcastsApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for sendBroadcast without sending the request
+     */
+    async sendBroadcastRequestOpts(requestParameters: SendBroadcastRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['broadcastId'] == null) {
+            throw new runtime.RequiredError(
+                'broadcastId',
+                'Required parameter "broadcastId" was null or undefined when calling sendBroadcast().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/v1/broadcasts/{broadcastId}/send`;
+        urlPath = urlPath.replace('{broadcastId}', encodeURIComponent(String(requestParameters['broadcastId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['broadcastSendInput'],
+        };
+    }
+
+    /**
+     * Starts a scheduled or paused broadcast now, or reschedules it when scheduled_at is provided.
+     * Send or schedule a broadcast
+     */
+    async sendBroadcastRaw(requestParameters: SendBroadcastRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<BroadcastEnvelope>> {
+        const requestOptions = await this.sendBroadcastRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     * Starts a scheduled or paused broadcast now, or reschedules it when scheduled_at is provided.
+     * Send or schedule a broadcast
+     */
+    async sendBroadcast(requestParameters: SendBroadcastRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<BroadcastEnvelope> {
+        const response = await this.sendBroadcastRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for updateBroadcast without sending the request
      */
     async updateBroadcastRequestOpts(requestParameters: UpdateBroadcastRequest): Promise<runtime.RequestOpts> {
@@ -433,3 +693,27 @@ export class BroadcastsApi extends runtime.BaseAPI {
     }
 
 }
+
+/**
+ * @export
+ */
+export const ListBroadcastRecipientsTypeEnum = {
+    sent: 'sent',
+    delivered: 'delivered',
+    opened: 'opened',
+    clicked: 'clicked',
+    bounced: 'bounced',
+    complained: 'complained',
+    unsubscribed: 'unsubscribed',
+    suppressed: 'suppressed'
+} as const;
+export type ListBroadcastRecipientsTypeEnum = typeof ListBroadcastRecipientsTypeEnum[keyof typeof ListBroadcastRecipientsTypeEnum];
+/**
+ * @export
+ */
+export const ListBroadcastRecipientsBounceTypeEnum = {
+    permanent: 'permanent',
+    transient: 'transient',
+    undetermined: 'undetermined'
+} as const;
+export type ListBroadcastRecipientsBounceTypeEnum = typeof ListBroadcastRecipientsBounceTypeEnum[keyof typeof ListBroadcastRecipientsBounceTypeEnum];
