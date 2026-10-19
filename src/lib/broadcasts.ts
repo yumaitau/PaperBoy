@@ -290,7 +290,11 @@ async function claimRecipient(input: {
     let keyUsable = true;
     if (broadcast.apiKeyId) {
       const [credential] = await tx
-        .select({ createdByUserId: apiKeys.createdByUserId, revokedAt: apiKeys.revokedAt })
+        .select({
+          createdByUserId: apiKeys.createdByUserId,
+          expiresAt: apiKeys.expiresAt,
+          revokedAt: apiKeys.revokedAt,
+        })
         .from(apiKeys)
         .where(
           and(
@@ -299,7 +303,11 @@ async function claimRecipient(input: {
           ),
         )
         .limit(1);
-      keyUsable = Boolean(credential && !credential.revokedAt);
+      keyUsable = Boolean(
+        credential &&
+          !credential.revokedAt &&
+          (!credential.expiresAt || credential.expiresAt > input.now),
+      );
       creatorId = credential?.createdByUserId ?? null;
     }
 

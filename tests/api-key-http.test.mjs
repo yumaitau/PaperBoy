@@ -129,6 +129,7 @@ test("API key REST management stays bound to the authenticated principal", async
     created_at: fixedNow.toISOString(),
     display: record.display,
     environment: "live",
+    expires_at: null,
     id: apiKeyId,
     key_id: "abc",
     last_used_at: null,
@@ -232,4 +233,37 @@ test("invalid bearer keys fail before API key services run", async () => {
   assert.equal(response.status, 401);
   assert.match(response.headers.get("WWW-Authenticate"), /Bearer/);
   assert.equal(called, false);
+});
+
+test("API key REST create forwards expires_at and returns it", async () => {
+  const calls = [];
+  const expiresAt = new Date("2026-12-01T00:00:00.000Z");
+  const deps = dependencies({
+    services: services({
+      create: async (received, payload) => {
+        calls.push(payload);
+        return {
+          display: record.display,
+          environment: "live",
+          expiresAt,
+          id: record.id,
+          name: "Warehouse",
+          rawKey: "pb_live_abc_secret",
+          scopes: null,
+        };
+      },
+    }),
+  });
+
+  const response = await handleCreateApiKeyRequest(
+    request(
+      "POST",
+      JSON.stringify({ expires_at: expiresAt.toISOString(), name: "Warehouse" }),
+    ),
+    deps,
+  );
+
+  assert.equal(response.status, 201);
+  assert.equal((await response.json()).expires_at, "2026-12-01T00:00:00.000Z");
+  assert.deepEqual(calls, [{ expires_at: "2026-12-01T00:00:00.000Z", name: "Warehouse" }]);
 });

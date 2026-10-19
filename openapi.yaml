@@ -5584,7 +5584,7 @@ components:
     ApiKey:
       type: object
       additionalProperties: false
-      required: [created_at, display, environment, id, key_id, last_used_at, name, revoked_at, scopes]
+      required: [created_at, display, environment, expires_at, id, key_id, last_used_at, name, revoked_at, scopes]
       properties:
         created_at:
           $ref: '#/components/schemas/UtcDateTime'
@@ -5593,6 +5593,9 @@ components:
         environment:
           type: string
           enum: [live, test]
+        expires_at:
+          $ref: '#/components/schemas/NullableUtcDateTime'
+          description: When the key stops working. Null means the key never expires.
         id:
           type: string
           format: uuid
@@ -5612,13 +5615,15 @@ components:
     ApiKeySecret:
       type: object
       additionalProperties: false
-      required: [display, environment, id, key, name, scopes]
+      required: [display, environment, expires_at, id, key, name, scopes]
       properties:
         display:
           type: string
         environment:
           type: string
           enum: [live, test]
+        expires_at:
+          $ref: '#/components/schemas/NullableUtcDateTime'
         id:
           type: string
           format: uuid
@@ -5649,6 +5654,10 @@ components:
           type: string
           enum: [live, test]
           default: live
+        expires_at:
+          type: ['string', 'null']
+          format: date-time
+          description: Future time after which the key stops working. Omit or null for a key that never expires. Expiry cannot be changed after creation.
         name:
           type: string
           minLength: 1

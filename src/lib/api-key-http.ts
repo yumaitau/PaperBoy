@@ -16,6 +16,7 @@ export type ApiKeyHttpServices = {
   ) => Promise<{
     display: string;
     environment: string;
+    expiresAt: Date | null;
     id: string;
     name: string;
     rawKey: string;
@@ -107,7 +108,7 @@ function failure(error: unknown): Response {
         error: {
           code: "validation_error",
           message:
-            "Provide a key name of 1-80 characters, a live or test environment, and scopes within your role.",
+            "Provide a key name of 1-80 characters, a live or test environment, scopes within your role, and an optional expires_at in the future.",
         },
       },
       422,
@@ -128,6 +129,7 @@ function failure(error: unknown): Response {
 
 function serialize(record: Record<string, unknown>) {
   const createdAt = record["createdAt"];
+  const expiresAt = record["expiresAt"];
   const lastUsedAt = record["lastUsedAt"];
   const revokedAt = record["revokedAt"];
 
@@ -135,6 +137,7 @@ function serialize(record: Record<string, unknown>) {
     created_at: createdAt instanceof Date ? createdAt.toISOString() : null,
     display: record["display"] ?? null,
     environment: record["environment"],
+    expires_at: expiresAt instanceof Date ? expiresAt.toISOString() : null,
     id: record["id"],
     key_id: record["keyId"],
     last_used_at: lastUsedAt instanceof Date ? lastUsedAt.toISOString() : null,
@@ -202,6 +205,7 @@ export async function handleCreateApiKeyRequest(
       {
         display: created.display,
         environment: created.environment,
+        expires_at: created.expiresAt?.toISOString() ?? null,
         id: created.id,
         key: created.rawKey,
         name: created.name,
@@ -309,8 +313,13 @@ export const apiKeyApiServices: ApiKeyHttpServices = {
 
     return createApiKey({
       actorUserId: principal.actorUserId,
-      callingKey: { environment: principal.environment, scopes: principal.scopes },
+      callingKey: {
+        apiKeyId: principal.apiKeyId,
+        environment: principal.environment,
+        scopes: principal.scopes,
+      },
       environment: input["environment"] ?? principal.environment,
+      expiresAt: input["expires_at"],
       name: input["name"],
       orgId: principal.orgId,
       scopes: Object.hasOwn(input, "scopes") ? input["scopes"] : undefined,
@@ -355,6 +364,11 @@ export const apiKeyApiServices: ApiKeyHttpServices = {
     return revokeApiKey({
       actorUserId: principal.actorUserId,
       apiKeyId,
+      callingKey: {
+        apiKeyId: principal.apiKeyId,
+        environment: principal.environment,
+        scopes: principal.scopes,
+      },
       orgId: principal.orgId,
     });
   },
@@ -371,7 +385,11 @@ export const apiKeyApiServices: ApiKeyHttpServices = {
     return updateApiKey({
       actorUserId: principal.actorUserId,
       apiKeyId,
-      callingKey: { environment: principal.environment, scopes: principal.scopes },
+      callingKey: {
+        apiKeyId: principal.apiKeyId,
+        environment: principal.environment,
+        scopes: principal.scopes,
+      },
       name: Object.hasOwn(input, "name") ? input["name"] : undefined,
       orgId: principal.orgId,
       scopes: Object.hasOwn(input, "scopes") ? input["scopes"] : undefined,

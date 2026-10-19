@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ApiKeyError, createApiKey, deleteApiKey, revokeApiKey } from "@/lib/api-keys";
+import { isApiKeyTtl, apiKeyExpiryForTtl } from "@/lib/api-key-ttl";
 import { AuthorizationError } from "@/lib/authorization";
 import { requireOrganization, requireSession } from "@/lib/session";
 
@@ -26,6 +27,14 @@ function apiKeyErrorMessage(error: unknown): string {
       return "Revoke this API key before deleting it.";
     }
 
+    if (error.code === "KEY_IN_USE") {
+      return "Cancel broadcasts sent with this API key before deleting it.";
+    }
+
+    if (error.code === "INVALID_EXPIRY") {
+      return "Choose an expiry in the future, or no expiry.";
+    }
+
     return "That API key action is no longer available.";
   }
 
@@ -37,11 +46,17 @@ export async function createApiKeyAction(
   formData: FormData,
 ): Promise<CreateApiKeyState> {
   const { organization, session } = await requireOrganization();
+  const ttl = formData.get("ttl") ?? "never";
+
+  if (!isApiKeyTtl(ttl)) {
+    return { display: null, error: "Choose an expiry from the list.", rawKey: null };
+  }
 
   try {
     const key = await createApiKey({
       actorUserId: session.user.id,
       environment: "live",
+      expiresAt: apiKeyExpiryForTtl(ttl, new Date()),
       name: formData.get("name"),
       orgId: organization.id,
     });

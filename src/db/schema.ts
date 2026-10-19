@@ -12,6 +12,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { ApiKeyAuditAction, ApiKeyAuditDetails } from "@/lib/api-key-audit-core";
 import type { DomainDnsCheckSnapshot } from "@/lib/domain-core";
 import type { DkimKeyStatus } from "@/lib/dkim-core";
 import type {
@@ -326,6 +327,9 @@ export const apiKeys = pgTable(
     }),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    // Null means the key never expires.
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    // Legacy soft delete from before keys were hard-deleted; new deletes remove the row.
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -338,6 +342,45 @@ export const apiKeys = pgTable(
     check(
       "api_keys_environment_check",
       sql`${table.environment} in ('live', 'test')`,
+    ),
+  ],
+);
+
+export const apiKeyAuditEvents = pgTable(
+  "api_key_audit_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id, { onDelete: "cascade" }),
+    // No foreign key: deleted keys must keep their audit history.
+    apiKeyId: uuid("api_key_id").notNull(),
+    action: text("action").$type<ApiKeyAuditAction>().notNull(),
+    actorUserId: text("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    // Set when the change was made with another API key.
+    viaApiKeyId: uuid("via_api_key_id"),
+    // Key state after the event, so the row reads correctly once the key is gone.
+    keyName: text("key_name").notNull(),
+    keyPublicId: text("key_public_id").notNull(),
+    environment: text("environment").notNull(),
+    scopes: text("scopes").array(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    details: bunJsonb("details").$type<ApiKeyAuditDetails | null>(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("api_key_audit_events_org_created_idx").on(
+      table.orgId,
+      table.createdAt,
+    ),
+    index("api_key_audit_events_api_key_id_idx").on(table.apiKeyId),
+    check(
+      "api_key_audit_events_action_check",
+      sql`${table.action} in ('created', 'updated', 'revoked', 'deleted')`,
     ),
   ],
 );
@@ -938,7 +981,7 @@ export const broadcasts = pgTable(
       .notNull()
       .references(() => orgs.id, { onDelete: "cascade" }),
     apiKeyId: uuid("api_key_id")
-      .references(() => apiKeys.id, { onDelete: "restrict" }),
+      .references(() => apiKeys.id, { onDelete: "set null" }),
     createdByUserId: text("created_by_user_id").references(() => users.id, {
       onDelete: "set null",
     }),

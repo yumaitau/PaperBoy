@@ -1597,7 +1597,7 @@ test("initializes and publishes versioned tool schemas", async () => {
       paperboy_publish_template: ["templateId"],
       paperboy_duplicate_template: ["templateId"],
       paperboy_list_api_keys: [],
-      paperboy_create_api_key: ["environment", "name", "scopes"],
+      paperboy_create_api_key: ["environment", "expiresAt", "name", "scopes"],
       paperboy_get_api_key: ["apiKeyId"],
       paperboy_update_api_key: ["apiKeyId", "name", "scopes"],
       paperboy_revoke_api_key: ["apiKeyId", "confirm"],

@@ -222,7 +222,7 @@ export const API_GUIDES: ApiGuide[] = [
     title: "Webhooks",
   },
   {
-    body: "API keys carry an environment and an optional scope list. Omit scopes to grant the creator role's full permissions; otherwise provide a subset, which is enforced as the minimum of role and key on every route, MCP tool, and CLI call. The secret is shown only at creation. Rotate by creating a replacement and revoking the original.",
+    body: "API keys carry an environment and an optional scope list. Omit scopes to grant the creator role's full permissions; otherwise provide a subset, which is enforced as the minimum of role and key on every route, MCP tool, and CLI call. Set expires_at to a future ISO 8601 time to make a key stop working then; omit it for a key that never expires. The secret is shown only at creation. Rotate by creating a replacement and revoking the original.",
     examples: [
       {
         body: JSON.stringify({

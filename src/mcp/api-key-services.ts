@@ -19,6 +19,7 @@ function toRecord(value: Record<string, unknown>): McpApiKeyRecord {
     createdAt: dateOrNull(value["createdAt"]),
     display: stringOrNull(value["display"]),
     environment: String(value["environment"] ?? "live"),
+    expiresAt: dateOrNull(value["expiresAt"]),
     id: String(value["id"] ?? ""),
     keyId: String(value["keyId"] ?? ""),
     lastUsedAt: dateOrNull(value["lastUsedAt"]),
@@ -32,6 +33,7 @@ export const paperBoyMcpApiKeyServices: PaperBoyMcpApiKeyServices = {
   create: async (principal, input): Promise<McpCreatedApiKeyRecord> => {
     const created = await apiKeyApiServices.create(principal, {
       environment: input.environment ?? principal.environment,
+      expires_at: input.expiresAt,
       name: input.name,
       scopes: input.scopes,
     });
@@ -39,6 +41,7 @@ export const paperBoyMcpApiKeyServices: PaperBoyMcpApiKeyServices = {
     return {
       display: created.display,
       environment: created.environment,
+      expiresAt: created.expiresAt,
       id: created.id,
       name: created.name,
       rawKey: created.rawKey,

@@ -1,10 +1,20 @@
-import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { apiKeys, orgMembers } from "@/db/schema";
+import {
+  apiKeyAuditEvents,
+  apiKeys,
+  broadcasts,
+  orgMembers,
+  users,
+} from "@/db/schema";
 import {
   generateApiKey,
   isApiKeyEnvironment,
 } from "@/lib/api-key-crypto";
+import type {
+  ApiKeyAuditAction,
+  ApiKeyAuditDetails,
+} from "@/lib/api-key-audit-core";
 import {
   can,
   isOrgRole,
@@ -18,8 +28,10 @@ export type { ApiKeyPrincipal } from "@/lib/api-key-auth";
 
 export type ApiKeyErrorCode =
   | "INVALID_ENVIRONMENT"
+  | "INVALID_EXPIRY"
   | "INVALID_NAME"
   | "INVALID_SCOPES"
+  | "KEY_IN_USE"
   | "KEY_NOT_FOUND"
   | "KEY_NOT_REVOKED"
   | "MEMBERSHIP_REQUIRED";
@@ -31,8 +43,62 @@ export class ApiKeyError extends Error {
   }
 }
 
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export type ApiKeyAuditEventInput = typeof apiKeyAuditEvents.$inferInsert;
+
 /** The API key making a key-management call, when the caller is not a console session. */
-export type CallingApiKey = { environment: string; scopes: KeyScopes };
+export type CallingApiKey = {
+  apiKeyId?: string;
+  environment: string;
+  scopes: KeyScopes;
+};
+
+/** Key state after an audited change. */
+export type ApiKeyAuditSnapshot = {
+  environment: string;
+  expiresAt: Date | null;
+  keyId: string;
+  name: string;
+  orgId: string;
+  scopes: string[] | null;
+};
+
+export function apiKeyAuditRow(input: {
+  action: ApiKeyAuditAction;
+  actorUserId: string;
+  apiKeyId: string;
+  callingKey?: CallingApiKey;
+  details?: ApiKeyAuditDetails;
+  key: ApiKeyAuditSnapshot;
+}): ApiKeyAuditEventInput {
+  return {
+    action: input.action,
+    actorUserId: input.actorUserId,
+    apiKeyId: input.apiKeyId,
+    details: input.details ?? null,
+    environment: input.key.environment,
+    expiresAt: input.key.expiresAt,
+    keyName: input.key.name,
+    keyPublicId: input.key.keyId,
+    orgId: input.key.orgId,
+    scopes: input.key.scopes,
+    viaApiKeyId: input.callingKey?.apiKeyId ?? null,
+  };
+}
+
+// Audit rows are written inside the same transaction as the change they record,
+// so a change never commits without its event.
+export async function recordApiKeyAuditEvents(
+  tx: Transaction,
+  events: ApiKeyAuditEventInput[],
+) {
+  if (events.length === 0) {
+    return;
+  }
+
+  await tx.insert(apiKeyAuditEvents).values(events);
+}
 
 function effectivePermissions(role: OrgRole, scopes: OrgPermission[] | null) {
   return scopes ?? ORG_PERMISSIONS.filter((permission) => can(role, permission));
@@ -69,6 +135,29 @@ function normalizeKeyName(value: unknown): string | null {
   return name.length > 0 && name.length <= 80 ? name : null;
 }
 
+const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T/;
+
+// Absent means no expiry. A supplied expiry must be a future instant, given as
+// a Date or an ISO 8601 string.
+function normalizeExpiresAt(value: unknown, now: Date): Date | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  const expiresAt =
+    value instanceof Date
+      ? value
+      : typeof value === "string" && ISO_DATE_TIME.test(value)
+        ? new Date(value)
+        : null;
+
+  if (!expiresAt || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= now.getTime()) {
+    throw new ApiKeyError("INVALID_EXPIRY");
+  }
+
+  return expiresAt;
+}
+
 function normalizeScopes(
   value: unknown,
   role: OrgRole,
@@ -96,10 +185,25 @@ function normalizeScopes(
   return scopes;
 }
 
+function sameScopes(
+  current: string[] | null,
+  next: OrgPermission[] | null,
+): boolean {
+  if (current === null || next === null) {
+    return current === next;
+  }
+
+  return (
+    current.length === next.length &&
+    next.every((scope) => current.includes(scope))
+  );
+}
+
 export async function createApiKey(input: {
   actorUserId: string;
   callingKey?: CallingApiKey;
   environment: unknown;
+  expiresAt?: unknown;
   name: unknown;
   orgId: string;
   scopes?: unknown;
@@ -120,6 +224,7 @@ export async function createApiKey(input: {
     throw new ApiKeyError("INVALID_ENVIRONMENT");
   }
 
+  const expiresAt = normalizeExpiresAt(input.expiresAt, new Date());
   const generated = generateApiKey(environment);
 
   return db.transaction(async (tx) => {
@@ -149,6 +254,7 @@ export async function createApiKey(input: {
       .values({
         createdByUserId: input.actorUserId,
         environment,
+        expiresAt,
         keyHash: generated.keyHash,
         keyId: generated.keyId,
         name,
@@ -161,9 +267,27 @@ export async function createApiKey(input: {
       throw new ApiKeyError("KEY_NOT_FOUND");
     }
 
+    await recordApiKeyAuditEvents(tx, [
+      apiKeyAuditRow({
+        action: "created",
+        actorUserId: input.actorUserId,
+        apiKeyId: created.id,
+        callingKey: input.callingKey,
+        key: {
+          environment,
+          expiresAt,
+          keyId: generated.keyId,
+          name,
+          orgId: input.orgId,
+          scopes,
+        },
+      }),
+    ]);
+
     return {
       ...generated,
       environment,
+      expiresAt,
       id: created.id,
       name,
       scopes,
@@ -196,6 +320,7 @@ export async function listApiKeys(input: {
     .select({
       createdAt: apiKeys.createdAt,
       environment: apiKeys.environment,
+      expiresAt: apiKeys.expiresAt,
       id: apiKeys.id,
       keyId: apiKeys.keyId,
       lastUsedAt: apiKeys.lastUsedAt,
@@ -234,6 +359,7 @@ export async function getApiKey(input: {
     .select({
       createdAt: apiKeys.createdAt,
       environment: apiKeys.environment,
+      expiresAt: apiKeys.expiresAt,
       id: apiKeys.id,
       keyId: apiKeys.keyId,
       lastUsedAt: apiKeys.lastUsedAt,
@@ -252,6 +378,53 @@ export async function getApiKey(input: {
   return key;
 }
 
+export async function listApiKeyAuditEvents(input: {
+  actorUserId: string;
+  limit?: number;
+  orgId: string;
+}) {
+  const [membership] = await db
+    .select({ role: orgMembers.role })
+    .from(orgMembers)
+    .where(
+      and(
+        eq(orgMembers.orgId, input.orgId),
+        eq(orgMembers.userId, input.actorUserId),
+      ),
+    )
+    .limit(1);
+
+  if (!membership || !isOrgRole(membership.role)) {
+    throw new ApiKeyError("MEMBERSHIP_REQUIRED");
+  }
+
+  requirePermission(membership.role, "apiKeys.read");
+
+  const limit = Math.min(Math.max(input.limit ?? 100, 1), 200);
+
+  return db
+    .select({
+      action: apiKeyAuditEvents.action,
+      actorEmail: users.email,
+      actorName: users.name,
+      apiKeyId: apiKeyAuditEvents.apiKeyId,
+      createdAt: apiKeyAuditEvents.createdAt,
+      details: apiKeyAuditEvents.details,
+      environment: apiKeyAuditEvents.environment,
+      expiresAt: apiKeyAuditEvents.expiresAt,
+      id: apiKeyAuditEvents.id,
+      keyName: apiKeyAuditEvents.keyName,
+      keyPublicId: apiKeyAuditEvents.keyPublicId,
+      scopes: apiKeyAuditEvents.scopes,
+      viaApiKeyId: apiKeyAuditEvents.viaApiKeyId,
+    })
+    .from(apiKeyAuditEvents)
+    .leftJoin(users, eq(users.id, apiKeyAuditEvents.actorUserId))
+    .where(eq(apiKeyAuditEvents.orgId, input.orgId))
+    .orderBy(desc(apiKeyAuditEvents.createdAt), desc(apiKeyAuditEvents.id))
+    .limit(limit);
+}
+
 export async function updateApiKey(input: {
   actorUserId: string;
   apiKeyId: string;
@@ -265,7 +438,11 @@ export async function updateApiKey(input: {
       .select({
         createdByUserId: apiKeys.createdByUserId,
         environment: apiKeys.environment,
+        expiresAt: apiKeys.expiresAt,
+        keyId: apiKeys.keyId,
+        name: apiKeys.name,
         orgId: apiKeys.orgId,
+        scopes: apiKeys.scopes,
       })
       .from(apiKeys)
       .where(eq(apiKeys.id, input.apiKeyId))
@@ -353,6 +530,7 @@ export async function updateApiKey(input: {
       .returning({
         createdAt: apiKeys.createdAt,
         environment: apiKeys.environment,
+        expiresAt: apiKeys.expiresAt,
         id: apiKeys.id,
         keyId: apiKeys.keyId,
         lastUsedAt: apiKeys.lastUsedAt,
@@ -365,6 +543,36 @@ export async function updateApiKey(input: {
       throw new ApiKeyError("KEY_NOT_FOUND");
     }
 
+    const changes: NonNullable<ApiKeyAuditDetails["changes"]> = {};
+
+    if (patch.name !== undefined && patch.name !== key.name) {
+      changes.name = { from: key.name, to: patch.name };
+    }
+
+    if (patch.scopes !== undefined && !sameScopes(key.scopes, patch.scopes)) {
+      changes.scopes = { from: key.scopes, to: patch.scopes };
+    }
+
+    if (Object.keys(changes).length > 0) {
+      await recordApiKeyAuditEvents(tx, [
+        apiKeyAuditRow({
+          action: "updated",
+          actorUserId: input.actorUserId,
+          apiKeyId: updated.id,
+          callingKey: input.callingKey,
+          details: { changes },
+          key: {
+            environment: updated.environment,
+            expiresAt: updated.expiresAt,
+            keyId: updated.keyId,
+            name: updated.name,
+            orgId: key.orgId,
+            scopes: updated.scopes,
+          },
+        }),
+      ]);
+    }
+
     return updated;
   });
 }
@@ -372,11 +580,19 @@ export async function updateApiKey(input: {
 export async function revokeApiKey(input: {
   actorUserId: string;
   apiKeyId: string;
+  callingKey?: CallingApiKey;
   orgId?: string;
 }) {
   return db.transaction(async (tx) => {
     const [key] = await tx
-      .select({ orgId: apiKeys.orgId })
+      .select({
+        environment: apiKeys.environment,
+        expiresAt: apiKeys.expiresAt,
+        keyId: apiKeys.keyId,
+        name: apiKeys.name,
+        orgId: apiKeys.orgId,
+        scopes: apiKeys.scopes,
+      })
       .from(apiKeys)
       .where(eq(apiKeys.id, input.apiKeyId))
       .for("update");
@@ -402,10 +618,26 @@ export async function revokeApiKey(input: {
 
     requirePermission(membership.role, "apiKeys.revoke");
 
-    await tx
+    const [revoked] = await tx
       .update(apiKeys)
       .set({ revokedAt: new Date() })
-      .where(and(eq(apiKeys.id, input.apiKeyId), isNull(apiKeys.revokedAt)));
+      .where(and(eq(apiKeys.id, input.apiKeyId), isNull(apiKeys.revokedAt)))
+      .returning({ id: apiKeys.id });
+
+    // Re-revoking an already revoked key is a no-op and is not logged.
+    if (!revoked) {
+      return;
+    }
+
+    await recordApiKeyAuditEvents(tx, [
+      apiKeyAuditRow({
+        action: "revoked",
+        actorUserId: input.actorUserId,
+        apiKeyId: revoked.id,
+        callingKey: input.callingKey,
+        key,
+      }),
+    ]);
   });
 }
 
@@ -433,7 +665,15 @@ export async function deleteApiKey(input: {
     requirePermission(membership.role, "apiKeys.revoke");
 
     const [key] = await tx
-      .select({ revokedAt: apiKeys.revokedAt })
+      .select({
+        environment: apiKeys.environment,
+        expiresAt: apiKeys.expiresAt,
+        keyId: apiKeys.keyId,
+        name: apiKeys.name,
+        orgId: apiKeys.orgId,
+        revokedAt: apiKeys.revokedAt,
+        scopes: apiKeys.scopes,
+      })
       .from(apiKeys)
       .where(and(eq(apiKeys.id, input.apiKeyId), eq(apiKeys.orgId, input.orgId)))
       .for("update");
@@ -445,16 +685,35 @@ export async function deleteApiKey(input: {
       throw new ApiKeyError("KEY_NOT_REVOKED");
     }
 
-    // Keep historical references and broadcast revocation checks intact.
-    await tx
-      .update(apiKeys)
-      .set({ deletedAt: new Date() })
+    // A broadcast that is still scheduled, running or paused depends on this key's
+    // check. Once the reference clears it would fall back to its creator's
+    // membership, so cancel those broadcasts before the key can be deleted.
+    const pending = await tx
+      .select({ id: broadcasts.id })
+      .from(broadcasts)
       .where(
         and(
-          eq(apiKeys.id, input.apiKeyId),
-          isNotNull(apiKeys.revokedAt),
-          isNull(apiKeys.deletedAt),
+          eq(broadcasts.apiKeyId, input.apiKeyId),
+          inArray(broadcasts.status, ["scheduled", "running", "paused"]),
         ),
-      );
+      )
+      .for("update");
+
+    if (pending.length > 0) {
+      throw new ApiKeyError("KEY_IN_USE");
+    }
+
+    await recordApiKeyAuditEvents(tx, [
+      apiKeyAuditRow({
+        action: "deleted",
+        actorUserId: input.actorUserId,
+        apiKeyId: input.apiKeyId,
+        key,
+      }),
+    ]);
+
+    // Hard delete. Broadcasts and request logs keep their rows with the key
+    // reference cleared; the audit event above keeps the key's identity.
+    await tx.delete(apiKeys).where(eq(apiKeys.id, input.apiKeyId));
   });
 }

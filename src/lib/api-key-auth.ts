@@ -34,6 +34,7 @@ export async function authenticateApiKey(
       actorUserId: apiKeys.createdByUserId,
       environment: apiKeys.environment,
       id: apiKeys.id,
+      expiresAt: apiKeys.expiresAt,
       keyHash: apiKeys.keyHash,
       orgId: apiKeys.orgId,
       revokedAt: apiKeys.revokedAt,
@@ -46,6 +47,7 @@ export async function authenticateApiKey(
   if (
     !candidate ||
     candidate.revokedAt ||
+    (candidate.expiresAt && candidate.expiresAt.getTime() <= Date.now()) ||
     candidate.environment !== parsed.environment ||
     !isApiKeyEnvironment(candidate.environment) ||
     !verifyApiKeyHash(rawKey, candidate.keyHash)

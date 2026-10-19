@@ -10,6 +10,7 @@ export type McpApiKeyRecord = {
   createdAt: Date | null;
   display: string | null;
   environment: string;
+  expiresAt: Date | null;
   id: string;
   keyId: string;
   lastUsedAt: Date | null;
@@ -21,6 +22,7 @@ export type McpApiKeyRecord = {
 export type McpCreatedApiKeyRecord = {
   display: string;
   environment: string;
+  expiresAt: Date | null;
   id: string;
   name: string;
   rawKey: string;
@@ -45,7 +47,7 @@ export const PAPERBOY_API_KEY_MCP_TOOL_DEFINITIONS = [
   },
   {
     description:
-      "Create one scoped organization API key. The raw secret is shown only in this response; store it immediately. Omit scopes to inherit the calling key's scopes (the creator role's full permissions for an unscoped key). The environment defaults to, and must match, the calling key's environment.",
+      "Create one scoped organization API key. The raw secret is shown only in this response; store it immediately. Omit scopes to inherit the calling key's scopes (the creator role's full permissions for an unscoped key). The environment defaults to, and must match, the calling key's environment. Omit expiresAt for a key that never expires; otherwise give a future ISO 8601 time after which the key stops working.",
     mutating: true,
     name: PAPERBOY_API_KEY_MCP_TOOL_NAMES[1],
     schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
@@ -76,7 +78,12 @@ export const PAPERBOY_API_KEY_MCP_TOOL_DEFINITIONS = [
 export type PaperBoyMcpApiKeyServices = {
   create: (
     principal: ApiKeyPrincipal,
-    input: { environment?: unknown; name: unknown; scopes?: unknown },
+    input: {
+      environment?: unknown;
+      expiresAt?: unknown;
+      name: unknown;
+      scopes?: unknown;
+    },
   ) => Promise<McpCreatedApiKeyRecord>;
   get: (
     principal: ApiKeyPrincipal,
@@ -98,6 +105,7 @@ const apiKeySchema = z.object({
   createdAt: z.iso.datetime({ offset: true }).nullable(),
   display: z.string().nullable(),
   environment: z.string(),
+  expiresAt: z.iso.datetime({ offset: true }).nullable(),
   id: z.string().uuid(),
   keyId: z.string(),
   lastUsedAt: z.iso.datetime({ offset: true }).nullable(),
@@ -109,6 +117,7 @@ const apiKeySchema = z.object({
 const createdApiKeySchema = z.object({
   display: z.string(),
   environment: z.string(),
+  expiresAt: z.iso.datetime({ offset: true }).nullable(),
   id: z.string().uuid(),
   key: z.string(),
   name: z.string(),
@@ -155,6 +164,7 @@ const apiKeyIdInputSchema = z.object({ apiKeyId: z.string().uuid() }).strict();
 const createApiKeyInputSchema = z
   .object({
     environment: z.enum(["live", "test"]).optional(),
+    expiresAt: z.iso.datetime({ offset: true }).optional(),
     name: z.string().min(1).max(80),
     scopes: z.array(z.string().min(1)).max(100).nullable().optional(),
   })
@@ -185,6 +195,7 @@ function serialize(record: McpApiKeyRecord) {
     createdAt: timestamp(record.createdAt),
     display: record.display,
     environment: record.environment,
+    expiresAt: timestamp(record.expiresAt),
     id: record.id,
     keyId: record.keyId,
     lastUsedAt: timestamp(record.lastUsedAt),
@@ -298,13 +309,14 @@ export function registerPaperBoyApiKeyTools(input: {
       title: "Create a PaperBoy API key",
       _meta: { "paperboy/schemaVersion": PAPERBOY_MCP_SCHEMA_VERSION },
     },
-    async ({ environment, name, scopes }) => {
+    async ({ environment, expiresAt, name, scopes }) => {
       const principal = await input.authorize();
       if (!principal) return unauthorizedResult();
 
       try {
         const created = await input.services.create(principal, {
           environment,
+          expiresAt,
           name,
           scopes,
         });
@@ -313,6 +325,7 @@ export function registerPaperBoyApiKeyTools(input: {
           apiKey: {
             display: created.display,
             environment: created.environment,
+            expiresAt: timestamp(created.expiresAt),
             id: created.id,
             key: created.rawKey,
             name: created.name,

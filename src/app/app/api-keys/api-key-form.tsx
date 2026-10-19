@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { API_KEY_TTL_OPTIONS } from "@/lib/api-key-ttl";
 import {
   createApiKeyAction,
   type CreateApiKeyState,
@@ -59,6 +60,16 @@ export function ApiKeyForm() {
             required
             type="text"
           />
+        </div>
+        <div className="field">
+          <label htmlFor="key-ttl">Expires</label>
+          <select defaultValue="never" id="key-ttl" name="ttl">
+            {API_KEY_TTL_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
         <button className="btn btn-primary" disabled={isPending} type="submit">
           {isPending ? "Creating…" : "Create API key"}

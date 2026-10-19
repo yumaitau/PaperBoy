@@ -15,6 +15,7 @@ import {
   requirePermission,
   type OrgRole,
 } from "@/lib/authorization";
+import { apiKeyAuditRow, recordApiKeyAuditEvents } from "@/lib/api-keys";
 import { isOrganizationInvitationId } from "@/lib/organization-invite-access";
 import { publicSignUpEnabled } from "@/lib/signup-policy";
 
@@ -619,7 +620,7 @@ export async function removeOrganizationMember(input: {
     await tx.delete(orgMembers).where(eq(orgMembers.id, input.membershipId));
 
     // Keys act for their creator; a removed member's keys must stop working.
-    await tx
+    const revokedKeys = await tx
       .update(apiKeys)
       .set({ revokedAt: new Date() })
       .where(
@@ -628,7 +629,29 @@ export async function removeOrganizationMember(input: {
           eq(apiKeys.createdByUserId, target.userId),
           isNull(apiKeys.revokedAt),
         ),
-      );
+      )
+      .returning({
+        environment: apiKeys.environment,
+        expiresAt: apiKeys.expiresAt,
+        id: apiKeys.id,
+        keyId: apiKeys.keyId,
+        name: apiKeys.name,
+        orgId: apiKeys.orgId,
+        scopes: apiKeys.scopes,
+      });
+
+    await recordApiKeyAuditEvents(
+      tx,
+      revokedKeys.map((key) =>
+        apiKeyAuditRow({
+          action: "revoked",
+          actorUserId: input.actorUserId,
+          apiKeyId: key.id,
+          details: { reason: "member_removed" },
+          key,
+        }),
+      ),
+    );
 
     const [targetUser] = await tx
       .select({ defaultOrgId: users.defaultOrgId })
