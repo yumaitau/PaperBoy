@@ -58,6 +58,7 @@ class ApiKeyInput implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $openAPITypes = [
         'environment' => 'string',
+        'expires_at' => '\DateTime',
         'name' => 'string',
         'scopes' => 'string[]'
     ];
@@ -71,6 +72,7 @@ class ApiKeyInput implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $openAPIFormats = [
         'environment' => null,
+        'expires_at' => 'date-time',
         'name' => null,
         'scopes' => null
     ];
@@ -82,6 +84,7 @@ class ApiKeyInput implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static array $openAPINullables = [
         'environment' => false,
+        'expires_at' => true,
         'name' => false,
         'scopes' => true
     ];
@@ -173,6 +176,7 @@ class ApiKeyInput implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $attributeMap = [
         'environment' => 'environment',
+        'expires_at' => 'expires_at',
         'name' => 'name',
         'scopes' => 'scopes'
     ];
@@ -184,6 +188,7 @@ class ApiKeyInput implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $setters = [
         'environment' => 'setEnvironment',
+        'expires_at' => 'setExpiresAt',
         'name' => 'setName',
         'scopes' => 'setScopes'
     ];
@@ -195,6 +200,7 @@ class ApiKeyInput implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $getters = [
         'environment' => 'getEnvironment',
+        'expires_at' => 'getExpiresAt',
         'name' => 'getName',
         'scopes' => 'getScopes'
     ];
@@ -272,6 +278,7 @@ class ApiKeyInput implements ModelInterface, ArrayAccess, \JsonSerializable
     public function __construct(?array $data = null)
     {
         $this->setIfExists('environment', $data ?? [], 'live');
+        $this->setIfExists('expires_at', $data ?? [], null);
         $this->setIfExists('name', $data ?? [], null);
         $this->setIfExists('scopes', $data ?? [], null);
     }
@@ -371,6 +378,40 @@ class ApiKeyInput implements ModelInterface, ArrayAccess, \JsonSerializable
             );
         }
         $this->container['environment'] = $environment;
+
+        return $this;
+    }
+
+    /**
+     * Gets expires_at
+     *
+     * @return \DateTime|null
+     */
+    public function getExpiresAt()
+    {
+        return $this->container['expires_at'];
+    }
+
+    /**
+     * Sets expires_at
+     *
+     * @param \DateTime|null $expires_at Future time after which the key stops working. Omit or null for a key that never expires. Expiry cannot be changed after creation.
+     *
+     * @return self
+     */
+    public function setExpiresAt($expires_at)
+    {
+        if (is_null($expires_at)) {
+            array_push($this->openAPINullablesSetToNull, 'expires_at');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('expires_at', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        $this->container['expires_at'] = $expires_at;
 
         return $this;
     }

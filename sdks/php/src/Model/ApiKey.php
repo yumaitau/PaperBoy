@@ -60,6 +60,7 @@ class ApiKey implements ModelInterface, ArrayAccess, \JsonSerializable
         'created_at' => '\DateTime',
         'display' => 'string',
         'environment' => 'string',
+        'expires_at' => 'mixed',
         'id' => 'string',
         'key_id' => 'string',
         'last_used_at' => 'mixed',
@@ -79,6 +80,7 @@ class ApiKey implements ModelInterface, ArrayAccess, \JsonSerializable
         'created_at' => 'date-time',
         'display' => null,
         'environment' => null,
+        'expires_at' => null,
         'id' => 'uuid',
         'key_id' => null,
         'last_used_at' => null,
@@ -96,6 +98,7 @@ class ApiKey implements ModelInterface, ArrayAccess, \JsonSerializable
         'created_at' => false,
         'display' => true,
         'environment' => false,
+        'expires_at' => true,
         'id' => false,
         'key_id' => false,
         'last_used_at' => true,
@@ -193,6 +196,7 @@ class ApiKey implements ModelInterface, ArrayAccess, \JsonSerializable
         'created_at' => 'created_at',
         'display' => 'display',
         'environment' => 'environment',
+        'expires_at' => 'expires_at',
         'id' => 'id',
         'key_id' => 'key_id',
         'last_used_at' => 'last_used_at',
@@ -210,6 +214,7 @@ class ApiKey implements ModelInterface, ArrayAccess, \JsonSerializable
         'created_at' => 'setCreatedAt',
         'display' => 'setDisplay',
         'environment' => 'setEnvironment',
+        'expires_at' => 'setExpiresAt',
         'id' => 'setId',
         'key_id' => 'setKeyId',
         'last_used_at' => 'setLastUsedAt',
@@ -227,6 +232,7 @@ class ApiKey implements ModelInterface, ArrayAccess, \JsonSerializable
         'created_at' => 'getCreatedAt',
         'display' => 'getDisplay',
         'environment' => 'getEnvironment',
+        'expires_at' => 'getExpiresAt',
         'id' => 'getId',
         'key_id' => 'getKeyId',
         'last_used_at' => 'getLastUsedAt',
@@ -310,6 +316,7 @@ class ApiKey implements ModelInterface, ArrayAccess, \JsonSerializable
         $this->setIfExists('created_at', $data ?? [], null);
         $this->setIfExists('display', $data ?? [], null);
         $this->setIfExists('environment', $data ?? [], null);
+        $this->setIfExists('expires_at', $data ?? [], null);
         $this->setIfExists('id', $data ?? [], null);
         $this->setIfExists('key_id', $data ?? [], null);
         $this->setIfExists('last_used_at', $data ?? [], null);
@@ -363,6 +370,9 @@ class ApiKey implements ModelInterface, ArrayAccess, \JsonSerializable
             );
         }
 
+        if ($this->container['expires_at'] === null && !$this->isNullableSetToNull('expires_at')) {
+            $invalidProperties[] = "'expires_at' is required";
+        }
         if ($this->container['id'] === null) {
             $invalidProperties[] = "'id' can't be null";
         }
@@ -490,6 +500,40 @@ class ApiKey implements ModelInterface, ArrayAccess, \JsonSerializable
             );
         }
         $this->container['environment'] = $environment;
+
+        return $this;
+    }
+
+    /**
+     * Gets expires_at
+     *
+     * @return mixed|null
+     */
+    public function getExpiresAt()
+    {
+        return $this->container['expires_at'];
+    }
+
+    /**
+     * Sets expires_at
+     *
+     * @param mixed|null $expires_at When the key stops working. Null means the key never expires.
+     *
+     * @return self
+     */
+    public function setExpiresAt($expires_at)
+    {
+        if (is_null($expires_at)) {
+            array_push($this->openAPINullablesSetToNull, 'expires_at');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('expires_at', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        $this->container['expires_at'] = $expires_at;
 
         return $this;
     }

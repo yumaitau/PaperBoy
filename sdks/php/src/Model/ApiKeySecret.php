@@ -59,6 +59,7 @@ class ApiKeySecret implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $openAPITypes = [
         'display' => 'string',
         'environment' => 'string',
+        'expires_at' => 'mixed',
         'id' => 'string',
         'key' => 'string',
         'name' => 'string',
@@ -75,6 +76,7 @@ class ApiKeySecret implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $openAPIFormats = [
         'display' => null,
         'environment' => null,
+        'expires_at' => null,
         'id' => 'uuid',
         'key' => null,
         'name' => null,
@@ -89,6 +91,7 @@ class ApiKeySecret implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static array $openAPINullables = [
         'display' => false,
         'environment' => false,
+        'expires_at' => true,
         'id' => false,
         'key' => false,
         'name' => false,
@@ -183,6 +186,7 @@ class ApiKeySecret implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $attributeMap = [
         'display' => 'display',
         'environment' => 'environment',
+        'expires_at' => 'expires_at',
         'id' => 'id',
         'key' => 'key',
         'name' => 'name',
@@ -197,6 +201,7 @@ class ApiKeySecret implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $setters = [
         'display' => 'setDisplay',
         'environment' => 'setEnvironment',
+        'expires_at' => 'setExpiresAt',
         'id' => 'setId',
         'key' => 'setKey',
         'name' => 'setName',
@@ -211,6 +216,7 @@ class ApiKeySecret implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $getters = [
         'display' => 'getDisplay',
         'environment' => 'getEnvironment',
+        'expires_at' => 'getExpiresAt',
         'id' => 'getId',
         'key' => 'getKey',
         'name' => 'getName',
@@ -291,6 +297,7 @@ class ApiKeySecret implements ModelInterface, ArrayAccess, \JsonSerializable
     {
         $this->setIfExists('display', $data ?? [], null);
         $this->setIfExists('environment', $data ?? [], null);
+        $this->setIfExists('expires_at', $data ?? [], null);
         $this->setIfExists('id', $data ?? [], null);
         $this->setIfExists('key', $data ?? [], null);
         $this->setIfExists('name', $data ?? [], null);
@@ -339,6 +346,9 @@ class ApiKeySecret implements ModelInterface, ArrayAccess, \JsonSerializable
             );
         }
 
+        if ($this->container['expires_at'] === null && !$this->isNullableSetToNull('expires_at')) {
+            $invalidProperties[] = "'expires_at' is required";
+        }
         if ($this->container['id'] === null) {
             $invalidProperties[] = "'id' can't be null";
         }
@@ -426,6 +436,40 @@ class ApiKeySecret implements ModelInterface, ArrayAccess, \JsonSerializable
             );
         }
         $this->container['environment'] = $environment;
+
+        return $this;
+    }
+
+    /**
+     * Gets expires_at
+     *
+     * @return mixed|null
+     */
+    public function getExpiresAt()
+    {
+        return $this->container['expires_at'];
+    }
+
+    /**
+     * Sets expires_at
+     *
+     * @param mixed|null $expires_at expires_at
+     *
+     * @return self
+     */
+    public function setExpiresAt($expires_at)
+    {
+        if (is_null($expires_at)) {
+            array_push($this->openAPINullablesSetToNull, 'expires_at');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('expires_at', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        $this->container['expires_at'] = $expires_at;
 
         return $this;
     }

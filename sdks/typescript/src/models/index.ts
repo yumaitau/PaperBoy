@@ -25,6 +25,12 @@ export interface ApiKey {
      */
     environment: ApiKeyEnvironmentEnum;
     /**
+     * When the key stops working. Null means the key never expires.
+     * @type {any}
+     * @memberof ApiKey
+     */
+    expires_at: any | null;
+    /**
      * 
      * @type {string}
      * @memberof ApiKey
@@ -85,6 +91,12 @@ export interface ApiKeyInput {
      */
     environment?: ApiKeyInputEnvironmentEnum;
     /**
+     * Future time after which the key stops working. Omit or null for a key that never expires. Expiry cannot be changed after creation.
+     * @type {string}
+     * @memberof ApiKeyInput
+     */
+    expires_at?: string | null;
+    /**
      * 
      * @type {string}
      * @memberof ApiKeyInput
@@ -139,6 +151,12 @@ export interface ApiKeySecret {
      * @memberof ApiKeySecret
      */
     environment: ApiKeySecretEnvironmentEnum;
+    /**
+     * 
+     * @type {any}
+     * @memberof ApiKeySecret
+     */
+    expires_at: any | null;
     /**
      * 
      * @type {string}
