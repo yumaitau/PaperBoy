@@ -5,9 +5,9 @@ import { AttachmentStorageError } from "@/lib/attachment-storage";
 import { AuthorizationError } from "@/lib/authorization";
 import { DomainError } from "@/lib/domain-core";
 import {
+  MAX_RECIPIENTS,
   EmailError,
   MAX_ATTACHMENT_BYTES,
-  MAX_RECIPIENTS,
 } from "@/lib/email-core";
 import type {
   QueuedMessageBatchItem,
