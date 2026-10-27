@@ -37,6 +37,13 @@ function initials(value: string): string {
   return letters || "PB";
 }
 
+/**
+ * Renders shared navigation and account content for the desktop sidebar and mobile
+ * drawer; the surrounding layout controls placement. Shows the supplied organization
+ * name and user email, with the supplied image or organization-initials avatar fallback.
+ * The account menu shows the user's name, links to organization management, and
+ * submits the sign-out form to the supplied `signOutAction`.
+ */
 export function DashboardSidebar({
   email,
   image,

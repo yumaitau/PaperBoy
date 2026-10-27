@@ -18,6 +18,13 @@ const legend = [
   { className: "legend-clicked", label: "Clicked" },
 ];
 
+/**
+ * Renders activity in the supplied order, with daily/weekly selection for day buckets.
+ * Supply chronological daily points: daily mode passes them through, while weekly
+ * mode sums delivered, opened, and clicked counts in consecutive seven-point groups,
+ * including a final partial group. It does not sort, fill gaps, or align calendar weeks.
+ * Month buckets are already aggregated and pass through without a granularity selector.
+ */
 export function EmailActivityPanel({
   bucket,
   data,
