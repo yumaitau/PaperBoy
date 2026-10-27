@@ -7,8 +7,13 @@ import { DomainError } from "@/lib/domain-core";
 import {
   MAX_RECIPIENTS,
   EmailError,
+  HEADER_NAME_PATTERN,
   MAX_ATTACHMENT_BYTES,
   MAX_CONTENT_ID_LENGTH,
+  MAX_HEADERS,
+  MAX_HEADER_NAME_LENGTH,
+  MAX_HEADER_VALUE_LENGTH,
+  RESERVED_HEADER_NAMES,
 } from "@/lib/email-core";
 import type {
   QueuedMessageBatchItem,
@@ -161,7 +166,49 @@ const attachment = z
     filename: z.string().min(1).max(255),
   })
   .strict();
-const headers = z.record(z.string(), z.string()).optional();
+// JSON Schema patterns cannot carry an /i flag. Explicit ASCII case pairs
+// preserve the runtime's case-insensitive rule in the advertised MCP schema.
+const caseInsensitiveHeaderPattern = (name: string) =>
+  name.replace(/[a-z]/g, (letter) => `[${letter}${letter.toUpperCase()}]`);
+const customHeaderNamePattern = new RegExp(
+  `^(?!(?:${[...RESERVED_HEADER_NAMES].map(caseInsensitiveHeaderPattern).join("|")})$)(?!${caseInsensitiveHeaderPattern("x-paperboy-")})`,
+);
+const headers = z
+  .preprocess(
+    (value, context) => {
+      // Count the raw JSON properties before z.record drops an own __proto__ key.
+      if (
+        value !== null &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        Object.keys(value).length > MAX_HEADERS
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: `Must contain at most ${MAX_HEADERS} headers.`,
+        });
+      }
+      return value;
+    },
+    z.record(
+      z.string()
+        .min(1)
+        .max(MAX_HEADER_NAME_LENGTH)
+        .regex(HEADER_NAME_PATTERN)
+        .regex(customHeaderNamePattern),
+      z.string()
+        .min(1)
+        .regex(/^[^\r\n]*$/)
+        // JSON Schema maxLength counts Unicode code points, unlike Zod's .max().
+        .refine((value) => [...value].length <= MAX_HEADER_VALUE_LENGTH, {
+          message: `Must contain at most ${MAX_HEADER_VALUE_LENGTH} characters.`,
+        })
+        .meta({ maxLength: MAX_HEADER_VALUE_LENGTH }),
+    ),
+  )
+  // Custom checks are not emitted as JSON Schema constraints.
+  .meta({ maxProperties: MAX_HEADERS })
+  .optional();
 const scheduledAt = z.string().datetime({ offset: true }).optional();
 
 const templateData = z.record(z.string(), z.unknown());
