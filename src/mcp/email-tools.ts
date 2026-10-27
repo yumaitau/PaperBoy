@@ -8,6 +8,7 @@ import {
   MAX_RECIPIENTS,
   EmailError,
   MAX_ATTACHMENT_BYTES,
+  MAX_CONTENT_ID_LENGTH,
 } from "@/lib/email-core";
 import type {
   QueuedMessageBatchItem,
@@ -145,7 +146,11 @@ const attachment = z
     content_id: z
       .string()
       .min(1)
-      .max(256)
+      .refine((value) => [...value].length <= MAX_CONTENT_ID_LENGTH, {
+        message: `Must contain at most ${MAX_CONTENT_ID_LENGTH} characters.`,
+      })
+      // JSON Schema string lengths count Unicode code points, not UTF-16 units.
+      .meta({ maxLength: MAX_CONTENT_ID_LENGTH })
       .regex(/^[^\s<>,;]+$/)
       .optional(),
     content_type: z
