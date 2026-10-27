@@ -17,11 +17,19 @@ Inbound attachment storage used the same check and had the same defect.
 
 The database checks are legacy storage safeguards, not a copy of the outgoing
 API validator. Outgoing validation rejects JavaScript whitespace and
-semicolons separately. Inbound parsing trims and truncates the parsed CID; it
-does not apply outgoing validation. This change leaves both parsers unchanged.
-For example, an inbound semicolon or internal non-ASCII whitespace retains
-the behavior already supported by a C-locale database. Angle brackets remain
-forbidden in stored labels, including brackets retained by the inbound parser.
+semicolons separately. Inbound parsing uses mailparser's trimmed, bracket-free
+`cid`: `Content-ID: <logo@example.com>` is stored and returned as
+`logo@example.com`. It retains at most 256 UTF-16 code units without splitting
+a surrogate pair. Missing or empty IDs, or IDs containing NUL, ASCII
+whitespace, remaining angle brackets, or commas, become NULL; the message and
+attachment are still retained. Validation happens before truncation.
+
+Inbound parsing does not apply outgoing validation. For example, an inbound
+semicolon or internal non-ASCII whitespace retains the behavior already
+supported by a C-locale database. The received API exposes the stored incoming
+MIME ID, which can differ from a sender's original logical label. Sent APIs
+continue to expose the original label. Migration 0043 itself left both parsers
+unchanged; the received parser now aligns with its existing storage checks.
 
 Do not replace the storage regex with JavaScript's full whitespace set, or
 add outbound-only restrictions to it without a separate data migration plan.
