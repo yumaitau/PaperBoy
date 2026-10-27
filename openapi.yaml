@@ -4761,8 +4761,8 @@ components:
           type: string
           minLength: 1
           maxLength: 256
-          pattern: '^(?:[^\s<>,;\uD800-\uDFFF]|[\uD800-\uDBFF][\uDC00-\uDFFF])+$'
-          description: 'Optional well-formed Unicode CID reference for inline images used as cid: URIs in HTML. Lone UTF-16 surrogates are rejected before queueing or attachment storage; valid surrogate pairs are accepted. Labels are not normalized or replaced.'
+          pattern: '^(?:[^\s<>,;\x00-\x1f\x7f\uD800-\uDFFF]|[\uD800-\uDBFF][\uDC00-\uDFFF])+$'
+          description: 'Optional well-formed Unicode CID reference for inline images used as cid: URIs in HTML. ASCII controls (U+0000–U+001F and U+007F), whitespace, angle brackets, commas, semicolons, and lone UTF-16 surrogates are rejected before queueing or attachment storage; valid surrogate pairs are accepted. Labels are not normalized or replaced.'
         filename:
           type: string
           minLength: 1

@@ -24,8 +24,8 @@ const cases = [
   { value: "x".repeat(257), valid: false },
   // These are NOT JavaScript whitespace. In particular PCRE UCP's \s includes
   // U+0085; using it would tighten the API contract. Keep non-whitespace
-  // controls, format characters, and adjacent code points accepted as before.
-  ...[0x0000, 0x0008, 0x000e, 0x001c, 0x007f, 0x0085, 0x1681, 0x180e,
+  // C1 controls, format characters, and adjacent code points accepted as before.
+  ...[0x0085, 0x1681, 0x180e,
     0x200b, 0x200c, 0x200d, 0x2027, 0x202a, 0x202e, 0x2030, 0x2060,
     0xfefe, 0xfffd, 0xffff,
   ].flatMap((codePoint) => [
