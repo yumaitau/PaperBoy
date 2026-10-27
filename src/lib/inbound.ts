@@ -236,6 +236,8 @@ export async function findLiveOrgForInboundRecipients(
 }
 
 export async function receiveInboundEmail(input: {
+  /** Transport-owned recipients; never read this from the public API payload. */
+  envelopeRecipients?: string[];
   payload: unknown;
   principal: Pick<ApiKeyPrincipal, "environment" | "orgId"> & {
     apiKeyId?: string | null;
@@ -250,7 +252,7 @@ export async function receiveInboundEmail(input: {
   const domain = await authorizeInboundRecipient({
     environment: input.principal.environment,
     orgId: input.principal.orgId,
-    to: email.to,
+    to: input.envelopeRecipients ?? email.to,
   });
 
   try {
