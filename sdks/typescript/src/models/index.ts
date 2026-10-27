@@ -3740,7 +3740,7 @@ export interface RescheduleEmailInput {
  */
 export interface RetrievedEmailAttachment {
     /**
-     * Persisted content identifier, or null when absent. For sent email, this is the original logical content_id label, not any ASCII Content-ID generated for MIME delivery or owner MIME downloads. For received email, this is the Content-ID header value parsed from incoming MIME, including any angle brackets, trimmed and limited to 256 UTF-16 code units; PaperBoy does not recover the sender's original logical label from a generated wire ID.
+     * Logical attachment content ID, or null when absent, empty, or unusable for storage. Received MIME IDs use the parser's bracket-free value with surrounding whitespace trimmed, truncated to at most 256 UTF-16 code units without splitting a surrogate pair. Values containing NUL, ASCII whitespace, angle brackets, or commas after parsing are unusable; the message and attachment are still retained. Sent-attachment retrieval returns the original caller-supplied logical content_id; received IDs reflect the incoming MIME ID and may differ from the sender's original label.
      * @type {string}
      * @memberof RetrievedEmailAttachment
      */

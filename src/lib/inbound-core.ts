@@ -260,6 +260,22 @@ export async function parseInboundMime(raw: string): Promise<InboundEmailInput> 
 
 const MAX_INBOUND_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
+/**
+ * Bound mailparser's bracket-free, trimmed CID for received storage. Invalid
+ * metadata becomes null so it cannot reject the message or attachment. Keep the
+ * legacy C-locale storage domain (not the stricter outbound validation rules).
+ */
+function receivedContentId(cid: string | undefined): string | null {
+  // PostgreSQL text cannot contain NUL; its C-locale check also rejects ASCII
+  // whitespace, brackets and commas. Validate before truncating the identifier.
+  if (!cid || /[\u0000\u0009-\u000d <>,]/.test(cid)) return null;
+
+  let bounded = cid.slice(0, 256);
+  // Keep the existing UTF-16 limit without creating a lone high surrogate.
+  if (/[\ud800-\udbff]$/.test(bounded)) bounded = bounded.slice(0, -1);
+  return bounded || null;
+}
+
 function parseInboundAttachments(attachments: Attachment[]): EmailAttachment[] {
   const parsed: EmailAttachment[] = [];
   let total = 0;
@@ -276,10 +292,7 @@ function parseInboundAttachments(attachments: Attachment[]): EmailAttachment[] {
       typeof attachment.contentType === "string" && attachment.contentType.includes("/")
         ? attachment.contentType
         : "application/octet-stream";
-    const contentId =
-      typeof attachment.contentId === "string" && attachment.contentId.trim()
-        ? attachment.contentId.trim().slice(0, 256)
-        : null;
+    const contentId = receivedContentId(attachment.cid);
 
     total += content.byteLength;
     if (total > MAX_INBOUND_ATTACHMENT_BYTES) {
