@@ -28,11 +28,13 @@ import {
   MESSAGE_STATUSES,
   emailRequestHash,
   effectiveScheduledAt,
+  matchesEmailRequestHash,
   normalizeEmailAddress,
   normalizeIdempotencyKey,
   parseSendEmailInput,
   type MessageDeliveryMode,
   type MessageStatus,
+  type SendEmailInput,
 } from "@/lib/email-core";
 import { authorizeSendingDomain } from "@/lib/domains";
 import { isOrganizationInviteMessage } from "@/lib/organization-invite-content";
@@ -184,9 +186,15 @@ async function findIdempotentMessage(apiKeyId: string, key: string) {
 
 function replayMessage(
   message: NonNullable<Awaited<ReturnType<typeof findIdempotentMessage>>>,
-  requestHash: string,
+  email: SendEmailInput,
 ): QueuedMessageRecord {
-  if (message.requestHash !== requestHash) {
+  if (
+    !matchesEmailRequestHash(
+      email,
+      message,
+      process.env.PAPERBOY_LEGACY_IDEMPOTENCY_BEFORE,
+    )
+  ) {
     throw new EmailError("IDEMPOTENCY_CONFLICT");
   }
 
@@ -261,7 +269,7 @@ export async function queueEmail(input: {
     );
 
     if (existing) {
-      const replay = replayMessage(existing, requestHash);
+      const replay = replayMessage(existing, email);
       const suppressions = await db
         .select({
           email: emailSuppressions.email,
@@ -560,7 +568,7 @@ export async function queueEmail(input: {
       );
 
       if (existing) {
-        return replayMessage(existing, requestHash);
+        return replayMessage(existing, email);
       }
     }
 
