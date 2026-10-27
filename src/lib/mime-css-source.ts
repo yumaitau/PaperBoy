@@ -1,0 +1,159 @@
+import { DecodingMode, EntityDecoder, htmlDecodeTree } from "entities/decode";
+import { Tokenizer, type Token } from "parse5";
+
+type Edit = { start: number; end: number; value: string };
+type Range = { start: number; end: number };
+type Span = {
+  start: number;
+  end: number;
+  from: number;
+  to: number;
+  literal: boolean;
+};
+
+/** Map foreign parsed text back to raw HTML without consuming markup boundaries. */
+export function foreignCssSource(source: string, textRanges: Range[]) {
+  const omitted: Range[] = [];
+  let cursor = 0;
+  for (const range of textRanges) {
+    if (cursor < range.start) omitted.push({ start: cursor, end: range.start });
+    cursor = range.end;
+  }
+  if (cursor < source.length)
+    omitted.push({ start: cursor, end: source.length });
+  const ignore = (token: Token.Token) => {
+    if (token.location)
+      omitted.push({
+        start: token.location.startOffset,
+        end: token.location.endOffset,
+      });
+  };
+  const noop = () => {};
+  // The tokenizer stays in foreign DATA mode: tags/comments are markup and
+  // CDATA is text. Tree selection and the final semantic check belong to parse5.
+  const tokenizer = new Tokenizer(
+    { sourceCodeLocationInfo: true },
+    {
+      onStartTag: ignore,
+      onEndTag: ignore,
+      onComment: ignore,
+      onDoctype: ignore,
+      onCharacter: noop,
+      onWhitespaceCharacter: noop,
+      onNullCharacter: noop,
+      onEof: noop,
+    },
+  );
+  tokenizer.inForeignNode = true;
+  tokenizer.write(source, true);
+  // Ignore both tokenizer markup and descendants that are not direct style
+  // text children. Ranges can overlap (e.g. a nested element's opening tag).
+  const markup: Range[] = [];
+  for (const range of omitted.sort((a, b) => a.start - b.start)) {
+    const previous = markup.at(-1);
+    if (previous && range.start <= previous.end)
+      previous.end = Math.max(previous.end, range.end);
+    else markup.push({ ...range });
+  }
+
+  const spans: Span[] = [];
+  let css = "";
+  function append(start: number, end: number, text: string, literal = false) {
+    spans.push({
+      start,
+      end,
+      from: css.length,
+      to: css.length + text.length,
+      literal,
+    });
+    css += text;
+  }
+  let decoded = "";
+  const decoder = new EntityDecoder(htmlDecodeTree, (cp) => {
+    decoded += String.fromCodePoint(cp);
+  });
+  let cdata = false;
+  let position = 0;
+  let markupIndex = 0;
+  let run = 0;
+  const flush = () => {
+    if (run < position)
+      append(run, position, source.slice(run, position), true);
+  };
+  while (position < source.length) {
+    const omitted = markup[markupIndex];
+    if (omitted?.start === position) {
+      flush();
+      position = omitted.end;
+      markupIndex++;
+    } else if (!cdata && source.startsWith("<![CDATA[", position)) {
+      flush();
+      position += 9;
+      cdata = true;
+    } else if (cdata && source.startsWith("]]>", position)) {
+      flush();
+      position += 3;
+      cdata = false;
+    } else if (!cdata && source[position] === "&") {
+      decoded = "";
+      decoder.startEntity(DecodingMode.Legacy);
+      let consumed = decoder.write(source, position + 1);
+      if (consumed < 0) consumed = decoder.end();
+      if (consumed === 0) {
+        position++;
+        continue;
+      }
+      flush();
+      append(position, position + consumed, decoded);
+      position += consumed;
+    } else if (source[position] === "\r" || source[position] === "\0") {
+      flush();
+      const end =
+        position +
+        (source[position] === "\r" && source[position + 1] === "\n" ? 2 : 1);
+      append(position, end, source[position] === "\r" ? "\n" : "\ufffd");
+      position = end;
+    } else {
+      position++;
+      continue;
+    }
+    run = position;
+  }
+  flush();
+
+  return {
+    css,
+    edits(changes: Edit[]): Edit[] {
+      const result: Edit[] = [];
+      let index = 0;
+      for (const change of changes) {
+        while (index < spans.length && spans[index].to <= change.start) index++;
+        let first = true;
+        for (
+          let i = index;
+          i < spans.length && spans[i].from < change.end;
+          i++
+        ) {
+          const span = spans[i];
+          const from = Math.max(change.start, span.from);
+          const to = Math.min(change.end, span.to);
+          // A reference may span entities, CDATA, or ignored markup. Only text
+          // spans are replaced; delimiters and untouched raw source stay intact.
+          // Multi-codepoint entities must retain any semantic prefix/suffix.
+          const escape = (text: string) =>
+            text.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
+          result.push({
+            start: span.start + (span.literal ? from - span.from : 0),
+            end: span.literal ? span.start + to - span.from : span.end,
+            value:
+              (span.literal ? "" : escape(css.slice(span.from, from))) +
+              (first ? change.value : "") +
+              (span.literal ? "" : escape(css.slice(to, span.to))),
+          });
+          first = false;
+        }
+      }
+      return result;
+    },
+  };
+}

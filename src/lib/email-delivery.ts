@@ -1,4 +1,5 @@
 import MailComposer from "nodemailer/lib/mail-composer";
+import { mimeContentIds, rewriteMimeCidReferences } from "@/lib/mime-content-ids";
 
 export const CLOUDFLARE_EMAIL_MAX_BYTES = 5 * 1024 * 1024;
 
@@ -57,10 +58,16 @@ async function buildMimeMessage(
   const cc = message.cc ?? [];
   const bcc = message.bcc ?? [];
   const customHeaders = message.headers ?? {};
+  const contentIds = mimeContentIds(
+    message.attachments.map((attachment) => attachment.contentId),
+  );
   const composer = new MailComposer({
     attachments: message.attachments.map((attachment) => ({
       ...(attachment.contentId
-        ? { cid: attachment.contentId, contentDisposition: "inline" as const }
+        ? {
+            cid: contentIds.get(attachment.contentId) ?? attachment.contentId,
+            contentDisposition: "inline" as const,
+          }
         : { contentDisposition: "attachment" as const }),
       content: attachment.content,
       contentType: attachment.contentType,
@@ -73,7 +80,10 @@ async function buildMimeMessage(
     disableUrlAccess: true,
     from: message.from,
     headers: { ...customHeaders, ...message.extraHeaders },
-    html: message.html ?? undefined,
+    html:
+      message.html === null
+        ? undefined
+        : rewriteMimeCidReferences(message.html, contentIds),
     messageId: message.messageId,
     replyTo:
       message.replyTo && message.replyTo.length > 0

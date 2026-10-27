@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { simpleParser } from "mailparser";
 
@@ -92,8 +93,13 @@ test(
     const mimeMessage = rows[118];
     mimeMessage.cc = ["Copy <copy@example.net>"];
     mimeMessage.bcc = ["Hidden copy <hidden@example.net>", "audit@example.org"];
+    const logicalContentId = "\u00e9\ud83d\ude00";
+    mimeMessage.html += `<img src="cid:${logicalContentId}">`;
     const attachmentId = randomUUID();
-    const attachment = Buffer.from("Cloudflare-compatible attachment proof\n");
+    const attachment = Buffer.from(
+      (await readFile(new URL("./fixtures/sample.png.b64", import.meta.url), "utf8")).trim(),
+      "base64",
+    );
     const storageKey = `${orgId}/${mimeMessage.id}/${attachmentId}.blob`;
     const lock = await db.$client.reserve();
 
@@ -165,7 +171,8 @@ test(
       await db.insert(messageAttachments).values({
         byteSize: attachment.length,
         contentSha256: createHash("sha256").update(attachment).digest("hex"),
-        contentType: "text/plain",
+        contentId: logicalContentId,
+        contentType: "image/png",
         filename: "proof.txt",
         id: attachmentId,
         messageId: mimeMessage.id,
@@ -321,9 +328,24 @@ test(
       assert.match(emlText, /Subject: Edition 118/);
       assert.match(emlText, /X-PaperBoy-Message-ID:/i);
       assert.match(emlText, /filename="?proof\.txt"?/);
-      assert.match(emlText, new RegExp(attachment.toString("base64")));
+      assert.deepEqual(parsed.attachments[0].content, attachment);
       assert.doesNotMatch(emlText, /DKIM-Signature:/i);
       assert.doesNotMatch(emlText, /ARC-Seal:/i);
+      const unlinked = await simpleParser(eml, { skipImageLinks: true });
+      const wireId = unlinked.attachments[0].cid;
+      assert.match(wireId, /^pb-[a-f0-9]{64}@cid\.paperboy\.invalid$/);
+      assert.ok(unlinked.html.includes(`<img src="cid:${wireId}">`));
+      assert.match(parsed.html, /src="data:image\/png;base64,/);
+      const [storedMessage] = await db
+        .select({ html: messages.html })
+        .from(messages)
+        .where(eq(messages.id, mimeMessage.id));
+      const [storedAttachment] = await db
+        .select({ contentId: messageAttachments.contentId })
+        .from(messageAttachments)
+        .where(eq(messageAttachments.id, attachmentId));
+      assert.equal(storedMessage.html, mimeMessage.html);
+      assert.equal(storedAttachment.contentId, logicalContentId);
       const withoutBcc = await buildOwnerMessageMime({
         actorUserId: ownerId,
         messageId: rows[0].id,
