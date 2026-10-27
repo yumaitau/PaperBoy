@@ -354,11 +354,18 @@ function parseScheduledAt(
     return null;
   }
 
-  if (parsed.getTime() <= now.getTime() + SCHEDULE_GRACE_MS) {
-    return null;
-  }
-
   return parsed;
+}
+
+// Keep the requested instant stable for idempotency; only delivery timing uses
+// the grace window. A retry must not change the identity of the request.
+export function effectiveScheduledAt(
+  scheduledAt: Date | null,
+  now = new Date(),
+): Date | null {
+  return scheduledAt && scheduledAt.getTime() > now.getTime() + SCHEDULE_GRACE_MS
+    ? scheduledAt
+    : null;
 }
 
 export function parseRescheduledAt(value: unknown, now = new Date()): Date | null {
@@ -392,7 +399,7 @@ export function parseRescheduledAt(value: unknown, now = new Date()): Date | nul
     throw new EmailError("VALIDATION_ERROR", issues);
   }
 
-  return scheduledAt;
+  return effectiveScheduledAt(scheduledAt, now);
 }
 
 function parseHeaders(

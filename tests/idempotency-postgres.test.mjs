@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
+import { setSystemTime } from "bun:test";
 
 const databaseUrl = process.env.PAPERBOY_TEST_DATABASE_URL;
 
@@ -205,6 +206,55 @@ test(
       });
       assert.equal(activeRow?.idempotencyKey, idempotencyKey);
       assert.match(activeRow?.requestHash ?? "", /^[0-9a-f]{64}$/);
+
+      const now = new Date();
+      try {
+        for (const offset of [120_000, 30_000, -30_000]) {
+          setSystemTime(now);
+          const scheduledAt = new Date(now.getTime() + offset);
+          const scheduledPayload = {
+            ...payload,
+            scheduled_at: scheduledAt.toISOString(),
+          };
+          const scheduledKey = `scheduled-${randomUUID()}`;
+          const send = (body) => handleSendEmailRequest(
+            request(body, secondKey.rawKey, { "Idempotency-Key": scheduledKey }),
+            dependencies,
+          );
+          const initial = await send(scheduledPayload);
+          assert.equal(initial.status, 200);
+          const initialBody = await initial.json();
+          for (const elapsed of [60_000, 180_000]) {
+            setSystemTime(new Date(now.getTime() + elapsed));
+            const replay = await send(scheduledPayload);
+            assert.equal(replay.status, 200);
+            assert.equal((await replay.json()).id, initialBody.id);
+          }
+          const changed = await send({
+            ...scheduledPayload,
+            scheduled_at: new Date(scheduledAt.getTime() + 1_000).toISOString(),
+          });
+          assert.equal(changed.status, 409);
+          assert.equal((await changed.json()).error.code, "idempotency_conflict");
+          const rows = await db.select({
+            id: messages.id,
+            scheduledAt: messages.scheduledAt,
+            nextAttemptAt: messages.nextAttemptAt,
+          }).from(messages).where(and(
+            eq(messages.apiKeyId, secondApiKeyId),
+            eq(messages.idempotencyKey, scheduledKey),
+          ));
+          assert.equal(rows.length, 1);
+          assert.equal(rows[0].id, initialBody.id);
+          assert.equal(rows[0].scheduledAt?.toISOString() ?? null,
+            offset > 60_000 ? scheduledAt.toISOString() : null);
+          if (offset > 60_000) {
+            assert.equal(rows[0].nextAttemptAt.toISOString(), scheduledAt.toISOString());
+          }
+        }
+      } finally {
+        setSystemTime();
+      }
     } finally {
       try {
         await db.delete(orgs).where(eq(orgs.id, orgId));

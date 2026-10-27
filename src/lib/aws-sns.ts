@@ -208,7 +208,7 @@ export function awsSnsStringToSign(envelope: AwsSnsEnvelope): string {
           ["TopicArn", envelope.TopicArn],
           ["Type", envelope.Type],
         ];
-  return pairs.flatMap(([name, value]) => [name, value]).join("\n");
+  return pairs.map(([name, value]) => `${name}\n${value}\n`).join("");
 }
 
 async function certificate(

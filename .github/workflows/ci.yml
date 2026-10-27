@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: paperboy-ci
+  group: paperboy-ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -119,6 +119,11 @@ jobs:
       - name: Build TypeScript SDK
         run: bun run sdk:build
 
+      - name: Build generated TypeScript SDK (CommonJS and ESM)
+        run: |
+          bun --no-env-file x tsc -p sdks/typescript/tsconfig.json
+          bun --no-env-file x tsc -p sdks/typescript/tsconfig.esm.json
+
       - name: Check Drizzle schema
         run: bun run db:check
 
@@ -136,6 +141,10 @@ jobs:
       - name: Migrate test database
         run: bun run db:migrate
 
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
       - name: Test
         run: bun run test
 
