@@ -4705,8 +4705,23 @@ components:
           pattern: '^[A-Za-z0-9_-]+$'
     EmailHeaders:
       type: object
-      description: Custom MIME headers. Delivery headers such as From, To, Cc, Bcc, Subject, and Date are reserved.
+      description: >-
+        Custom MIME headers. Names use RFC 5322 field-name characters (printable
+        ASCII except colon, including parentheses), with at most 128 characters.
+        Reserved names are case-insensitive: Bcc, Cc, Content-Transfer-Encoding,
+        Content-Type, Date, DKIM-Signature, DomainKey-Signature, From, Message-ID,
+        MIME-Version, Received, Reply-To, Return-Path, Return-Receipt-To, Sender,
+        Subject, To, and every name beginning with X-PaperBoy-.
       maxProperties: 50
+      propertyNames:
+        type: string
+        minLength: 1
+        maxLength: 128
+        pattern: '^[\x21-\x39\x3b-\x7e]+$'
+        not:
+          anyOf:
+            - pattern: '^([bB][cC][cC]|[cC][cC]|[cC][oO][nN][tT][eE][nN][tT]-[tT][rR][aA][nN][sS][fF][eE][rR]-[eE][nN][cC][oO][dD][iI][nN][gG]|[cC][oO][nN][tT][eE][nN][tT]-[tT][yY][pP][eE]|[dD][aA][tT][eE]|[dD][kK][iI][mM]-[sS][iI][gG][nN][aA][tT][uU][rR][eE]|[dD][oO][mM][aA][iI][nN][kK][eE][yY]-[sS][iI][gG][nN][aA][tT][uU][rR][eE]|[fF][rR][oO][mM]|[mM][eE][sS][sS][aA][gG][eE]-[iI][dD]|[mM][iI][mM][eE]-[vV][eE][rR][sS][iI][oO][nN]|[rR][eE][cC][eE][iI][vV][eE][dD]|[rR][eE][pP][lL][yY]-[tT][oO]|[rR][eE][tT][uU][rR][nN]-[pP][aA][tT][hH]|[rR][eE][tT][uU][rR][nN]-[rR][eE][cC][eE][iI][pP][tT]-[tT][oO]|[sS][eE][nN][dD][eE][rR]|[sS][uU][bB][jJ][eE][cC][tT]|[tT][oO])$'
+            - pattern: '^[xX]-[pP][aA][pP][eE][rR][bB][oO][yY]-'
       additionalProperties:
         type: string
         minLength: 1

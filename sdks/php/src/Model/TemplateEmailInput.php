@@ -713,7 +713,7 @@ class TemplateEmailInput implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Sets headers
      *
-     * @param array<string,string>|null $headers Custom MIME headers. Delivery headers such as From, To, Cc, Bcc, Subject, and Date are reserved.
+     * @param array<string,string>|null $headers Custom MIME headers. Names use RFC 5322 field-name characters (printable ASCII except colon, including parentheses), with at most 128 characters. Reserved names are case-insensitive: Bcc, Cc, Content-Transfer-Encoding, Content-Type, Date, DKIM-Signature, DomainKey-Signature, From, Message-ID, MIME-Version, Received, Reply-To, Return-Path, Return-Receipt-To, Sender, Subject, To, and every name beginning with X-PaperBoy-.
      *
      * @return self
      */

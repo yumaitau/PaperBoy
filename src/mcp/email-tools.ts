@@ -6,7 +6,12 @@ import { AuthorizationError } from "@/lib/authorization";
 import { DomainError } from "@/lib/domain-core";
 import {
   EmailError,
+  HEADER_NAME_PATTERN,
   MAX_ATTACHMENT_BYTES,
+  MAX_HEADERS,
+  MAX_HEADER_NAME_LENGTH,
+  MAX_HEADER_VALUE_LENGTH,
+  RESERVED_HEADER_NAMES,
 } from "@/lib/email-core";
 import type {
   QueuedMessageBatchItem,
@@ -155,7 +160,31 @@ const attachment = z
     filename: z.string().min(1).max(255),
   })
   .strict();
-const headers = z.record(z.string(), z.string()).optional();
+// JSON Schema patterns cannot carry an /i flag. Explicit ASCII case pairs
+// preserve the runtime's case-insensitive rule in the advertised MCP schema.
+const caseInsensitiveHeaderPattern = (name: string) =>
+  name.replace(/[a-z]/g, (letter) => `[${letter}${letter.toUpperCase()}]`);
+const customHeaderNamePattern = new RegExp(
+  `^(?!(?:${[...RESERVED_HEADER_NAMES].map(caseInsensitiveHeaderPattern).join("|")})$)(?!${caseInsensitiveHeaderPattern("x-paperboy-")})`,
+);
+const headers = z
+  .record(
+    z.string()
+      .min(1)
+      .max(MAX_HEADER_NAME_LENGTH)
+      .regex(HEADER_NAME_PATTERN)
+      .regex(customHeaderNamePattern),
+    z.string()
+      .min(1)
+      .max(MAX_HEADER_VALUE_LENGTH)
+      .regex(/^[^\r\n]*$/),
+  )
+  .refine((value) => Object.keys(value).length <= MAX_HEADERS, {
+    message: `Must contain at most ${MAX_HEADERS} headers.`,
+  })
+  // Zod record refinements are not emitted as JSON Schema constraints.
+  .meta({ maxProperties: MAX_HEADERS })
+  .optional();
 const scheduledAt = z.string().datetime({ offset: true }).optional();
 
 const templateData = z.record(z.string(), z.unknown());
