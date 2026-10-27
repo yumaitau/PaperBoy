@@ -283,9 +283,23 @@
       "breakpoints": true
     },
     {
+      "idx": 40,
+      "version": "7",
+      "when": 1793086502326,
+      "tag": "0040_invitation_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793088407171,
+      "tag": "0041_received_email_environment",
+      "breakpoints": true
+    },
+    {
       "idx": 42,
       "version": "7",
-      "when": 1793088345404,
+      "when": 1793089246334,
       "tag": "0042_webhook_endpoint_fanout",
       "breakpoints": true
     }

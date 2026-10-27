@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/auth-form";
-import { findOrganizationInvitationById } from "@/lib/organizations";
+import { findOrganizationInvitationForLink } from "@/lib/organizations";
 import { organizationInvitePath } from "@/lib/organization-invite-access";
 import { getSession } from "@/lib/session";
 import { acceptInvitationFromLinkAction } from "./actions";
@@ -24,7 +24,7 @@ export default async function InvitePage({
     searchParams,
     getSession(),
   ]);
-  const invitation = await findOrganizationInvitationById(invitationId);
+  const invitation = await findOrganizationInvitationForLink(invitationId);
 
   if (!invitation || invitation.revokedAt) {
     return (
@@ -39,10 +39,24 @@ export default async function InvitePage({
     );
   }
 
-  const invitePath = organizationInvitePath(invitation.id);
+  const invitePath = organizationInvitePath(invitationId);
   const sessionEmail = session?.user.email.trim().toLowerCase() ?? null;
   const invitedEmail = invitation.email;
   const matchingSession = sessionEmail === invitedEmail;
+
+  if (invitation.requiresVerifiedEmail && (!matchingSession || !session?.user.emailVerified)) {
+    return (
+      <section className="auth-card">
+        <h1>This invitation needs a new link</h1>
+        <p className="auth-intro">
+          Ask an owner or admin to resend your invitation. Older links cannot
+          verify your email address. If you already have a verified PaperBoy
+          account, sign in with the invited address to accept it.
+        </p>
+        <a href={`/sign-in?callbackURL=${encodeURIComponent(invitePath)}`}>Sign in</a>
+      </section>
+    );
+  }
 
   if (invitation.acceptedAt) {
     if (matchingSession) {
@@ -75,7 +89,7 @@ export default async function InvitePage({
           </p>
         ) : null}
         <form action={acceptInvitationFromLinkAction}>
-          <input name="invitationId" type="hidden" value={invitation.id} />
+          <input name="invitationToken" type="hidden" value={invitationId} />
           <button className="btn btn-primary auth-submit" type="submit">
             Accept invitation
           </button>

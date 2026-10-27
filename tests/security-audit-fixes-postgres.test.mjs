@@ -34,7 +34,7 @@ test(
       import("../src/lib/broadcasts.ts"),
       import("../src/lib/rate-limit-core.ts"),
     ]);
-    const { apiKeys, broadcastRecipients, broadcasts, orgInvites, orgMembers, orgs, users } = schema;
+    const { apiKeys, broadcastRecipients, broadcasts, orgMembers, orgs, users } = schema;
     const orgId = randomUUID();
     const [ownerId, adminId, agencyId, memberId, inviteeId] = Array.from({ length: 5 }, () => randomUUID());
     const inviteEmail = `${randomUUID()}@example.test`;
@@ -120,16 +120,17 @@ test(
       assert.equal(afterRace.status, "paused");
 
       // Invites: address alone is not proof of ownership.
-      const [invite] = await db.insert(orgInvites).values({ orgId, email: inviteEmail, role: "admin", invitedByUserId: ownerId }).returning({ id: orgInvites.id });
+      const { invitation: invite, invitationToken } = await organizations.inviteOrganizationMember({ orgId, email: inviteEmail, role: "admin", actorUserId: ownerId });
       process.env.PAPERBOY_PUBLIC_SIGNUP_ENABLED = "false";
       assert.equal(await organizations.canCreateAccountForEmail(inviteEmail), false);
       assert.equal(await organizations.canCreateAccountForEmail(inviteEmail, randomUUID()), false);
-      assert.equal(await organizations.canCreateAccountForEmail(inviteEmail, invite.id), true);
+      assert.equal(await organizations.canCreateAccountForEmail(inviteEmail, invite.id), false);
+      assert.equal(await organizations.canCreateAccountForEmail(inviteEmail, invitationToken), true);
       await assert.rejects(
         organizations.acceptOrganizationInvitation({ email: inviteEmail, invitationId: invite.id, proof: "verified-session", userId: inviteeId }),
         { code: "INVITATION_REQUIRES_LINK" },
       );
-      await organizations.acceptOrganizationInvitation({ email: inviteEmail, invitationId: invite.id, proof: "invite-link", userId: inviteeId });
+      await organizations.acceptOrganizationInvitation({ email: inviteEmail, invitationToken, proof: "invite-link", userId: inviteeId });
       const [invitee] = await db.select({ emailVerified: users.emailVerified }).from(users).where(eq(users.id, inviteeId));
       assert.equal(invitee.emailVerified, true);
     } finally {
