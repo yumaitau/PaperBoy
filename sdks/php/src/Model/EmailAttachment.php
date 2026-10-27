@@ -310,8 +310,8 @@ class EmailAttachment implements ModelInterface, ArrayAccess, \JsonSerializable
             $invalidProperties[] = "invalid value for 'content_id', the character length must be bigger than or equal to 1.";
         }
 
-        if (!is_null($this->container['content_id']) && !preg_match("/^[^\\\\s<>,;]+$/", $this->container['content_id'])) {
-            $invalidProperties[] = "invalid value for 'content_id', must be conform to the pattern /^[^\\\\s<>,;]+$/.";
+        if (!is_null($this->container['content_id']) && !preg_match("/^[^\\s<>,;]+$/", $this->container['content_id'])) {
+            $invalidProperties[] = "invalid value for 'content_id', must be conform to the pattern /^[^\\s<>,;]+$/.";
         }
 
         if ($this->container['filename'] === null) {
@@ -411,8 +411,8 @@ class EmailAttachment implements ModelInterface, ArrayAccess, \JsonSerializable
         if ((mb_strlen($content_id) < 1)) {
             throw new \InvalidArgumentException('invalid length for $content_id when calling EmailAttachment., must be bigger than or equal to 1.');
         }
-        if ((!preg_match("/^[^\\\\s<>,;]+$/", ObjectSerializer::toString($content_id)))) {
-            throw new \InvalidArgumentException("invalid value for \$content_id when calling EmailAttachment., must conform to the pattern /^[^\\\\s<>,;]+$/.");
+        if ((!preg_match("/^[^\\s<>,;]+$/", ObjectSerializer::toString($content_id)))) {
+            throw new \InvalidArgumentException("invalid value for \$content_id when calling EmailAttachment., must conform to the pattern /^[^\\s<>,;]+$/.");
         }
 
         $this->container['content_id'] = $content_id;
