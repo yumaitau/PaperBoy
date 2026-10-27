@@ -38,6 +38,15 @@ jobs:
       - name: Generate TypeScript and PHP SDKs
         run: ./scripts/generate-sdks.sh
 
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: "1.4.0"
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - name: Build generated TypeScript SDK (CommonJS and ESM)
+        run: |
+          bun --no-env-file x tsc -p sdks/typescript/tsconfig.json
+          bun --no-env-file x tsc -p sdks/typescript/tsconfig.esm.json
+
       - name: Commit regenerated SDKs
         run: |
           git add sdks/typescript sdks/php
