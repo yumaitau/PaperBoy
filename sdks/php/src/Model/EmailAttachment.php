@@ -310,8 +310,8 @@ class EmailAttachment implements ModelInterface, ArrayAccess, \JsonSerializable
             $invalidProperties[] = "invalid value for 'content_id', the character length must be bigger than or equal to 1.";
         }
 
-        if (!is_null($this->container['content_id']) && !preg_match("/^[^\\s<>,;]+$/", $this->container['content_id'])) {
-            $invalidProperties[] = "invalid value for 'content_id', must be conform to the pattern /^[^\\s<>,;]+$/.";
+        if (!is_null($this->container['content_id']) && !preg_match("/\\A[^\\x{0009}-\\x{000D}\\x{0020}\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}<>,;]+\\z/u", $this->container['content_id'])) {
+            $invalidProperties[] = "invalid value for 'content_id', must be conform to the pattern /\\A[^\\x{0009}-\\x{000D}\\x{0020}\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}<>,;]+\\z/u.";
         }
 
         if ($this->container['filename'] === null) {
@@ -411,8 +411,8 @@ class EmailAttachment implements ModelInterface, ArrayAccess, \JsonSerializable
         if ((mb_strlen($content_id) < 1)) {
             throw new \InvalidArgumentException('invalid length for $content_id when calling EmailAttachment., must be bigger than or equal to 1.');
         }
-        if ((!preg_match("/^[^\\s<>,;]+$/", ObjectSerializer::toString($content_id)))) {
-            throw new \InvalidArgumentException("invalid value for \$content_id when calling EmailAttachment., must conform to the pattern /^[^\\s<>,;]+$/.");
+        if ((!preg_match("/\\A[^\\x{0009}-\\x{000D}\\x{0020}\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}<>,;]+\\z/u", ObjectSerializer::toString($content_id)))) {
+            throw new \InvalidArgumentException("invalid value for \$content_id when calling EmailAttachment., must conform to the pattern /\\A[^\\x{0009}-\\x{000D}\\x{0020}\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}<>,;]+\\z/u.");
         }
 
         $this->container['content_id'] = $content_id;
