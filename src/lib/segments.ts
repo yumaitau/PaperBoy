@@ -1362,7 +1362,7 @@ export async function createContactImport(input: {
   }
 
   try {
-    const { rows } = parseImportRows(definition.csv, definition.columnMap);
+    const { rows, columnMap } = parseImportRows(definition.csv, definition.columnMap);
     let created = 0;
     let updated = 0;
     let skipped = 0;

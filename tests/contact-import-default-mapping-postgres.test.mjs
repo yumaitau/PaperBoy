@@ -27,6 +27,12 @@ test("contact imports infer canonical CSV headers when optional mapping is omitt
     const [contact] = await db.select().from(contacts).where(and(eq(contacts.orgId, orgId), eq(contacts.email, "ada@example.net")));
     assert.equal(contact.firstName, "Ada");
     assert.equal(contact.lastName, "Lovelace");
+    await createContactImport({ actorUserId, orgId, payload: {
+      csv: "email\nada@example.net\n", on_conflict: "upsert",
+    } });
+    const [preserved] = await db.select().from(contacts).where(eq(contacts.id, contact.id));
+    assert.equal(preserved.firstName, "Ada");
+    assert.equal(preserved.lastName, "Lovelace");
     const explicit = await createContactImport({ actorUserId, orgId, payload: {
       csv: "Address\ngrace@example.net\n", column_map: { email: "Address" },
     } });
