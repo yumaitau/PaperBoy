@@ -354,10 +354,13 @@ export async function duplicateTemplate(input: {
               textBody: source.text,
               version: 1,
             })
+            // A uniqueness exception aborts a PostgreSQL transaction. Skip
+            // occupied copy names without raising before the next attempt.
+            .onConflictDoNothing()
             .returning(templateSelection);
 
           if (!created) {
-            throw new TemplateError("TEMPLATE_NOT_FOUND");
+            continue;
           }
 
           return created;

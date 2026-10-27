@@ -20,7 +20,6 @@ import type {
     ContactSegmentListEnvelope,
     ContactTopicListEnvelope,
     ContactTopicsUpdateInput,
-    CreateContactImportRequest,
     DeletedResource,
     ErrorEnvelope,
     OrgContact,

@@ -165,6 +165,7 @@ export async function deleteBroadcastAction(formData: FormData) {
 export async function updateBroadcastAction(formData: FormData) {
   const { organization, session } = await requireOrganization();
   const broadcastId = String(formData.get("broadcastId") ?? "");
+  const audienceId = formData.get("audienceId");
   const schedule = parseNaturalLanguageSchedule(
     formData.get("scheduleText"),
     new Date(),
@@ -182,7 +183,7 @@ export async function updateBroadcastAction(formData: FormData) {
       broadcastId,
       orgId: organization.id,
       payload: {
-        audience_id: formData.get("audienceId"),
+        ...(typeof audienceId === "string" && audienceId ? { audience_id: audienceId } : {}),
         from: formData.get("from"),
         ...(typeof formData.get("html") === "string"
           ? { html: formData.get("html") }
