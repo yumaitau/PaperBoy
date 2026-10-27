@@ -476,6 +476,9 @@ test("duplicate To, CC, and BCC addresses succeed through Nodemailer's SMTP tran
     assert.deepEqual(parsed.cc.value.map(({ address }) => address.toLowerCase()),
       ["reader@example.net", "copy@example.net"]);
     assert.equal(parsed.bcc, undefined);
+    assert.equal(parsed.headers.has("bcc"), false);
+    assert.doesNotMatch(transactions[1].raw, /^Bcc:/im);
+    assert.doesNotMatch(transactions[1].raw, /hidden@example\.net/i);
   } finally {
     adapter.close();
     for (const socket of sockets) socket.destroy();

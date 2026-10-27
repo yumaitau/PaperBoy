@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { simpleParser } from "mailparser";
 import {
   GetAccountCommand,
   ListEmailIdentitiesCommand,
@@ -79,7 +80,12 @@ test("SES v2 SendEmail submits lossless raw MIME and stores the provider ID", as
     now: () => new Date("2026-08-24T01:00:00.000Z"),
   });
 
-  const result = await adapter.send(message());
+  const result = await adapter.send(
+    message({
+      bcc: ["Hidden copy <Hidden@Example.NET>", "audit@example.org"],
+      cc: ["Copy <Copy@Example.NET>"],
+    }),
+  );
   assert.deepEqual(result, { providerMessageId: sendResponse.MessageId });
   assert.equal(commands.length, 1);
   assert.ok(commands[0] instanceof SendEmailCommand);
@@ -87,6 +93,10 @@ test("SES v2 SendEmail submits lossless raw MIME and stores the provider ID", as
   assert.equal(input.ConfigurationSetName, "paperboy-events");
   assert.equal(input.FromEmailAddress, "PaperBoy <news@example.com>");
   assert.deepEqual(input.Destination.ToAddresses, ["reader@example.net"]);
+  assert.deepEqual(input.Destination.CcAddresses, ["copy@example.net"]);
+  assert.deepEqual(input.Destination.BccAddresses, [
+    "hidden@example.net", "audit@example.org",
+  ]);
   assert.deepEqual(input.EmailTags, [
     { Name: AWS_SES_MESSAGE_ID_TAG, Value: messageId },
   ]);
@@ -97,6 +107,16 @@ test("SES v2 SendEmail submits lossless raw MIME and stores the provider ID", as
   );
   assert.match(raw, /filename=fixture\.txt/);
   assert.match(raw, /Amazon SES fixture/);
+  const parsed = await simpleParser(input.Content.Raw.Data);
+  assert.deepEqual(parsed.to.value.map(({ address }) => address), [
+    "reader@example.net",
+  ]);
+  assert.deepEqual(parsed.cc.value.map(({ address }) => address.toLowerCase()), [
+    "copy@example.net",
+  ]);
+  assert.equal(parsed.headers.has("bcc"), false);
+  assert.doesNotMatch(raw, /^Bcc:/im);
+  assert.doesNotMatch(raw, /hidden@example\.net|audit@example\.org/i);
 });
 
 test("SES v2 SendBulkEmail preserves input order and per-message tags", async () => {

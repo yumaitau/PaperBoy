@@ -29,12 +29,24 @@ export class DeliveryProviderError extends Error {
   }
 }
 
-export async function buildSmtpMimeMessage(
-  message: DeliveryMessage & {
-    date?: Date;
-    extraHeaders?: Record<string, string>;
-    messageId?: string;
-  },
+type MimeMessage = DeliveryMessage & {
+  date?: Date;
+  extraHeaders?: Record<string, string>;
+  messageId?: string;
+};
+
+export function buildSmtpMimeMessage(message: MimeMessage): Promise<Buffer> {
+  return buildMimeMessage(message, false);
+}
+
+// For authorized owner downloads only; delivery must never include Bcc headers.
+export function buildArchiveMimeMessage(message: MimeMessage): Promise<Buffer> {
+  return buildMimeMessage(message, true);
+}
+
+async function buildMimeMessage(
+  message: MimeMessage,
+  keepBcc: boolean,
 ): Promise<Buffer> {
   const cc = message.cc ?? [];
   const bcc = message.bcc ?? [];
@@ -66,7 +78,9 @@ export async function buildSmtpMimeMessage(
     to: message.to,
   });
 
-  return composer.compile().build();
+  const mime = composer.compile();
+  mime.keepBcc = keepBcc;
+  return mime.build();
 }
 
 export function prepareCloudflareEmailMessage(message: DeliveryMessage) {
