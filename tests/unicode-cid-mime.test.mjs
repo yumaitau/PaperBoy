@@ -22,8 +22,15 @@ import {
 const accent = "\u00e9";
 const emoji = "\ud83d\ude00";
 const bytes = Buffer.from("inline image fixture");
+/** Return a fresh fixed Date so adapter timing and MIME headers are repeatable. */
 const now = () => new Date("2026-10-27T00:00:00.000Z");
 
+/**
+ * Build head/body noscript fixtures with URL and non-URL occurrences side by side.
+ * id supplies the expected URL label or wire ID, while label remains in text,
+ * comments, CSS strings, script, and textarea content that must not be rewritten.
+ * Values are interpolated as raw fixture source, without HTML escaping.
+ */
 function noscriptHtml(label, id = label) {
   return (
     `<!doctype html><html><head><noscript>` +
@@ -38,6 +45,13 @@ function noscriptHtml(label, id = label) {
     `<textarea><noscript><img src="cid:${label}"></noscript></textarea></body></html>`
   );
 }
+/**
+ * Create an adapter message with one attachment per logical label, including
+ * duplicates, and stable envelope/header fields. Attachment buffers are shared
+ * fixture bytes; HTML can be overridden to exercise exact source preservation.
+ * Null labels and null HTML are accepted without validation or normalization.
+ * Constructing the message performs no I/O.
+ */
 function message(labels = [accent], html = `<img src="cid:${labels[0]}">`) {
   return {
     attemptCount: 1,
@@ -63,14 +77,24 @@ function message(labels = [accent], html = `<img src="cid:${labels[0]}">`) {
     to: ["reader@example.net"],
   };
 }
+/**
+ * Return raw SMTP MIME and its local parse with CID-to-data-URL linking disabled.
+ * No transport is contacted; parsed.html can be false when there is no HTML part.
+ */
 async function parsedMime(input) {
   const raw = await buildSmtpMimeMessage(input);
   return { raw, parsed: await simpleParser(raw, { skipImageLinks: true }) };
 }
+/** Assert the generated ASCII ID shape and an unfolded Content-ID below 998 bytes. */
 function assertWire(id) {
   assert.match(id, /^pb-[a-f0-9]{64}@cid\.paperboy\.invalid$/);
   assert.ok(Buffer.byteLength(`Content-ID: <${id}>`) < 998);
 }
+/**
+ * Collect decoded attributes in tree order with scripting disabled, including
+ * noscript fallbacks and template contents. Match parse5's exact tag name and
+ * prefixed attribute name (for example xlink:href); omit absent attributes.
+ */
 function attrs(html, tag, name) {
   const result = [];
   const pending = [parse(html, { scriptingEnabled: false })];
@@ -89,7 +113,13 @@ function attrs(html, tag, name) {
   return result;
 }
 
-// A real loopback SMTP conversation, with no SMTPUTF8 capability advertised.
+/**
+ * Start a minimal SMTP receiver on an ephemeral IPv4 loopback port.
+ * Advertise no SMTPUTF8 support, reject its use in MAIL FROM assertions, and
+ * capture envelope recipients plus dot-unstuffed DATA bytes for each transaction.
+ * Return adapter configuration for this local fixture; callers must await close
+ * to destroy remaining connections and release the listener.
+ */
 async function smtpLoopback() {
   const transactions = [];
   const sockets = new Set();
@@ -141,6 +171,7 @@ async function smtpLoopback() {
       SMTP_TLS_MODE: "disabled",
       SMTP_URL: `smtp://127.0.0.1:${server.address().port}`,
     },
+    /** Destroy active fixture sockets and wait for the loopback listener to close. */
     async close() {
       for (const socket of sockets) socket.destroy();
       await new Promise((resolve) => server.close(resolve));
@@ -261,6 +292,7 @@ for (const transport of ["smtp", "ses", "archive", "cloudflare-email"]) {
               },
             },
             client: {
+              /** Capture the SES command locally and return a fixed provider receipt. */
               async send(command) {
                 submitted = command.input;
                 return { MessageId: "fixture-ses-id" };

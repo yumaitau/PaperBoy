@@ -16,6 +16,13 @@ import {
 } from "../src/lib/mime-content-ids.ts";
 
 const bytes = Buffer.from("semantic CSS fixture");
+/**
+ * Compose one non-ASCII inline-label fixture without contacting a transport.
+ * Keep CID links visible during MIME parsing, assert wire-ID shape, attachment
+ * bytes, and input immutability, then return MIME HTML and the direct rewrite
+ * separately so tests can compare semantic output with source preservation
+ * even when MIME parsing normalizes line endings.
+ */
 async function composed(html, label = "é") {
   const input = {
     attachments: [
@@ -42,8 +49,14 @@ async function composed(html, label = "é") {
   const rewritten = rewriteMimeCidReferences(html, mimeContentIds([label]));
   return { html: mime.html, rewritten, id };
 }
+/**
+ * Collect direct text values from style elements in parse5's default HTML tree.
+ * This inspects parsed CSS (including foreign-content entity/CDATA handling),
+ * not raw markup; separate style elements are joined with a newline.
+ */
 function styleText(html) {
   const css = [];
+  /** Visit childNodes recursively; template content is outside these fixtures. */
   function visit(node) {
     if (node.tagName === "style")
       css.push(node.childNodes.map((child) => child.value ?? "").join(""));
@@ -52,6 +65,11 @@ function styleText(html) {
   visit(parse(html));
   return css.join("\n");
 }
+/**
+ * Read decoded URL-token and quoted url() values in token order for assertions.
+ * This fixture inspector skips trivia before strings but does not validate
+ * closing parentheses or parse errors; it is not the production URL validator.
+ */
 function urls(css) {
   const tokens = tokenize({ css });
   const values = [];
@@ -66,6 +84,7 @@ function urls(css) {
   });
   return values;
 }
+/** Embed raw CSS fixture markup in foreign style content without escaping it. */
 const svg = (css) => `<svg><style>${css}</style></svg>`;
 
 for (const [name, source, expected, label = "é"] of [

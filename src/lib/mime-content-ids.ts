@@ -14,7 +14,14 @@ type Edit = { start: number; end: number; value: string };
 const htmlSpace = /[\t\n\f\r ]/;
 const nonAscii = /[^\x00-\x7f]/;
 
-/** Logical labels stay in storage. Only MIME uses this per-message mapping. */
+/**
+ * Map each distinct non-ASCII logical label to a deterministic ASCII MIME ID.
+ * Empty, null, undefined, and ASCII labels have no map entry; all nonempty
+ * labels reserve their spelling against generated-ID collisions. Sorting and
+ * hashing UTF-16 code units keep results independent of attachment order and
+ * distinguish unpaired surrogates. Labels are neither validated nor normalized;
+ * callers retain them in storage and use this mapping only when building MIME.
+ */
 export function mimeContentIds(labels: readonly (string | null | undefined)[]) {
   const originals = new Set(labels.filter((label): label is string => !!label));
   const occupied = new Set(originals);
@@ -41,6 +48,12 @@ export function mimeContentIds(labels: readonly (string | null | undefined)[]) {
   return mapping;
 }
 
+/**
+ * Apply replacements at half-open UTF-16 offsets into the original source.
+ * Sorts the supplied array in place and skips edits overlapping an earlier
+ * accepted edit, including duplicate spans from HTML recovery. Callers supply
+ * in-bounds ranges; source outside accepted ranges is copied verbatim.
+ */
 function applyEdits(source: string, edits: Edit[]): string {
   let result = "";
   let offset = 0;
@@ -53,6 +66,13 @@ function applyEdits(source: string, edits: Edit[]): string {
   return result + source.slice(offset);
 }
 
+/**
+ * Resolve a semantic URL using a logical-label-to-wire-ID mapping.
+ * Trim edge C0 controls/spaces and remove tabs, LF, and CR before recognizing
+ * the case-insensitive cid scheme. Percent-decode the label exactly once, keep
+ * plus signs literal, and match labels case-sensitively without normalization.
+ * Return undefined for other schemes, malformed escapes, or unmapped labels.
+ */
 function mappedUrl(
   url: string,
   mapping: ReadonlyMap<string, string>,
@@ -77,6 +97,11 @@ function mappedUrl(
   }
 }
 
+/**
+ * Rewrite one decoded URL attribute while retaining its outer HTML whitespace.
+ * Whitespace-only values and URLs with no mapping are returned unchanged;
+ * URL preprocessing applies only to the portion passed to mappedUrl.
+ */
 function rewriteUrl(
   value: string,
   mapping: ReadonlyMap<string, string>,
@@ -91,6 +116,14 @@ function rewriteUrl(
     : value.slice(0, start) + replacement + value.slice(end);
 }
 
+/**
+ * Locate mapped CID URLs in semantic CSS after CSS escape decoding.
+ * Accept URL tokens and url() functions containing a single string plus trivia;
+ * leave parse-error spans, comments, and unrelated strings untouched. Results
+ * are ordered, nonoverlapping half-open UTF-16 ranges into css (the tokenizer's
+ * inclusive ends are converted here). Mapping values must be safe ASCII MIME
+ * IDs from mimeContentIds because replacements are inserted as CSS directly.
+ */
 function cssEdits(css: string, mapping: ReadonlyMap<string, string>): Edit[] {
   const edits: Edit[] = [];
   // Keep malformed tokens intact without losing valid URLs elsewhere in a block.
@@ -111,6 +144,10 @@ function cssEdits(css: string, mapping: ReadonlyMap<string, string>): Edit[] {
     } else malformed.push({ start: error.sourceStart, end: error.sourceEnd });
   }
   let errorIndex = 0;
+  /**
+   * Test an inclusive token span against merged parse errors. Calls must follow
+   * nondecreasing source starts because the error cursor only moves forward.
+   */
   function hasError(start: number, end: number): boolean {
     while (errorIndex < malformed.length && malformed[errorIndex].end < start)
       errorIndex++;
@@ -147,10 +184,17 @@ function cssEdits(css: string, mapping: ReadonlyMap<string, string>): Edit[] {
   return edits;
 }
 
+/** Replace mapped CSS URL spans, preserving every other part of the CSS source. */
 function rewriteCss(css: string, mapping: ReadonlyMap<string, string>): string {
   return applyEdits(css, cssEdits(css, mapping));
 }
 
+/**
+ * Check one srcset candidate's descriptor combination without selecting it.
+ * Accept an empty list, positive integer widths/heights, or a finite nonnegative
+ * density. Reject duplicates, density mixed with dimensions, unknown syntax,
+ * and a height without a width; descriptor suffixes are case-sensitive.
+ */
 function validDescriptors(descriptors: string[]): boolean {
   let width = false;
   let density = false;
@@ -186,9 +230,13 @@ function validDescriptors(descriptors: string[]): boolean {
   return !height || width;
 }
 
-// WHATWG "parsing a srcset attribute", retaining URL source spans. In particular,
-// commas inside a URL (e.g. data:) are not candidate separators, and parentheses
-// in descriptors must be consumed before looking for the next candidate.
+/**
+ * Rewrite mapped URLs of valid candidates in a decoded srcset/imagesrcset value.
+ * Follow WHATWG candidate boundaries: commas inside URLs are not separators,
+ * trailing URL commas are stripped for matching, and descriptor parentheses
+ * consume embedded separators. Invalid candidates stay unchanged; edits retain
+ * descriptors, spacing, and separators in the original value.
+ */
 function rewriteSrcset(
   value: string,
   mapping: ReadonlyMap<string, string>,
@@ -273,6 +321,13 @@ const svgUrlAttributes = new Set([
   "stroke",
 ]);
 
+/**
+ * Encode a changed semantic value within parse5's whole-attribute source range.
+ * Offsets are half-open UTF-16 positions into source. Preserve the attribute
+ * name, spacing, and existing quote style; add double quotes to an unquoted
+ * value only when required. Escape HTML metacharacters in the replacement and
+ * return undefined for an attribute without an equals sign.
+ */
 function attributeEdit(
   source: string,
   start: number,
@@ -303,7 +358,19 @@ function attributeEdit(
   };
 }
 
-/** Rewrite only parsed URL contexts; all unedited source bytes are retained. */
+/**
+ * Rewrite mapped CID references only in supported parsed HTML/SVG URL contexts.
+ * The mapping must come from mimeContentIds. Parse as an HTML document with
+ * scripting disabled so noscript fallbacks and template contents are visited;
+ * script nodes and non-CSS style nodes are skipped. Entity decoding follows the
+ * HTML parsing context: HTML style raw text and CDATA keep entity spellings
+ * literal. CSS escapes are decoded before URL matching. Prose and non-URL
+ * attributes remain untouched. Edits use source offsets instead of serializing
+ * the tree.
+ * Foreign style edits require reconstructed text to equal parse5's direct text
+ * children; ambiguous recovery is left unchanged. An empty map returns html
+ * verbatim, and the input HTML and mapping are never mutated.
+ */
 export function rewriteMimeCidReferences(
   html: string,
   mapping: ReadonlyMap<string, string>,

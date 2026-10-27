@@ -51,6 +51,16 @@ export function buildArchiveMimeMessage(message: MimeMessage): Promise<Buffer> {
   return buildMimeMessage(message, true);
 }
 
+/**
+ * Build unsigned MIME from validated fields and already-loaded attachment bytes.
+ * Map non-ASCII inline labels and matching HTML references only in the composed
+ * message, preserving the caller's logical labels, HTML, and attachment bytes.
+ * Truthy labels mark inline attachments; absent labels remain ordinary attachments
+ * and null HTML omits the HTML part. Resolve to the composed MIME Buffer.
+ * File/URL loading is disabled and extraHeaders override matching custom keys.
+ * keepBcc is reserved for authorized owner archives; SMTP callers pass false and
+ * supply envelope recipients separately. Composition failures reject the promise.
+ */
 async function buildMimeMessage(
   message: MimeMessage,
   keepBcc: boolean,
