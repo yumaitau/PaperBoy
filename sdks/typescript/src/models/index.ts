@@ -1980,7 +1980,7 @@ export interface EmailAttachment {
      */
     content: string;
     /**
-     * Optional CID reference for inline images used as cid: URIs in HTML.
+     * Optional CID reference for inline images used as cid: URIs in HTML. ASCII controls (U+0000–U+001F and U+007F), whitespace, angle brackets, commas, and semicolons are rejected before queueing or attachment storage.
      * @type {string}
      * @memberof EmailAttachment
      */
