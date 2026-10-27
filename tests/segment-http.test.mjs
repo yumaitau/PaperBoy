@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { AuthorizationError } from "../src/lib/authorization.ts";
-import { SegmentError } from "../src/lib/segment-core.ts";
+import { SegmentError, parseTopLevelUpdateContactInput } from "../src/lib/segment-core.ts";
 import {
   handleCreateContactImportRequest,
   handleCreateContactPropertyRequest,
@@ -13,6 +15,7 @@ import {
   handleDeleteTopicRequest,
   handleGetContactRequest,
   handleGetSegmentRequest,
+  handleUpdateContactRequest,
   handleGetTopicRequest,
   handleListContactsRequest,
   handleListSegmentsRequest,
@@ -296,4 +299,29 @@ test("contact imports accept JSON and multipart CSV uploads", async () => {
   assert.equal((await multipartResponse.json()).file_name, "contacts.csv");
   assert.equal(calls.length, 2);
   assert.equal(calls[1].file_name, "contacts.csv");
+});
+
+test("PHP contact updates encode empty maps as objects and preserve lists", async () => {
+  const serialized = JSON.parse(execFileSync("php", [fileURLToPath(new URL("./fixtures/php-sdk-empty-maps.php", import.meta.url))], { encoding: "utf8" }));
+  assert.deepEqual(serialized, {
+    update: { properties: {} },
+    populated: { properties: { age: 42, active: false } },
+    list: [],
+    list_of_maps: [{}],
+    map_of_maps: { child: {} },
+    numeric_keys: { "0": "zero" },
+  });
+  const response = await handleUpdateContactRequest(
+    request("http://paperboy.test/api/v1/contacts/contact-id", "PATCH", JSON.stringify(serialized.update)),
+    "contact-id",
+    dependencies({ services: services({
+      updateContact: async (_principal, _id, payload) => {
+        const update = parseTopLevelUpdateContactInput(payload);
+        assert.deepEqual(update.properties, {});
+        return { ...contact, properties: update.properties };
+      },
+    }) }),
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).properties, {});
 });
