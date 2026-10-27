@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
-import { orgMembers } from "@/db/schema";
-import { and, eq } from "drizzle-orm";
+import { messages, orgMembers } from "@/db/schema";
+import { and, eq, inArray } from "drizzle-orm";
 import {
   isOrgRole,
   requirePermission,
@@ -299,17 +299,17 @@ export async function getEmailMetrics(input: {
   ];
 
   if (query.emailIds) {
-    conditions.push(sql`"messages"."id" = ANY(${query.emailIds})`);
+    conditions.push(inArray(messages.id, query.emailIds));
   }
 
   if (query.domainIds) {
-    conditions.push(sql`"messages"."domain_id" = ANY(${query.domainIds})`);
+    conditions.push(inArray(messages.domainId, query.domainIds));
   }
 
   if (query.broadcastIds) {
     conditions.push(sql`EXISTS (
       SELECT 1 FROM jsonb_to_recordset("messages"."tags") AS tag("name" text, "value" text)
-      WHERE tag."name" = 'broadcast_id' AND tag."value" = ANY(${query.broadcastIds})
+      WHERE tag."name" = 'broadcast_id' AND ${inArray(sql`tag."value"`, query.broadcastIds)}
     )`);
   }
 
