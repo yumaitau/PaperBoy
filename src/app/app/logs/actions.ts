@@ -75,6 +75,13 @@ function safeError(error: unknown): MessageDrawerResult {
   return { error: "The message details could not be loaded.", ok: false };
 }
 
+/**
+ * Load drawer content for the signed-in user's current organization, deriving the
+ * message environment from its authorized delivery record. Dates use the user's
+ * timezone; attachment bytes and raw event data are not returned to the client.
+ * Read failures become safe UI errors. Session/organization redirects propagate.
+ * The download flag controls presentation; the MIME endpoint authorizes again.
+ */
 export async function getMessageDrawerAction(
   messageId: string,
 ): Promise<MessageDrawerResult> {

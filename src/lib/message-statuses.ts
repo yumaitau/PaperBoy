@@ -151,6 +151,12 @@ function searchPattern(query: string): string {
   return `%${query.replace(/[\\%_]/g, "\\$&")}%`;
 }
 
+/**
+ * Build tenant-scoped SQL predicates with optional environment/status/domain and
+ * a half-open creation-time range. Search matches subject, sender, To/CC/BCC,
+ * and tag JSON case-insensitively, escaping user LIKE wildcards. Callers must
+ * authorize message reads before executing the resulting query.
+ */
 function messageFilters(
   orgId: string,
   environment?: "live" | "test",

@@ -34,6 +34,13 @@ async function requireMimeDownload(input: {
   requirePermission(membership.role, "messages.downloadMime");
 }
 
+/**
+ * Require owner-only messages.downloadMime permission and tenant-scoped message
+ * access before reconstructing an unsigned archive from stored content and
+ * integrity-checked attachment bytes. Retain BCC for the owner's archive; never
+ * use this result for delivery. Provider DKIM/ARC signatures are not reproduced.
+ * Authorization, missing-message, and attachment-storage errors propagate.
+ */
 export async function buildOwnerMessageMime(input: {
   actorUserId: string;
   attachmentStore?: AttachmentStore;

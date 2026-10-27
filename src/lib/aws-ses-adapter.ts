@@ -95,6 +95,11 @@ function safeProviderValue(value: unknown): string | null {
     : null;
 }
 
+/**
+ * Normalize To, CC, and BCC envelope addresses for SES quota accounting, retaining
+ * order and duplicates. Throw a permanent invalid_envelope error for any invalid
+ * address; display names belong in MIME, not the SES recipient list.
+ */
 function normalizedRecipients(message: OutboundDeliveryMessage): string[] {
   const recipients = [
     ...message.to,
@@ -111,6 +116,11 @@ function normalizedRecipients(message: OutboundDeliveryMessage): string[] {
   return recipients as string[];
 }
 
+/**
+ * Normalize only primary recipients, retaining order and duplicates so callers
+ * can enforce SES's one-To-recipient contract independently of CC/BCC.
+ * Throw a permanent invalid_envelope error if a primary address is invalid.
+ */
 function normalizedToRecipients(message: OutboundDeliveryMessage): string[] {
   const recipients = message.to.map(normalizeEmailAddress);
   if (recipients.some((recipient) => !recipient)) {
@@ -194,6 +204,12 @@ function attachmentFingerprint(message: OutboundDeliveryMessage): string {
   return hash.digest("hex");
 }
 
+/**
+ * Require 1-50 live SES messages with exactly one primary recipient each and no
+ * CC/BCC, custom headers, or CID attachments. Entries must share the
+ * exact sender, body-format presence, and ordered attachment names/types/bytes.
+ * Violations throw permanent OutboundDeliveryError instances before submission.
+ */
 function bulkCompatibility(messages: OutboundDeliveryMessage[]): void {
   if (messages.length < 1 || messages.length > AWS_SES_MAX_BULK_ENTRIES) {
     throw new OutboundDeliveryError({
@@ -505,6 +521,13 @@ function bulkFailure(
   });
 }
 
+/**
+ * Build the regional SES v2 adapter using an injected client or configured AWS
+ * credentials. Single sends use raw MIME; compatible batches use SES templates.
+ * An optional quota guard reserves recipient capacity before submission. Provider
+ * errors become worker retry decisions, and connection tests expose safe account
+ * and verified-domain metadata. Call close() when the adapter is no longer used.
+ */
 export function createAwsSesAdapter(
   input: AwsSesAdapterInput,
 ): OutboundProviderAdapter & { close: () => void } {
@@ -706,6 +729,12 @@ export function createAwsSesAdapter(
       return mapAwsSesEvent(eventInput);
     },
     provider: "aws-ses",
+    /**
+     * Submit a validated live SES message with exactly one primary recipient.
+     * CC/BCC use Destination fields; BCC is omitted from raw delivery MIME. Add
+     * the PaperBoy correlation tag to SES EmailTags and return its safe receipt ID.
+     * Routing, envelope, quota, and provider failures use OutboundDeliveryError.
+     */
     async send(message) {
       requireSesMessage(message);
       const to = normalizedToRecipients(message);

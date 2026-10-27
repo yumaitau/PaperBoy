@@ -18,6 +18,13 @@ export type LoadedMessageAttachment = {
   size: number;
 };
 
+/**
+ * Read attachment rows in position order and verify each blob's stored size and
+ * SHA-256 before returning bytes with filename, MIME type, and CID metadata.
+ * Use the configured store unless one is injected; missing/corrupt storage errors
+ * propagate. This internal loader does not authorize the message ID: callers must
+ * establish tenant/role access or a trusted worker claim before invoking it.
+ */
 export async function loadMessageAttachments(input: {
   attachmentStore?: AttachmentStore;
   messageId: string;
