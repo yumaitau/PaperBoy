@@ -32,16 +32,32 @@ function json(data: unknown, status: number): Response {
 async function payload(request: Request): Promise<unknown> {
   const length = request.headers.get("content-length");
   if (length && /^\d+$/.test(length) && Number(length) > AWS_SES_MAX_EVENT_BYTES) {
+    await request.body?.cancel().catch(() => undefined);
     throw new OutboundProviderEventError("INVALID_EVENT");
   }
-  const raw = await request.text();
-  if (!raw || Buffer.byteLength(raw, "utf8") > AWS_SES_MAX_EVENT_BYTES) {
+  if (!request.body) {
     throw new OutboundProviderEventError("INVALID_EVENT");
   }
+  const reader = request.body.getReader();
+  // A fixed buffer bounds both bytes and allocation overhead for tiny chunks.
+  const bytes = Buffer.alloc(AWS_SES_MAX_EVENT_BYTES);
+  let size = 0;
   try {
-    return JSON.parse(raw);
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value.byteLength > AWS_SES_MAX_EVENT_BYTES - size) {
+        await reader.cancel().catch(() => undefined);
+        throw new OutboundProviderEventError("INVALID_EVENT");
+      }
+      bytes.set(value, size);
+      size += value.byteLength;
+    }
+    return JSON.parse(bytes.subarray(0, size).toString("utf8"));
   } catch {
     throw new OutboundProviderEventError("INVALID_EVENT");
+  } finally {
+    reader.releaseLock();
   }
 }
 
