@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   EmailError,
   emailRequestHash,
+  effectiveScheduledAt,
   normalizeIdempotencyKey,
   parseSendEmailInput,
 } from "../src/lib/email-core.ts";
@@ -134,6 +135,39 @@ test("idempotency keys and canonical request hashes are deterministic", () => {
   assert.throws(() => normalizeIdempotencyKey("contains a space"), EmailError);
 });
 
+test("scheduled request hashes remain stable across the grace window and due time", () => {
+  const payload = {
+    from: "sender@example.com",
+    scheduled_at: "2026-09-06T01:30:00Z",
+    subject: "Hello",
+    text: "Body",
+    to: "reader@example.com",
+  };
+  const hashes = [
+    "2026-09-06T01:28:59.999Z",
+    "2026-09-06T01:29:00Z",
+    "2026-09-06T01:30:00Z",
+    "2026-09-06T01:31:00Z",
+  ].map((instant) =>
+    emailRequestHash(parseSendEmailInput(payload, { now: new Date(instant) })),
+  );
+  assert.equal(new Set(hashes).size, 1);
+  const now = new Date("2026-09-06T01:31:00Z");
+  for (const scheduled_at of [null, "2026-09-06T01:30:01Z"]) {
+    assert.notEqual(
+      emailRequestHash(parseSendEmailInput({ ...payload, scheduled_at }, { now })),
+      hashes[0],
+    );
+  }
+  assert.equal(
+    emailRequestHash(parseSendEmailInput({
+      ...payload,
+      scheduled_at: "2026-09-06T11:30:00+10:00",
+    }, { now })),
+    hashes[0],
+  );
+});
+
 test("reply_to accepts a plus-address used by support desks", () => {
   const parsed = parseSendEmailInput({
     from: "Acme <hello@snagspot.app>",
@@ -202,7 +236,7 @@ test("reserved and malformed headers are rejected", () => {
   }
 });
 
-test("scheduled_at accepts a future ISO instant and normalises the past", () => {
+test("scheduled_at preserves the instant while delivery timing normalises the past", () => {
   const now = new Date("2026-09-05T07:00:00.000Z");
   const future = parseSendEmailInput(
     {
@@ -226,7 +260,14 @@ test("scheduled_at accepts a future ISO instant and normalises the past", () => 
     },
     { now },
   );
-  assert.equal(past.scheduledAt, null);
+  assert.equal(past.scheduledAt?.toISOString(), "2026-09-04T01:30:00.000Z");
+  assert.equal(effectiveScheduledAt(past.scheduledAt, now), null);
+  assert.equal(effectiveScheduledAt(future.scheduledAt, now), future.scheduledAt);
+  assert.equal(effectiveScheduledAt(new Date(now.getTime() + 60_000), now), null);
+  assert.equal(
+    effectiveScheduledAt(new Date(now.getTime() + 60_001), now)?.getTime(),
+    now.getTime() + 60_001,
+  );
 
   for (const scheduled_at of [
     "tomorrow at noon",

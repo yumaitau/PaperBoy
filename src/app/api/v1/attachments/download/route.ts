@@ -1,3 +1,4 @@
+import { attachmentDownloadResponse } from "@/lib/attachment-download";
 import { MessageStatusError } from "@/lib/message-status-core";
 import { downloadSharedAttachment } from "@/lib/message-sharing";
 
@@ -18,14 +19,7 @@ export async function GET(request: Request) {
 
   try {
     const attachment = await downloadSharedAttachment({ token });
-    return new Response(new Uint8Array(attachment.bytes), {
-      headers: {
-        "Cache-Control": "private, max-age=3600",
-        "Content-Disposition": `attachment; filename="${attachment.filename.replace(/["\r\n]/g, "")}"`,
-        "Content-Type": attachment.contentType,
-      },
-      status: 200,
-    });
+    return attachmentDownloadResponse(attachment);
   } catch (error) {
     if (error instanceof MessageStatusError) {
       return Response.json(

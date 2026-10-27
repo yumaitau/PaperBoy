@@ -74,10 +74,13 @@ class ObjectSerializer
         }
 
         if (is_array($data)) {
+            $isList = is_string($type) && str_ends_with($type, '[]');
+            $isMap = !$isList && is_string($type) && preg_match('/^(?:array<|map\[)[^,]+,(.+)[>\]]$/', $type, $mapType);
+            $itemType = $isList ? substr($type, 0, -2) : ($isMap ? $mapType[1] : null);
             foreach ($data as $property => $value) {
-                $data[$property] = self::sanitizeForSerialization($value);
+                $data[$property] = self::sanitizeForSerialization($value, $itemType);
             }
-            return $data;
+            return $isMap ? (object) $data : $data;
         }
 
         if (is_object($data)) {

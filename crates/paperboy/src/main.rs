@@ -1,4 +1,6 @@
 mod client;
+#[cfg(test)]
+mod command_tests;
 
 use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand};
@@ -286,7 +288,10 @@ enum RateLimitCommand {
 #[derive(Subcommand)]
 enum OpenTrackingCommand {
     Get,
-    Update { enabled: bool },
+    Update {
+        #[arg(action = clap::ArgAction::Set)]
+        enabled: bool,
+    },
 }
 
 #[derive(Args)]
