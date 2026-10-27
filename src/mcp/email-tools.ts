@@ -174,20 +174,38 @@ const caseInsensitiveHeaderPattern = (name: string) =>
 const customHeaderNamePattern = new RegExp(
   `^(?!(?:${[...RESERVED_HEADER_NAMES].map(caseInsensitiveHeaderPattern).join("|")})$)(?!${caseInsensitiveHeaderPattern("x-paperboy-")})`,
 );
+const headerValue = z.string()
+  .min(1)
+  .regex(/^[^\r\n]*$/)
+  // JSON Schema maxLength counts Unicode code points, unlike Zod's .max().
+  .refine((value) => [...value].length <= MAX_HEADER_VALUE_LENGTH, {
+    message: `Must contain at most ${MAX_HEADER_VALUE_LENGTH} characters.`,
+  })
+  .meta({ maxLength: MAX_HEADER_VALUE_LENGTH });
 const headers = z
   .preprocess(
     (value, context) => {
-      // Count the raw JSON properties before z.record drops an own __proto__ key.
+      // Check raw JSON properties before z.record skips an own __proto__ key.
       if (
         value !== null &&
         typeof value === "object" &&
-        !Array.isArray(value) &&
-        Object.keys(value).length > MAX_HEADERS
+        !Array.isArray(value)
       ) {
-        context.addIssue({
-          code: "custom",
-          message: `Must contain at most ${MAX_HEADERS} headers.`,
-        });
+        if (Object.keys(value).length > MAX_HEADERS) {
+          context.addIssue({
+            code: "custom",
+            message: `Must contain at most ${MAX_HEADERS} headers.`,
+          });
+          return z.NEVER;
+        }
+        for (const [name, rawValue] of Object.entries(value)) {
+          const result = headerValue.safeParse(rawValue);
+          if (!result.success) {
+            for (const issue of result.error.issues) {
+              context.addIssue({ ...issue, path: [name, ...issue.path] });
+            }
+          }
+        }
       }
       return value;
     },
@@ -197,14 +215,7 @@ const headers = z
         .max(MAX_HEADER_NAME_LENGTH)
         .regex(HEADER_NAME_PATTERN)
         .regex(customHeaderNamePattern),
-      z.string()
-        .min(1)
-        .regex(/^[^\r\n]*$/)
-        // JSON Schema maxLength counts Unicode code points, unlike Zod's .max().
-        .refine((value) => [...value].length <= MAX_HEADER_VALUE_LENGTH, {
-          message: `Must contain at most ${MAX_HEADER_VALUE_LENGTH} characters.`,
-        })
-        .meta({ maxLength: MAX_HEADER_VALUE_LENGTH }),
+      headerValue,
     ),
   )
   // Custom checks are not emitted as JSON Schema constraints.
