@@ -1,0 +1,4 @@
+ALTER TABLE "message_attachments" DROP CONSTRAINT "message_attachments_content_id_check";--> statement-breakpoint
+ALTER TABLE "received_email_attachments" DROP CONSTRAINT "received_email_attachments_content_id_check";--> statement-breakpoint
+ALTER TABLE "message_attachments" ADD CONSTRAINT "message_attachments_content_id_check" CHECK ("message_attachments"."content_id" is null or (char_length("message_attachments"."content_id") between 1 and 256 and "message_attachments"."content_id" collate "C" !~ '[[:space:]<>,]'));--> statement-breakpoint
+ALTER TABLE "received_email_attachments" ADD CONSTRAINT "received_email_attachments_content_id_check" CHECK ("received_email_attachments"."content_id" is null or (char_length("received_email_attachments"."content_id") between 1 and 256 and "received_email_attachments"."content_id" collate "C" !~ '[[:space:]<>,]'));

@@ -95,7 +95,9 @@ const LOCAL_PART_PATTERN = /^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/i;
 const TAG_PATTERN = /^[A-Z0-9_-]+$/i;
 // RFC 5322 section 3.6.8 ftext, which permits parentheses unlike HTTP token.
 export const HEADER_NAME_PATTERN = /^[\x21-\x39\x3b-\x7e]+$/;
-export const CONTENT_ID_PATTERN = /^[^\s<>,;\x00-\x1f\x7f]+$/;
+// The pair alternative preserves supplementary characters even when the pattern
+// is used without /u (as in JSON Schema). A lone UTF-16 half has no UTF-8 identity.
+export const CONTENT_ID_PATTERN = /^(?:[^\s<>,;\x00-\x1f\x7f\uD800-\uDFFF]|[\uD800-\uDBFF][\uDC00-\uDFFF])+$/;
 export const RESERVED_HEADER_NAMES: ReadonlySet<string> = new Set([
   "bcc",
   "cc",
@@ -583,7 +585,7 @@ function parseAttachments(
       issues.push({
         field: `attachments.${index}.content_id`,
         message:
-          "Use a CID reference without ASCII control characters, spaces, angle brackets, commas, or semicolons.",
+          "Use a well-formed Unicode CID reference without ASCII control characters, spaces, angle brackets, commas, or semicolons.",
       });
     } else {
       normalizedContentId = contentId;

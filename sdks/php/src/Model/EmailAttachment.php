@@ -396,7 +396,7 @@ class EmailAttachment implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets content_id
      *
-     * @param string|null $content_id Optional CID reference for inline images used as cid: URIs in HTML. ASCII controls (U+0000–U+001F and U+007F), whitespace, angle brackets, commas, and semicolons are rejected before queueing or attachment storage.
+     * @param string|null $content_id Optional well-formed Unicode CID reference for inline images used as cid: URIs in HTML. ASCII controls (U+0000–U+001F and U+007F), whitespace, angle brackets, commas, semicolons, and lone UTF-16 surrogates are rejected before queueing or attachment storage; valid surrogate pairs are accepted. Labels are not normalized or replaced.
      *
      * @return self
      */
