@@ -382,6 +382,9 @@ export function MessageLogTable({
                           <span>{attachment.filename}</span>
                           <small>
                             {attachment.contentType} · {byteSize(attachment.size)}
+                            {attachment.contentId !== null ? (
+                              <> · CID: <code className="break-all">{attachment.contentId}</code></>
+                            ) : null}
                           </small>
                         </li>
                       ))}
