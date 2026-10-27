@@ -11,7 +11,15 @@ type Span = {
   literal: boolean;
 };
 
-/** Map foreign parsed text back to raw HTML without consuming markup boundaries. */
+/**
+ * Reconstruct a foreign style element's semantic CSS and map edits to raw HTML.
+ * source is the element's inner HTML; textRanges are parse5's ordered,
+ * nonoverlapping direct-text-child ranges, relative to that slice. All offsets
+ * use half-open UTF-16 code units. Foreign DATA tokenization omits markup and
+ * preserves CDATA text; entity decoding, CR/CRLF folding, and null replacement
+ * reproduce parsed text. The caller must compare css with parse5's selected text
+ * before applying edits, since malformed tree recovery may select other text.
+ */
 export function foreignCssSource(source: string, textRanges: Range[]) {
   const omitted: Range[] = [];
   let cursor = 0;
@@ -21,6 +29,7 @@ export function foreignCssSource(source: string, textRanges: Range[]) {
   }
   if (cursor < source.length)
     omitted.push({ start: cursor, end: source.length });
+  /** Record located markup for omission; locationless tokens contribute no range. */
   const ignore = (token: Token.Token) => {
     if (token.location)
       omitted.push({
@@ -28,6 +37,7 @@ export function foreignCssSource(source: string, textRanges: Range[]) {
         end: token.location.endOffset,
       });
   };
+  /** Ignore text/EOF events; the source scan below reconstructs text spans. */
   const noop = () => {};
   // The tokenizer stays in foreign DATA mode: tags/comments are markup and
   // CDATA is text. Tree selection and the final semantic check belong to parse5.
@@ -58,6 +68,10 @@ export function foreignCssSource(source: string, textRanges: Range[]) {
 
   const spans: Span[] = [];
   let css = "";
+  /**
+   * Append decoded text and its raw source span. literal marks a one-to-one
+   * UTF-16 mapping; transformed spans such as entities must be replaced whole.
+   */
   function append(start: number, end: number, text: string, literal = false) {
     spans.push({
       start,
@@ -76,6 +90,7 @@ export function foreignCssSource(source: string, textRanges: Range[]) {
   let position = 0;
   let markupIndex = 0;
   let run = 0;
+  /** Append the pending unchanged source run before a boundary or transformation. */
   const flush = () => {
     if (run < position)
       append(run, position, source.slice(run, position), true);
@@ -123,6 +138,15 @@ export function foreignCssSource(source: string, textRanges: Range[]) {
 
   return {
     css,
+    /**
+     * Project ordered, nonoverlapping, nonempty edits in css back to source.
+     * Changes must be within css, and separate changes must not touch the same transformed source span.
+     * Replacement values must be safe verbatim in both parsed text and CDATA
+     * (the caller supplies generated ASCII CID URLs). Split edits across text
+     * spans, insert each replacement once, and retain intervening markup/CDATA
+     * delimiters. Re-encode any untouched portion of a transformed span, including
+     * a multi-codepoint entity; callers apply the returned raw ranges to source.
+     */
     edits(changes: Edit[]): Edit[] {
       const result: Edit[] = [];
       let index = 0;
@@ -140,6 +164,7 @@ export function foreignCssSource(source: string, textRanges: Range[]) {
           // A reference may span entities, CDATA, or ignored markup. Only text
           // spans are replaced; delimiters and untouched raw source stay intact.
           // Multi-codepoint entities must retain any semantic prefix/suffix.
+          /** Encode retained semantic entity text without introducing HTML markup. */
           const escape = (text: string) =>
             text.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
           result.push({
