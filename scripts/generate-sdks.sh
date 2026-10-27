@@ -76,6 +76,7 @@ generate php \
   "invokerPackage=PaperBoy\\OpenApi,packageName=paperboy/openapi,composerVendorName=paperboy,composerProjectName=openapi,srcBasePath=src,variableNamingConvention=snake_case,hideGenerationTimestamp=true"
 
 python3 "${ROOT}/sdk-generator/fix-php-map-serialization.py" "${ROOT}/sdks/php"
+python3 "${ROOT}/sdk-generator/fix-php-recipients.py" "${ROOT}/sdks/php"
 
 # The PHP generator still emits these even when listed in the ignore file.
 rm -f \
