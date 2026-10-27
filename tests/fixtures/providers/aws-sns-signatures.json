@@ -1,0 +1,75 @@
+{
+  "note": "Synthetic offline RSA signatures over independently assembled SNS fields, each name and value newline-terminated. Private key discarded; no AWS calls.",
+  "certificate": "-----BEGIN CERTIFICATE-----\nMIICxDCCAawCCQC37eCaJaQhgDANBgkqhkiG9w0BAQsFADAkMSIwIAYDVQQDDBlw\nYXBlcmJveS1zbnMtdGVzdC5pbnZhbGlkMB4XDTI2MTAyNzA3MjI1MloXDTM2MTAy\nNDA3MjI1MlowJDEiMCAGA1UEAwwZcGFwZXJib3ktc25zLXRlc3QuaW52YWxpZDCC\nASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALKp8bf1yrz4yKSVmwTSfuke\nDqYbtOkINsFh6AabIDF6yTmaDlVJxn4bFL78pFeE9784oaD4Ra1kTU8gke27iF5K\nBppKXF4i0ZVZK9jwoCjK4sHk5GF78qHKFSI74rjqX4oRZlhvGIeIacxb+Sl0/bB9\nqTsiavAlomhBpNSxzCFvZ9DQdVi9RHVfbVghs6nRijvMmTKGXs119IvHSSDJDt8s\nql5Iuhph3Vg5XJAkoZwaWOWxX8NQJIvliDdHiw9MAD8HTpvam4N5IQTmK5nhi63C\nMcufN2pqRI/0jCYl36Q3KB5nTLy9/ZuJv8ylGbjuf61ek5vvSbNLAmcGqffuTN8C\nAwEAATANBgkqhkiG9w0BAQsFAAOCAQEAQAOAT9ucSx8HBDvXGxUdNX/gcGu7QzgC\ncYtJOQWQyvpft3XNotA1SMlalXAu/VOJMtbvwhDYkwh6HP6CiZJ5oqsCyxQ63LB9\nV+RskPw6KXFWtNBPFyyiBPaH+P0oEOCjLSU/jQ/R+F9WgkN5BC5RTRthVN9hi1A7\n8N98WiGhUUbWkWQ162hbmyW9gMtceYSJZKJE/uxba4zrOmB6HeSu/3oKhL1f7NCC\nBONuem/2LalusyOGXMLqM50RhvGg+9WkFf8U82N11c8anh/auj+HYALrP/nXMkL8\ndfbmzPKNjnkdzYKPh+J7yxBiJ0vk0VvIxdSZB0O+nR3GCe1cQOr+1Q==\n-----END CERTIFICATE-----\n",
+  "envelopes": [
+    {
+      "Type": "Notification",
+      "MessageId": "11111111-1111-4111-8111-111111111111",
+      "TopicArn": "arn:aws:sns:us-east-1:123456789012:paperboy-ses-events",
+      "Message": "{\"eventType\":\"Delivery\"}",
+      "Timestamp": "2026-08-24T01:02:03.000Z",
+      "SignatureVersion": "1",
+      "SigningCertURL": "https://sns.us-east-1.amazonaws.com/SimpleNotificationService-0123456789abcdef.pem",
+      "Signature": "Cvg+hjI0VR/3x9xzemy3K5oL8JuYP4VWkwGj9VtOcDOgViEt49fpZG1Bms6yzQmrr4iaIBXNo3WuX95Vml5Ekb9DaqDAtenRZblZsxE0PiD+vrcgImNrI40C1RDqUu0Jq6Rk6OJobb5QvHlGPlgqzgizcz8pTB9m1JFMS3HTNT+KzSttme/gUh8zHkM0G3yy7+9f+dbNcleIxO+hHfmB1PQ+0RAG/66EY5mu4iRpt/qbCcBoXR+I+Y7agLoTl8cYm0oWJNZDFE7x2eSwKvRDZsMuSnRGaONiY/ZgQB4ZPItDCml/VLfSeAgd3dqCJKXUnga4lPTgf7CU3btwEx6e3w=="
+    },
+    {
+      "Type": "Notification",
+      "MessageId": "11111111-1111-4111-8111-111111111111",
+      "TopicArn": "arn:aws:sns:us-east-1:123456789012:paperboy-ses-events",
+      "Message": "{\"eventType\":\"Delivery\"}",
+      "Timestamp": "2026-08-24T01:02:03.000Z",
+      "SignatureVersion": "2",
+      "SigningCertURL": "https://sns.us-east-1.amazonaws.com/SimpleNotificationService-0123456789abcdef.pem",
+      "Subject": "SES event",
+      "Signature": "VGJHuDIPyKh+VdqGmX2YM9uCWc5RnOWJW1diSovBJIKXBP5iUElooA0Q0+FC32aqrd4/vmCG1BLr4USZ1HaZoKy5rdqnvxP5hFu4nY43Zu5pJABPoQ4hsFB/W49MS1L8EiUxU4L4jNzAoOGYsi2GRdjBpNIVBfOJuiUIdh9+kSCIPMrZo/+/hScP06UVAnt6EceWPnd0YNpVrb3Xg1cdYjEyTbdhrpnn+LOswAep18MNZASW113Y1ahh/t69HrPZJWDm6CATUZuBDqVCGhSRN3mKmClL1N6OSMBBTBbVDx423M0zZdshi8PuL1Es9j65r7gQUshB/A5FJlCkBHT40w=="
+    },
+    {
+      "Type": "SubscriptionConfirmation",
+      "MessageId": "11111111-1111-4111-8111-111111111111",
+      "TopicArn": "arn:aws:sns:us-east-1:123456789012:paperboy-ses-events",
+      "Message": "{\"eventType\":\"Delivery\"}",
+      "Timestamp": "2026-08-24T01:02:03.000Z",
+      "SignatureVersion": "1",
+      "SigningCertURL": "https://sns.us-east-1.amazonaws.com/SimpleNotificationService-0123456789abcdef.pem",
+      "Token": "synthetic-subscription-token",
+      "SubscribeURL": "https://sns.us-east-1.amazonaws.com/?Action=ConfirmSubscription",
+      "Signature": "NCucLr0oNuHrfhH7afgW7c0NIzLNEWkDVYKxo3AwWAlcDQAJJgDoLnwweCxJ6UvZ9qpbUIBJUWoumEsyMKWtK5TdFo5+xJeLRTbYInmAFd8HuiCwPl5kjMI7AvAZfVL9s6P4dsXH+E/Q1KSD7VQPY2KezqUdUu4hsfM/OnfM0+RHubogVbDLZ16Uwj5xd7qf1eclGTAh/WLt4iRYh5Ks/EW/wOM5t4XG6Gl6g2C1RT4Rq/3x4upkhWTe+VbsN6pliupOAXLg1VVJxCznPN2a7jrgeRpHuOqEU4oJsguXOJvbzjrcNqRRMj3CgAx+vUKc0aergQdnIqIIT8O5/2ClJg=="
+    },
+    {
+      "Type": "SubscriptionConfirmation",
+      "MessageId": "11111111-1111-4111-8111-111111111111",
+      "TopicArn": "arn:aws:sns:us-east-1:123456789012:paperboy-ses-events",
+      "Message": "{\"eventType\":\"Delivery\"}",
+      "Timestamp": "2026-08-24T01:02:03.000Z",
+      "SignatureVersion": "2",
+      "SigningCertURL": "https://sns.us-east-1.amazonaws.com/SimpleNotificationService-0123456789abcdef.pem",
+      "Token": "synthetic-subscription-token",
+      "SubscribeURL": "https://sns.us-east-1.amazonaws.com/?Action=ConfirmSubscription",
+      "Signature": "J6loOEUD7X/G0I9q/qk0/KiXDkr+kmAUzewLZT0Swrjckwvoqr4O9vU8zJD/TrQpd7iOtjBWk8TG01RW6/lGiAcGk5Kn94tqfsXsPCOVV+MPqoAxsjJcwWH1qXAlHRz0dhDH+kigINgAGHpikzdPjltnDcHi0D6tFkvr5nlnZVY9hfwGBSQ2Zp7i2Vwo1/187fYzO7rKwww0N26A+fwUCD9BbMFod+Z7WyfAZUR7Wb75dHz7MjIE8nTr3cCzKsPBf6Uw35+D7IEJCUXSYZPL9CqoQVPp03wIWC0/GcCOFWK51o3D6knALw9rn55D21KfqixMtrjTqRv44wYrZ8VjGA=="
+    },
+    {
+      "Type": "UnsubscribeConfirmation",
+      "MessageId": "11111111-1111-4111-8111-111111111111",
+      "TopicArn": "arn:aws:sns:us-east-1:123456789012:paperboy-ses-events",
+      "Message": "{\"eventType\":\"Delivery\"}",
+      "Timestamp": "2026-08-24T01:02:03.000Z",
+      "SignatureVersion": "1",
+      "SigningCertURL": "https://sns.us-east-1.amazonaws.com/SimpleNotificationService-0123456789abcdef.pem",
+      "Token": "synthetic-subscription-token",
+      "SubscribeURL": "https://sns.us-east-1.amazonaws.com/?Action=ConfirmSubscription",
+      "Signature": "nWV96+hOaJ1Uzmca2l9VmFj6A0JfE8JQeYu4H1I2GOzfHeO5BS0O1Opg3DkoZm6rNi/3umYvkl33zr9X5yrjlHDGc3KOJ9e85LphfmpA1p+OYrjhiGvpVQ/zbbsXRJk8C3m4Om6PL3u2GWU6FEDxHpxcn8zH8l3p/HMoWV1bTpCKOHfM/RuwOli0s/9pgyMSC7LMpL/gOtdLib47wvhSdEPCqHRyx2pB6MIPclgIWns5JhA/NWXWi80X46l80QZI7bet8tSmPPc9bDLcMJjrtKpCjZS0tdD9Dqn8jSAIbFeGEUhaB5QPUyjMHVjzYCFnWL8H9u6UspRF8JDBuktX/A=="
+    },
+    {
+      "Type": "UnsubscribeConfirmation",
+      "MessageId": "11111111-1111-4111-8111-111111111111",
+      "TopicArn": "arn:aws:sns:us-east-1:123456789012:paperboy-ses-events",
+      "Message": "{\"eventType\":\"Delivery\"}",
+      "Timestamp": "2026-08-24T01:02:03.000Z",
+      "SignatureVersion": "2",
+      "SigningCertURL": "https://sns.us-east-1.amazonaws.com/SimpleNotificationService-0123456789abcdef.pem",
+      "Token": "synthetic-subscription-token",
+      "SubscribeURL": "https://sns.us-east-1.amazonaws.com/?Action=ConfirmSubscription",
+      "Signature": "HwXQWqPjpVWLpKU5K7g0aTSAHEBvl0T5RB7J6sfE11vXg38YfZ4u5tDLpBowvYVWPs8FAhGp8XNJA5Q1KvEunWdb0lQiCrUfMlv68kPfz+Dv9jFjYsOEWxgX0s3T6nxL8yUP3qapAnMiUNJypaPiaXD6mwv1CSEE6YpWg4wp+ejPmwe3mspFML1QvNnLDkVpDGWZvIOkE8u+N3hmKgE/l5Y+Y0+DQLPzkIDbkTs+nSHpeSqEkvkZoMX+hct+9tLr/TrSLXFVpCwOgvAGctxq3mNctWbrfeCfJPbsu7N6ZrUnuYkGZYzC4Ggr+LxM6k5YENx7cK+6I+hUkbLAIZVqyg=="
+    }
+  ]
+}

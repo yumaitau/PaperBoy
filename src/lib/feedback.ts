@@ -88,7 +88,7 @@ export async function ingestFeedbackReport(input: {
 
     for (const outcome of parsed.outcomes) {
       const [message] = await tx
-        .select({ id: messages.id, to: messages.to })
+        .select({ id: messages.id, to: messages.to, cc: messages.cc, bcc: messages.bcc })
         .from(messages)
         .where(
           and(
@@ -100,7 +100,7 @@ export async function ingestFeedbackReport(input: {
 
       if (
         !message ||
-        !message.to.some(
+        ![...message.to, ...message.cc, ...message.bcc].some(
           (recipient) => normalizeEmailAddress(recipient) === outcome.recipient,
         )
       ) {

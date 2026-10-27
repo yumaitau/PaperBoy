@@ -65,7 +65,7 @@ export function parseNaturalLanguageSchedule(
     { instant: reference, timezone: referenceOffset },
     { forwardDate: true },
   );
-  if (results.length !== 1) {
+  if (results.length !== 1 || results[0].end) {
     return {
       date: null,
       error: "Type one unambiguous future date and time.",

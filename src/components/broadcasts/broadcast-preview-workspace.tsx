@@ -316,8 +316,8 @@ export function BroadcastPreviewWorkspace({
                         defaultValue={sourceAudienceId ?? ""}
                         id="broadcast-edit-audience"
                         name="audienceId"
-                        required
                       >
+                        <option value="">Keep current recipients</option>
                         {audiences.map((audience) => (
                           <option key={audience.id} value={audience.id}>
                             {audience.name} · {audience.activeContactCount} active

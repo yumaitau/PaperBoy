@@ -96,7 +96,9 @@ impl PaperBoyClient {
             .send()
             .context("PaperBoy could not be reached")?;
         let status = response.status();
-        let text = response.text().unwrap_or_default();
+        let text = response
+            .text()
+            .context("Could not read PaperBoy response body")?;
         let parsed = if text.is_empty() {
             json!({ "ok": status.is_success(), "status": status.as_u16() })
         } else {

@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import {
   simpleParser,
   type AddressObject,
-  type HeaderValue,
   type ParsedMail,
   type SimpleParserOptions,
 } from "mailparser";
@@ -53,7 +52,7 @@ function pushField(fields: HeaderFields, name: string, value: string): void {
   fields.set(normalized, [...(fields.get(normalized) ?? []), value.trim()]);
 }
 
-function parseHeaderBlocks(content: Buffer): HeaderFields[] {
+function parseHeaderBlocks(content: Buffer, headersOnly = false): HeaderFields[] {
   const blocks: HeaderFields[] = [];
   let current = new Map<string, string[]>();
   let currentName: string | null = null;
@@ -69,6 +68,7 @@ function parseHeaderBlocks(content: Buffer): HeaderFields[] {
   for (const line of content.toString("utf8").split(/\r?\n/)) {
     if (line.length === 0) {
       finish();
+      if (headersOnly) break;
       continue;
     }
 
@@ -109,28 +109,11 @@ function uuidFrom(value: string | null): string | null {
   return match?.[1]?.toLowerCase() ?? null;
 }
 
-function messageIdsFromContent(content: Buffer): string[] {
-  const ids: string[] = [];
-
-  for (const line of content.toString("utf8").split(/\r?\n/)) {
-    if (
-      /^(?:original-envelope-id|original-message-id|x-paperboy-message-id)\s*:/i.test(line) ||
-      /^message-id\s*:/i.test(line)
-    ) {
-      const id = uuidFrom(line);
-      if (id) ids.push(id);
-    }
-  }
-
-  return ids;
-}
-
-function messageIdFromHeader(value: HeaderValue | undefined): string | null {
-  if (typeof value === "string") return uuidFrom(value);
-  if (Array.isArray(value)) {
-    return value.flatMap((entry) => uuidFrom(String(entry)) ?? []).at(0) ?? null;
-  }
-  return null;
+function correlationMessageIds(blocks: HeaderFields[]): string[] {
+  return blocks.flatMap((block) =>
+    ["original-envelope-id", "original-message-id", "x-paperboy-message-id", "message-id"]
+      .flatMap((name) => (block.get(name) ?? []).flatMap((value) => uuidFrom(value) ?? [])),
+  );
 }
 
 function addressValues(value: AddressObject | AddressObject[] | undefined) {
@@ -156,7 +139,16 @@ async function originalMessageMetadata(mail: ParsedMail): Promise<{
   } as SimpleParserOptions & { keepDeliveryStatus: boolean };
 
   for (const attachment of mail.attachments) {
-    messageIds.push(...messageIdsFromContent(attachment.content));
+    // DSN/ARF parts contain structured fields across multiple blocks. Original
+    // messages contribute only their first header block, never body text or
+    // unrelated attachments, even when those contain header-looking lines.
+    if (
+      attachment.contentType === "message/delivery-status" ||
+      attachment.contentType === "message/feedback-report"
+    ) {
+      messageIds.push(...correlationMessageIds(parseHeaderBlocks(attachment.content)));
+      continue;
+    }
 
     if (
       attachment.contentType !== "message/rfc822" &&
@@ -165,12 +157,9 @@ async function originalMessageMetadata(mail: ParsedMail): Promise<{
       continue;
     }
 
+    messageIds.push(...correlationMessageIds(parseHeaderBlocks(attachment.content, true)));
     try {
       const original = await simpleParser(attachment.content, parserOptions);
-      const id =
-        messageIdFromHeader(original.headers.get("x-paperboy-message-id")) ??
-        uuidFrom(original.messageId ?? null);
-      if (id) messageIds.push(id);
       recipients.push(
         ...addressValues(original.to).flatMap(
           (value) => normalizeEmailAddress(value) ?? [],

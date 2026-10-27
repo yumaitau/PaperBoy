@@ -49,6 +49,10 @@ func run(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
+	if inv.Resource.Name == "attachments" && inv.Action.Name == "download" {
+		_, err = stdout.Write(payload)
+		return err
+	}
 	return PrintJSON(stdout, payload, cfg.Compact)
 }
 
