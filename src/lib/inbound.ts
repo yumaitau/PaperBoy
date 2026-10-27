@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   attachmentStorageKey,
@@ -202,7 +202,10 @@ async function insertReceivedEmailWebhooks(tx: InboundTransaction, input: {
         url: endpoint.url,
       })),
     )
-    .onConflictDoNothing()
+    .onConflictDoNothing({
+      target: [webhookDeliveries.receivedEmailId, webhookDeliveries.endpointId],
+      where: sql`${webhookDeliveries.receivedEmailId} is not null`,
+    })
     .returning({ id: webhookDeliveries.id });
 
   return created.map((delivery) => delivery.id);

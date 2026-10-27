@@ -48,7 +48,7 @@ Returned mail is a sinkhole. Out-of-office auto-replies, vacation notices, DSN b
 
 ## Webhook and fetch
 
-If the organization has a webhook endpoint, PaperBoy queues `email.received`:
+PaperBoy queues one `email.received` delivery per enabled webhook endpoint in the organization. Replaying the same received email does not create duplicate deliveries. Each endpoint has its own delivery status and retries:
 
 ```json
 {

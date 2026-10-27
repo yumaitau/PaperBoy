@@ -1917,11 +1917,11 @@ export const webhookDeliveries = pgTable(  "webhook_deliveries",
       .notNull(),
   },
   (table) => [
-    uniqueIndex("webhook_deliveries_event_id_unique")
-      .on(table.eventId)
+    uniqueIndex("webhook_deliveries_event_endpoint_unique")
+      .on(table.eventId, table.endpointId)
       .where(sql`${table.eventId} is not null`),
-    uniqueIndex("webhook_deliveries_received_email_id_unique")
-      .on(table.receivedEmailId)
+    uniqueIndex("webhook_deliveries_received_email_endpoint_unique")
+      .on(table.receivedEmailId, table.endpointId)
       .where(sql`${table.receivedEmailId} is not null`),
     index("webhook_deliveries_org_id_created_at_idx").on(
       table.orgId,
