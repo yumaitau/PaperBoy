@@ -4762,7 +4762,7 @@ components:
           minLength: 1
           maxLength: 256
           pattern: '^[^\s<>,;]+$'
-          description: 'Optional CID reference for inline images used as cid: URIs in HTML.'
+          description: 'Optional logical label for inline attachments referenced by cid: URLs in HTML. API and storage preserve the original label. MIME delivery and owner downloads map non-ASCII labels and matching URL references to bounded deterministic ASCII Content-IDs; ordinary ASCII labels stay unchanged. See docs/inline-attachments.md for reference syntax and duplicate/collision behavior.'
         filename:
           type: string
           minLength: 1

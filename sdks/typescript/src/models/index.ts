@@ -1980,7 +1980,7 @@ export interface EmailAttachment {
      */
     content: string;
     /**
-     * Optional CID reference for inline images used as cid: URIs in HTML.
+     * Optional logical label for inline attachments referenced by cid: URLs in HTML. API and storage preserve the original label. MIME delivery and owner downloads map non-ASCII labels and matching URL references to bounded deterministic ASCII Content-IDs; ordinary ASCII labels stay unchanged. See docs/inline-attachments.md for reference syntax and duplicate/collision behavior.
      * @type {string}
      * @memberof EmailAttachment
      */
