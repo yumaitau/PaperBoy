@@ -29,7 +29,7 @@ try {
   for (let attempt = 0; attempt < 120; attempt++) {
     if (server.exitCode !== null) throw new Error(serverLog);
     try {
-      ready = (await fetch(`${baseURL}/sign-in`)).ok;
+      ready = (await fetch(`${baseURL}/sign-in`, { signal: AbortSignal.timeout(1_000) })).ok;
     } catch { /* The server is still starting. */ }
     if (ready) break;
     await delay(500);
