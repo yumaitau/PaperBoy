@@ -29,9 +29,8 @@ if (!baseURL) {
   throw new Error("BETTER_AUTH_URL is required");
 }
 
-// The invite page signs up with callbackURL "/invite/<id>"; that id is the
-// proof the sign-up came from the emailed invitation link.
-function signUpInvitationId(context: unknown): string | null {
+// The callback carries an independent emailed token, never the public record ID.
+function signUpInvitationToken(context: unknown): string | null {
   const body = (context as { body?: { callbackURL?: unknown } } | null)?.body;
   const match = /^\/invite\/([^/?#]+)/.exec(
     typeof body?.callbackURL === "string" ? body.callbackURL : "",
@@ -56,7 +55,7 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user, context) => {
-          if (await canCreateAccountForEmail(user.email, signUpInvitationId(context))) {
+          if (await canCreateAccountForEmail(user.email, signUpInvitationToken(context))) {
             return { data: user };
           }
 

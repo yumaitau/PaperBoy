@@ -11,6 +11,7 @@ import {
 } from "../src/lib/organization-invite-email.ts";
 
 const invitationId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const invitationToken = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const orgId = "11111111-1111-4111-8111-111111111111";
 
 test("invite email prefers a verified domain that matches the recipient", () => {
@@ -69,6 +70,7 @@ test("queueing an invite email uses a ready sender and live principal", async ()
       actorUserId: "user-one",
       email: "justin@yumait.com.au",
       invitationId,
+      invitationToken,
       orgId,
       orgName: "RangerOS",
       role: "member",
@@ -87,9 +89,11 @@ test("queueing an invite email uses a ready sender and live principal", async ()
   assert.equal(queued.length, 1);
   assert.equal(queued[0].payload.from, "PaperBoy <invites@rangeros.com.au>");
   assert.equal(
-    queued[0].payload.text.includes(`/invite/${invitationId}`),
+    queued[0].payload.text.includes(`/invite/${invitationToken}`),
     true,
   );
+  assert.equal(queued[0].payload.text.includes(`/invite/${invitationId}`), false);
+  assert.deepEqual(queued[0].payload.tags, [{ name: "invitation_id", value: invitationId }, { name: "organization_invite", value: "1" }]);
   assert.equal(queued[0].principal.environment, "live");
   assert.equal(queued[0].principal.orgId, orgId);
 });
