@@ -6,6 +6,7 @@ import { AuthorizationError } from "@/lib/authorization";
 import { DomainError } from "@/lib/domain-core";
 import {
   MAX_RECIPIENTS,
+  CONTENT_ID_PATTERN,
   EmailError,
   HEADER_NAME_PATTERN,
   MAX_ATTACHMENT_BYTES,
@@ -151,7 +152,7 @@ const attachment = z
       .string()
       .min(1)
       .max(256)
-      .regex(/^[^\s<>,;]+$/)
+      .regex(CONTENT_ID_PATTERN)
       .optional(),
     content_type: z
       .string()
