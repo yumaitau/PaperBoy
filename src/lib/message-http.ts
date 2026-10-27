@@ -267,6 +267,12 @@ export function serializeMessageEvent(event: MessageEventRecord) {
   };
 }
 
+/**
+ * Project an already-authorized detail record into the public snake_case email
+ * response, using UTC ISO timestamps and null for absent dates. Preserve tags,
+ * recipients (including BCC), and attachment metadata/CIDs, but omit bytes.
+ * This formatter performs no authorization or content redaction itself.
+ */
 export function serializeMessage(message: MessageDetailRecord) {
   const timestamp = (value: Date | null) => value?.toISOString() ?? null;
 

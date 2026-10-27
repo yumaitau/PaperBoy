@@ -13,6 +13,12 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+/**
+ * Renders the mobile header and supplied navigation children in a left drawer whose
+ * open state this component controls. Bubbling clicks on any anchor with an href,
+ * including its descendants or an already-current destination, dismiss the drawer
+ * without waiting for a route change. The header also provides a send-email shortcut.
+ */
 export function MobileDashboardNavigation({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
 

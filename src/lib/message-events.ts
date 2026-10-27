@@ -143,6 +143,13 @@ export async function insertMessageEvent(
   return event;
 }
 
+/**
+ * Authorize messages.read for the actor, then load a message in the requested
+ * organization/environment with ordered attachment metadata, not stored bytes.
+ * Includes sensitive recipient fields and tags; invitation bodies are redacted.
+ * Propagate membership/permission errors and MESSAGE_NOT_FOUND for unavailable
+ * or out-of-scope messages.
+ */
 export async function getMessageDetail(
   input: MessageReadContext,
 ): Promise<MessageDetailRecord> {

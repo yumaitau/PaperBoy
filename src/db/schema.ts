@@ -1370,7 +1370,9 @@ export const messageAttachments = pgTable(
     ),
     check(
       "message_attachments_content_id_check",
-      sql`${table.contentId} is null or (char_length(${table.contentId}) between 1 and 256 and ${table.contentId} !~ '[[:space:]<>,]')`,
+      // C fixes whitespace to ASCII HT–CR and space. Keep the legacy storage
+      // contract; outbound validation separately rejects JS whitespace and ';'.
+      sql`${table.contentId} is null or (char_length(${table.contentId}) between 1 and 256 and ${table.contentId} collate "C" !~ '[[:space:]<>,]')`,
     ),
   ],
 );
@@ -1695,7 +1697,9 @@ export const receivedEmailAttachments = pgTable(
     ),
     check(
       "received_email_attachments_content_id_check",
-      sql`${table.contentId} is null or (char_length(${table.contentId}) between 1 and 256 and ${table.contentId} !~ '[[:space:]<>,]')`,
+      // Match the locale-independent legacy storage contract, not the stricter
+      // outbound input policy: inbound CIDs can contain ';' and non-ASCII space.
+      sql`${table.contentId} is null or (char_length(${table.contentId}) between 1 and 256 and ${table.contentId} collate "C" !~ '[[:space:]<>,]')`,
     ),
   ],
 );

@@ -6,6 +6,7 @@ import { AuthorizationError } from "@/lib/authorization";
 import { DomainError } from "@/lib/domain-core";
 import {
   MAX_RECIPIENTS,
+  CONTENT_ID_PATTERN,
   EmailError,
   HEADER_NAME_PATTERN,
   MAX_ATTACHMENT_BYTES,
@@ -156,7 +157,7 @@ const attachment = z
       })
       // JSON Schema string lengths count Unicode code points, not UTF-16 units.
       .meta({ maxLength: MAX_CONTENT_ID_LENGTH })
-      .regex(/^[^\s<>,;]+$/)
+      .regex(CONTENT_ID_PATTERN)
       .optional(),
     content_type: z
       .string()

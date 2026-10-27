@@ -43,6 +43,13 @@ async function markOwnedMessage(
 }
 
 export const postgresWorkerStore: WorkerStore = {
+  /**
+   * Lease the earliest due queued message or expired send in the requested modes,
+   * optionally restricted to one ID. SKIP LOCKED prevents competing claims; the
+   * transaction increments the attempt and returns persisted delivery fields.
+   * Return null when none is eligible; reject invalid worker IDs. Trusted workers
+   * must load attachment bytes separately and use the lease fields on completion.
+   */
   async claim(input) {
     if (!validWorkerId(input.workerId)) {
       throw new Error("Worker ID must be 1-128 characters without controls.");
@@ -126,6 +133,11 @@ export const postgresWorkerStore: WorkerStore = {
     });
   },
 
+  /**
+   * Load and integrity-check the claimed message's stored bytes, then project the
+   * filename, MIME type, and CID needed by adapters. Storage errors propagate;
+   * this internal worker method does not authorize access to the message ID.
+   */
   async loadAttachments(messageId) {
     const attachments = await loadMessageAttachments({ messageId });
     return attachments.map((attachment) => ({

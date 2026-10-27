@@ -11,7 +11,10 @@ source = path.read_text()
 # WhiteSpace + LineTerminator set and use absolute anchors. UTF mode makes
 # these code points meaningful and makes preg_match fail closed on invalid UTF-8.
 # These are PHP double-quoted string contents, so regex backslashes are doubled.
-original = r"/^[^\\s<>,;]+$/"
+# PHP holds UTF-8 bytes rather than UTF-16 code units. PCRE /u already rejects
+# encoded surrogates (and other malformed UTF-8); a surrogate range in a /u
+# PCRE pattern would fail to compile. Keep the equivalent scalar-value domain.
+original = r"/^(?:[^\\s<>,;\\uD800-\\uDFFF]|[\\uD800-\\uDBFF][\\uDC00-\\uDFFF])+$/"
 replacement = (
     r"/\\A[^\\x{0009}-\\x{000D}\\x{0020}\\x{00A0}\\x{1680}"
     r"\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}"

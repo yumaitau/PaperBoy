@@ -1980,7 +1980,7 @@ export interface EmailAttachment {
      */
     content: string;
     /**
-     * Optional CID reference for inline images used as cid: URIs in HTML.
+     * Optional well-formed Unicode CID reference for inline images used as cid: URIs in HTML. Lone UTF-16 surrogates are rejected before queueing or attachment storage; valid surrogate pairs are accepted. Labels are not normalized or replaced.
      * @type {string}
      * @memberof EmailAttachment
      */
