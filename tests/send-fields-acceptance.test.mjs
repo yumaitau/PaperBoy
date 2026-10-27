@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import { SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { simpleParser } from "mailparser";
@@ -350,11 +352,16 @@ test("Azure remains explicitly unavailable and never falls back to a configured 
 });
 
 test(
-  "queue, detail, log search, and worker claim preserve the combined fields and metadata",
+  "queue, detail, log search, and worker attachment delivery preserve the combined fields and metadata",
   {
     skip: databaseUrl ? false : "PAPERBOY_TEST_DATABASE_URL is not configured",
   },
-  async () => {
+  async (t) => {
+    const previousDatabaseUrl = process.env.DATABASE_URL;
+    t.after(() => {
+      if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
+      else process.env.DATABASE_URL = previousDatabaseUrl;
+    });
     process.env.DATABASE_URL = databaseUrl;
     const [
       { eq },
@@ -364,7 +371,7 @@ test(
       { getMessageDetail },
       { getMessageDeliveryOverview },
       { postgresWorkerStore },
-      { loadMessageAttachments },
+      { attachmentStore: configuredAttachmentStore, createLocalAttachmentStore },
     ] = await Promise.all([
       import("drizzle-orm"),
       import("../src/db/index.ts"),
@@ -373,23 +380,13 @@ test(
       import("../src/lib/message-events.ts"),
       import("../src/lib/message-statuses.ts"),
       import("../src/lib/postgres-worker-store.ts"),
-      import("../src/lib/stored-message-attachments.ts"),
+      import("../src/lib/attachment-storage.ts"),
     ]);
     const tenantId = randomUUID();
     const actorUserId = `combined-fields-${randomUUID()}`;
-    const blobs = new Map();
-    const attachmentStore = {
-      async put({ storageKey, content }) {
-        blobs.set(storageKey, Buffer.from(content));
-      },
-      async read(storageKey) {
-        assert.ok(blobs.has(storageKey));
-        return blobs.get(storageKey);
-      },
-      async delete(storageKey) {
-        blobs.delete(storageKey);
-      },
-    };
+    const storageRoot = await mkdtemp(join(tmpdir(), "paperboy-worker-attachments-"));
+    t.after(() => rm(storageRoot, { recursive: true, force: true }));
+    const attachmentStore = createLocalAttachmentStore(storageRoot);
     const data = await fixture();
     try {
       await db
@@ -480,13 +477,48 @@ test(
         "to",
       ])
         assert.deepEqual(claim[field], data.parsed[field], field);
-      const attachments = await loadMessageAttachments({
-        attachmentStore,
-        messageId: queued.id,
-      });
+      // Inject only the blob reader: exercise the real database loader and the
+      // worker's attachment projection, without changing shared storage config.
+      const previousRead = configuredAttachmentStore.read;
+      let attachments;
+      try {
+        configuredAttachmentStore.read = attachmentStore.read;
+        attachments = await postgresWorkerStore.loadAttachments(queued.id);
+      } finally {
+        configuredAttachmentStore.read = previousRead;
+      }
       assert.equal(attachments.length, 1);
       assert.equal(attachments[0].contentId, "hero@example");
       assert.deepEqual(attachments[0].content, data.png);
+      assert.equal(attachments[0].filename, "hero.png");
+      assert.equal(attachments[0].contentType, "image/png");
+
+      const smtp = await loopbackSmtp();
+      let adapter;
+      try {
+        adapter = createSmtpAdapter({
+          environment: { SMTP_TLS_MODE: "disabled", SMTP_URL: smtp.url },
+          now: () => now,
+        });
+        // The queued test-sink claim supplies every message field; override only
+        // routing so its persisted attachment also reaches real loopback MIME.
+        await adapter.send({
+          ...claim,
+          attachments,
+          deliveryMode: "live",
+          provider: "smtp",
+        });
+        assert.equal(smtp.transactions.length, 1);
+        assert.deepEqual(smtp.transactions[0].recipients, [
+          "reader@example.net",
+          "copy@example.net",
+          "hidden@example.net",
+        ]);
+        await assertMime(smtp.transactions[0].raw, data);
+      } finally {
+        adapter?.close();
+        await smtp.close();
+      }
     } finally {
       await db.delete(orgs).where(eq(orgs.id, tenantId));
       await db.delete(users).where(eq(users.id, actorUserId));
