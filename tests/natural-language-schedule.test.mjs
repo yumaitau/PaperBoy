@@ -70,3 +70,25 @@ test("relative calendar schedules apply the target date's daylight-saving offset
   assert.equal(parsed.error, null);
   assert.equal(parsed.date?.toISOString(), "2026-10-03T23:00:00.000Z");
 });
+
+test("natural schedule honors explicit timezone offsets", () => {
+  for (const [text, expected] of [
+    ["Thursday 3 September 2026 10 am UTC", "2026-09-03T10:00:00.000Z"],
+    ["Thursday 3 September 2026 10 am +0530", "2026-09-03T04:30:00.000Z"],
+    ["Thursday 3 September 2026 11 pm UTC", "2026-09-03T23:00:00.000Z"],
+  ]) {
+    const parsed = parseNaturalLanguageSchedule(text, reference, timeZone);
+    assert.equal(parsed.error, null, text);
+    assert.equal(parsed.date?.toISOString(), expected, text);
+  }
+});
+
+test("an explicit offset is not rejected by a gap in the display timezone", () => {
+  const parsed = parseNaturalLanguageSchedule(
+    "Sunday 4 October 2026 2:30 am UTC",
+    reference,
+    timeZone,
+  );
+  assert.equal(parsed.error, null);
+  assert.equal(parsed.date?.toISOString(), "2026-10-04T02:30:00.000Z");
+});
