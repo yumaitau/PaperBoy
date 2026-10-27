@@ -69,7 +69,7 @@ const MAX_ADDRESS_LENGTH = 254;
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 export const MAX_ATTACHMENTS = 100;
 const MAX_BODY_LENGTH = 2 * 1024 * 1024;
-const MAX_RECIPIENTS = 50;
+export const MAX_RECIPIENTS = 50;
 const MAX_SUBJECT_LENGTH = 998;
 const MAX_TAGS = 75;
 const MAX_TAG_LENGTH = 256;
@@ -445,7 +445,8 @@ function parseHeaders(
     if (
       typeof headerValue !== "string" ||
       headerValue.length === 0 ||
-      headerValue.length > MAX_HEADER_VALUE_LENGTH ||
+      // Match JSON Schema maxLength: supplementary characters count once.
+      [...headerValue].length > MAX_HEADER_VALUE_LENGTH ||
       /[\r\n]/.test(headerValue)
     ) {
       issues.push({

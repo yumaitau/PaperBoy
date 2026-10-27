@@ -5,7 +5,9 @@ import { YAML } from "bun";
 import { Client } from "@modelcontextprotocol/client";
 import { AjvJsonSchemaValidator } from "@modelcontextprotocol/client/validators/ajv";
 import { InMemoryTransport, McpServer } from "@modelcontextprotocol/server";
+import { simpleParser } from "mailparser";
 import { EmailError, parseSendEmailInput } from "../src/lib/email-core.ts";
+import { buildSmtpMimeMessage } from "../src/lib/email-delivery.ts";
 import { registerPaperBoyEmailTools } from "../src/mcp/email-tools.ts";
 
 const inline = {
@@ -51,6 +53,18 @@ const invalidNames = [
 const invalidValues = ["", "v".repeat(999), "one\rtwo", "one\ntwo", "one\r\ntwo", "v\n", null, 1]
   .map((value) => ({ "X-Value": value }));
 const invalid = [...invalidNames, ...invalidValues, countHeaders(51), null, []];
+
+const unicodeValues = [
+  { value: "😀".repeat(499), accepted: true },
+  { value: "😀".repeat(500), accepted: true },
+  { value: "😀".repeat(998), accepted: true },
+  { value: "😀".repeat(999), accepted: false },
+  { value: "a".repeat(997) + "😀", accepted: true },
+  { value: "a".repeat(998) + "😀", accepted: false },
+  // Combining marks count separately: the contract counts code points, not graphemes.
+  { value: "e\u0301".repeat(499), accepted: true },
+  { value: "e\u0301".repeat(499) + "!", accepted: false },
+];
 
 async function withEmailClient(run) {
   const server = new McpServer({ name: "header-contract", version: "1.0.0" });
@@ -145,3 +159,101 @@ for (const name of ["paperboy_send_email", "paperboy_send_email_batch"]) {
     });
   });
 }
+
+for (const [mode, content] of Object.entries({ inline, template })) {
+  for (const batch of [false, true]) {
+    const name = batch ? "paperboy_send_email_batch" : "paperboy_send_email";
+    const label = `${mode}, ${batch ? "later batch item" : "single"}`;
+
+    test(`raw header count includes an own JSON __proto__ property (${label})`, async () => {
+      const spec = YAML.parse(await readFile(new URL("../openapi.yaml", import.meta.url), "utf8"));
+      await withEmailClient(async (client, calls) => {
+        const { tools } = await client.listTools();
+        const input = tools.find((tool) => tool.name === name).inputSchema;
+        const discovery = batch ? input.properties.emails.items.properties.headers : input.properties.headers;
+        assert.equal(discovery.maxProperties, 50);
+
+        for (const ordinaryCount of [50, 49, 0]) {
+          const ordinary = countHeaders(ordinaryCount);
+          const headers = JSON.parse(JSON.stringify({ ...ordinary, ["__proto__"]: "value" }));
+          assert.equal(Object.hasOwn(headers, "__proto__"), true);
+          assert.equal(Object.keys(headers).length, ordinaryCount + 1);
+          const accepted = ordinaryCount < 50;
+          checkSchema(spec.components.schemas.EmailHeaders, [headers], accepted);
+          checkSchema(discovery, [headers], accepted);
+          if (accepted) {
+            // Keep the existing <=50-key normalization policy: __proto__ is dropped.
+            assert.deepEqual(parseSendEmailInput({ ...inline, headers }).headers, ordinary);
+          } else {
+            assert.throws(() => parseSendEmailInput({ ...inline, headers }), EmailError);
+          }
+
+          const before = calls.length;
+          const payload = { ...content, headers };
+          const result = await client.callTool({ name, arguments: batch ? { emails: [inline, payload] } : payload });
+          if (accepted) {
+            assert.notEqual(result.isError, true);
+            assert.equal(calls.length, before + (batch ? 2 : 1));
+            assert.deepEqual(calls.at(-1).headers, ordinary);
+          } else {
+            assert.equal(result.isError, true);
+            assert.match(result.content[0].text, /at most 50 headers/);
+            assert.equal(calls.length, before, "No item may queue when a later item has 51 raw keys");
+          }
+        }
+      });
+    });
+
+    test(`Unicode header values use JSON Schema code-point limits (${label})`, async () => {
+      const spec = YAML.parse(await readFile(new URL("../openapi.yaml", import.meta.url), "utf8"));
+      await withEmailClient(async (client, calls) => {
+        const { tools } = await client.listTools();
+        const input = tools.find((tool) => tool.name === name).inputSchema;
+        const discovery = batch ? input.properties.emails.items.properties.headers : input.properties.headers;
+        assert.equal(discovery.additionalProperties.maxLength, 998);
+
+        for (const { value, accepted } of unicodeValues) {
+          const headers = { "X-Value": value };
+          checkSchema(spec.components.schemas.EmailHeaders, [headers], accepted);
+          checkSchema(discovery, [headers], accepted);
+          if (accepted) {
+            assert.deepEqual(parseSendEmailInput({ ...inline, headers }).headers, headers);
+          } else {
+            assert.throws(() => parseSendEmailInput({ ...inline, headers }), EmailError);
+          }
+
+          const before = calls.length;
+          const payload = { ...content, headers };
+          const result = await client.callTool({ name, arguments: batch ? { emails: [inline, payload] } : payload });
+          if (accepted) {
+            assert.notEqual(result.isError, true);
+            assert.equal(calls.length, before + (batch ? 2 : 1));
+            assert.deepEqual(calls.at(-1).headers, headers);
+          } else {
+            assert.equal(result.isError, true);
+            assert.equal(calls.length, before, "No item may queue when a later header exceeds 998 code points");
+          }
+        }
+      });
+    });
+  }
+}
+
+test("accepted Unicode values and RFC 5322 header names survive MIME serialization", async () => {
+  for (const { value } of unicodeValues.filter((entry) => entry.accepted)) {
+    const headers = { "X(Test)": value, "X-Other": "preserved" };
+    const input = parseSendEmailInput({ ...inline, headers });
+    const raw = await buildSmtpMimeMessage(input);
+    const parsed = await simpleParser(raw);
+    // Mailparser leaves unknown fields encoded; Subject uses the same RFC 2047
+    // unstructured-value decoding needed for this custom header.
+    const decoded = await simpleParser(`Subject: ${parsed.headers.get("x(test)")}\r\n\r\n`);
+    assert.equal(decoded.subject, value);
+    assert.equal(parsed.headers.get("x-other"), "preserved");
+    assert.equal(parsed.subject, inline.subject);
+    assert.equal(parsed.text.trim(), inline.text);
+    for (const line of raw.toString("ascii").split("\r\n\r\n")[0].split("\r\n")) {
+      assert.ok(line.length <= 998, "MIME header lines must stay within the RFC 5322 line limit");
+    }
+  }
+});

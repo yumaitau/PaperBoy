@@ -5,6 +5,7 @@ import { AttachmentStorageError } from "@/lib/attachment-storage";
 import { AuthorizationError } from "@/lib/authorization";
 import { DomainError } from "@/lib/domain-core";
 import {
+  MAX_RECIPIENTS,
   EmailError,
   HEADER_NAME_PATTERN,
   MAX_ATTACHMENT_BYTES,
@@ -168,26 +169,62 @@ const customHeaderNamePattern = new RegExp(
   `^(?!(?:${[...RESERVED_HEADER_NAMES].map(caseInsensitiveHeaderPattern).join("|")})$)(?!${caseInsensitiveHeaderPattern("x-paperboy-")})`,
 );
 const headers = z
-  .record(
-    z.string()
-      .min(1)
-      .max(MAX_HEADER_NAME_LENGTH)
-      .regex(HEADER_NAME_PATTERN)
-      .regex(customHeaderNamePattern),
-    z.string()
-      .min(1)
-      .max(MAX_HEADER_VALUE_LENGTH)
-      .regex(/^[^\r\n]*$/),
+  .preprocess(
+    (value, context) => {
+      // Count the raw JSON properties before z.record drops an own __proto__ key.
+      if (
+        value !== null &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        Object.keys(value).length > MAX_HEADERS
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: `Must contain at most ${MAX_HEADERS} headers.`,
+        });
+      }
+      return value;
+    },
+    z.record(
+      z.string()
+        .min(1)
+        .max(MAX_HEADER_NAME_LENGTH)
+        .regex(HEADER_NAME_PATTERN)
+        .regex(customHeaderNamePattern),
+      z.string()
+        .min(1)
+        .regex(/^[^\r\n]*$/)
+        // JSON Schema maxLength counts Unicode code points, unlike Zod's .max().
+        .refine((value) => [...value].length <= MAX_HEADER_VALUE_LENGTH, {
+          message: `Must contain at most ${MAX_HEADER_VALUE_LENGTH} characters.`,
+        })
+        .meta({ maxLength: MAX_HEADER_VALUE_LENGTH }),
+    ),
   )
-  .refine((value) => Object.keys(value).length <= MAX_HEADERS, {
-    message: `Must contain at most ${MAX_HEADERS} headers.`,
-  })
-  // Zod record refinements are not emitted as JSON Schema constraints.
+  // Custom checks are not emitted as JSON Schema constraints.
   .meta({ maxProperties: MAX_HEADERS })
   .optional();
 const scheduledAt = z.string().datetime({ offset: true }).optional();
 
 const templateData = z.record(z.string(), z.unknown());
+const recipientLimitDescription =
+  "Provide at most 50 recipients across to, cc, and bcc combined. A single address counts as one recipient; reply_to addresses are excluded.";
+
+function validateRecipientCount(
+  value: { to: string | string[]; cc?: string | string[]; bcc?: string | string[] },
+  context: z.core.$RefinementCtx,
+) {
+  const count = (recipients: string | string[] | undefined) =>
+    Array.isArray(recipients) ? recipients.length : recipients === undefined ? 0 : 1;
+
+  if (count(value.to) + count(value.cc) + count(value.bcc) > MAX_RECIPIENTS) {
+    context.addIssue({
+      code: "custom",
+      message: `Provide at most ${MAX_RECIPIENTS} recipients across to, cc, and bcc.`,
+      path: ["to"],
+    });
+  }
+}
 
 function validateSendMode(
   value: {
@@ -232,33 +269,35 @@ function validateSendMode(
 
 const sendEmailPayloadSchema = z
   .object({
-    bcc: z.union([address, z.array(address).min(1).max(50)]).optional(),
-    cc: z.union([address, z.array(address).min(1).max(50)]).optional(),
+    bcc: z.union([address, z.array(address).min(1).max(MAX_RECIPIENTS)]).optional(),
+    cc: z.union([address, z.array(address).min(1).max(MAX_RECIPIENTS)]).optional(),
     data: templateData.optional(),
     from: address,
     headers,
     html: z.string().max(2 * 1024 * 1024).optional(),
-    reply_to: z.union([address, z.array(address).min(1).max(50)]).optional(),
+    reply_to: z.union([address, z.array(address).min(1).max(MAX_RECIPIENTS)]).optional(),
     scheduled_at: scheduledAt,
     subject: z.string().min(1).max(998).optional(),
     tags: z.array(tag).max(75).optional(),
     template_id: z.string().uuid().optional(),
     text: z.string().max(2 * 1024 * 1024).optional(),
-    to: z.union([address, z.array(address).min(1).max(50)]),
+    to: z.union([address, z.array(address).min(1).max(MAX_RECIPIENTS)]),
   })
   .strict()
-  .superRefine(validateSendMode);
+  .superRefine(validateSendMode)
+  .superRefine(validateRecipientCount)
+  .describe(recipientLimitDescription);
 
 const sendEmailInputSchema = z
   .object({
     attachments: z.array(attachment).max(100).optional(),
-    bcc: z.union([address, z.array(address).min(1).max(50)]).optional(),
-    cc: z.union([address, z.array(address).min(1).max(50)]).optional(),
+    bcc: z.union([address, z.array(address).min(1).max(MAX_RECIPIENTS)]).optional(),
+    cc: z.union([address, z.array(address).min(1).max(MAX_RECIPIENTS)]).optional(),
     data: templateData.optional(),
     from: address,
     headers,
     html: z.string().max(2 * 1024 * 1024).optional(),
-    reply_to: z.union([address, z.array(address).min(1).max(50)]).optional(),
+    reply_to: z.union([address, z.array(address).min(1).max(MAX_RECIPIENTS)]).optional(),
     idempotencyKey: z
       .string()
       .min(1)
@@ -273,10 +312,12 @@ const sendEmailInputSchema = z
     tags: z.array(tag).max(75).optional(),
     template_id: z.string().uuid().optional(),
     text: z.string().max(2 * 1024 * 1024).optional(),
-    to: z.union([address, z.array(address).min(1).max(50)]),
+    to: z.union([address, z.array(address).min(1).max(MAX_RECIPIENTS)]),
   })
   .strict()
-  .superRefine(validateSendMode);
+  .superRefine(validateSendMode)
+  .superRefine(validateRecipientCount)
+  .describe(recipientLimitDescription);
 
 const sendEmailBatchInputSchema = z
   .object({

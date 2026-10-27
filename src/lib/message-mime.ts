@@ -6,7 +6,7 @@ import {
   isOrgRole,
   requirePermission,
 } from "@/lib/authorization";
-import { buildSmtpMimeMessage } from "@/lib/email-delivery";
+import { buildArchiveMimeMessage } from "@/lib/email-delivery";
 import { normalizeEmailAddress } from "@/lib/email-core";
 import { getMessageDetail } from "@/lib/message-events";
 import { MessageStatusError } from "@/lib/message-status-core";
@@ -63,7 +63,7 @@ export async function buildOwnerMessageMime(input: {
   const senderDomain = sender?.split("@").at(-1);
   if (!senderDomain) throw new Error("Stored message sender is invalid.");
 
-  return buildSmtpMimeMessage({
+  return buildArchiveMimeMessage({
     attachments: attachments.map((attachment) => ({
       content: attachment.content,
       contentId: attachment.contentId,

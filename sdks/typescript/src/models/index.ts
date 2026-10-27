@@ -2413,7 +2413,7 @@ export interface EventOccurrenceEnvelope {
     data: EventOccurrence;
 }
 /**
- * 
+ * Provide at most 50 recipients across to, cc, and bcc combined. A single address counts as one recipient; reply_to addresses are excluded.
  * @export
  * @interface InlineEmailInput
  */
@@ -4243,7 +4243,7 @@ export const TemplateStatusEnum = {
 export type TemplateStatusEnum = typeof TemplateStatusEnum[keyof typeof TemplateStatusEnum];
 
 /**
- * 
+ * Provide at most 50 recipients across to, cc, and bcc combined. A single address counts as one recipient; reply_to addresses are excluded.
  * @export
  * @interface TemplateEmailInput
  */

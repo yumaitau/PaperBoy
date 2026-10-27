@@ -35,6 +35,7 @@ use \PaperBoy\OpenApi\ObjectSerializer;
  * TemplateEmailInput Class Doc Comment
  *
  * @category Class
+ * @description Provide at most 50 recipients across to, cc, and bcc combined. A single address counts as one recipient; reply_to addresses are excluded.
  * @package  PaperBoy\OpenApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

@@ -4586,6 +4586,9 @@ components:
         - $ref: '#/components/schemas/TemplateEmailInput'
     InlineEmailInput:
       type: object
+      description: >-
+        Provide at most 50 recipients across to, cc, and bcc combined.
+        A single address counts as one recipient; reply_to addresses are excluded.
       additionalProperties: false
       required: [from, to, subject]
       anyOf:
@@ -4633,6 +4636,9 @@ components:
           $ref: '#/components/schemas/ScheduledAt'
     TemplateEmailInput:
       type: object
+      description: >-
+        Provide at most 50 recipients across to, cc, and bcc combined.
+        A single address counts as one recipient; reply_to addresses are excluded.
       additionalProperties: false
       required: [from, to, template_id]
       properties:

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import test from "node:test";
+import { simpleParser } from "mailparser";
 
 const databaseUrl = process.env.PAPERBOY_TEST_DATABASE_URL;
 
@@ -60,6 +61,7 @@ test(
     const otherOrgId = randomUUID();
     const ownerId = `logs-owner-${randomUUID()}`;
     const adminId = `logs-admin-${randomUUID()}`;
+    const agencyId = `logs-agency-${randomUUID()}`;
     const memberId = `logs-member-${randomUUID()}`;
     const alphaDomainId = randomUUID();
     const betaDomainId = randomUUID();
@@ -88,6 +90,8 @@ test(
       };
     });
     const mimeMessage = rows[118];
+    mimeMessage.cc = ["Copy <copy@example.net>"];
+    mimeMessage.bcc = ["Hidden copy <hidden@example.net>", "audit@example.org"];
     const attachmentId = randomUUID();
     const attachment = Buffer.from("Cloudflare-compatible attachment proof\n");
     const storageKey = `${orgId}/${mimeMessage.id}/${attachmentId}.blob`;
@@ -119,10 +123,17 @@ test(
           name: "Log member",
           timezone: "UTC",
         },
+        {
+          email: `${randomUUID()}@example.com`,
+          id: agencyId,
+          name: "Log agency",
+          timezone: "UTC",
+        },
       ]);
       await db.insert(orgMembers).values([
         { orgId, role: "owner", userId: ownerId },
         { orgId, role: "admin", userId: adminId },
+        { orgId, role: "agency", userId: agencyId },
         { orgId, role: "member", userId: memberId },
         { orgId: otherOrgId, role: "owner", userId: ownerId },
       ]);
@@ -264,12 +275,24 @@ test(
       assert.deepEqual(timeline.map((event) => event.type), ["queued", "delivered"]);
       assert.equal(timeline[0].data.recipient, "must-not-leak@example.net");
 
-      for (const actorUserId of [adminId, memberId]) {
+      for (const actorUserId of [adminId, agencyId, memberId]) {
         await assert.rejects(
           buildOwnerMessageMime({ actorUserId, messageId: mimeMessage.id, orgId }),
           (error) => error?.code === "FORBIDDEN",
         );
       }
+      await assert.rejects(
+        buildOwnerMessageMime({
+          actorUserId: randomUUID(), messageId: mimeMessage.id, orgId,
+        }),
+        (error) => error?.code === "MEMBERSHIP_REQUIRED",
+      );
+      await assert.rejects(
+        buildOwnerMessageMime({
+          actorUserId: ownerId, messageId: otherMessage.id, orgId,
+        }),
+        (error) => error?.code === "MESSAGE_NOT_FOUND",
+      );
       const eml = await buildOwnerMessageMime({
         actorUserId: ownerId,
         attachmentStore: {
@@ -284,12 +307,29 @@ test(
         orgId,
       });
       const emlText = eml.toString("utf8");
+      const parsed = await simpleParser(eml);
+      assert.deepEqual(
+        parsed.to.value.map(({ address }) => address), mimeMessage.to,
+      );
+      assert.deepEqual(parsed.cc.value, [
+        { address: "copy@example.net", name: "Copy" },
+      ]);
+      assert.deepEqual(parsed.bcc?.value, [
+        { address: "hidden@example.net", name: "Hidden copy" },
+        { address: "audit@example.org", name: "" },
+      ]);
       assert.match(emlText, /Subject: Edition 118/);
       assert.match(emlText, /X-PaperBoy-Message-ID:/i);
       assert.match(emlText, /filename="?proof\.txt"?/);
       assert.match(emlText, new RegExp(attachment.toString("base64")));
       assert.doesNotMatch(emlText, /DKIM-Signature:/i);
       assert.doesNotMatch(emlText, /ARC-Seal:/i);
+      const withoutBcc = await buildOwnerMessageMime({
+        actorUserId: ownerId,
+        messageId: rows[0].id,
+        orgId,
+      });
+      assert.equal((await simpleParser(withoutBcc)).headers.has("bcc"), false);
 
       const indexResult = await lock`
         SELECT indexname FROM pg_indexes
@@ -312,7 +352,9 @@ test(
     } finally {
       try {
         await db.delete(orgs).where(inArray(orgs.id, [orgId, otherOrgId]));
-        await db.delete(users).where(inArray(users.id, [ownerId, adminId, memberId]));
+        await db.delete(users).where(
+          inArray(users.id, [ownerId, adminId, agencyId, memberId]),
+        );
       } finally {
         await lock`SELECT pg_advisory_unlock(${190026})`;
         lock.release();
