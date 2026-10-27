@@ -758,33 +758,68 @@ export function normalizeIdempotencyKey(
   return value;
 }
 
+function canonicalEmailRequest(input: SendEmailInput): string {
+  return JSON.stringify({
+    from: input.from,
+    html: input.html,
+    replyTo: input.replyTo,
+    cc: input.cc,
+    bcc: input.bcc,
+    headers: input.headers,
+    scheduledAt: input.scheduledAt?.toISOString() ?? null,
+    subject: input.subject,
+    tags: input.tags,
+    text: input.text,
+    to: input.to,
+    ...(input.attachments.length === 0
+      ? {}
+      : {
+          attachments: input.attachments.map((attachment) => ({
+            contentId: attachment.contentId,
+            contentSha256: attachment.contentSha256,
+            contentType: attachment.contentType,
+            filename: attachment.filename,
+            size: attachment.size,
+          })),
+        }),
+  });
+}
+
 export function emailRequestHash(input: SendEmailInput): string {
+  // Domain separation keeps new unscheduled identities out of the legacy
+  // null-schedule equivalence class, without changing the stored hash format.
   return createHash("sha256")
-    .update(
-      JSON.stringify({
-        from: input.from,
-        html: input.html,
-        replyTo: input.replyTo,
-        cc: input.cc,
-        bcc: input.bcc,
-        headers: input.headers,
-        scheduledAt: input.scheduledAt?.toISOString() ?? null,
-        subject: input.subject,
-        tags: input.tags,
-        text: input.text,
-        to: input.to,
-        ...(input.attachments.length === 0
-          ? {}
-          : {
-              attachments: input.attachments.map((attachment) => ({
-                contentId: attachment.contentId,
-                contentSha256: attachment.contentSha256,
-                contentType: attachment.contentType,
-                filename: attachment.filename,
-                size: attachment.size,
-              })),
-            }),
-      }),
-    )
+    .update("paperboy:email-request:v2\0")
+    .update(canonicalEmailRequest(input))
     .digest("hex");
+}
+
+export function matchesEmailRequestHash(
+  input: SendEmailInput,
+  stored: { createdAt: Date; requestHash: string | null },
+  legacyCreatedBefore?: string,
+): boolean {
+  if (stored.requestHash === emailRequestHash(input)) return true;
+  const legacyHash = (candidate: SendEmailInput) =>
+    createHash("sha256").update(canonicalEmailRequest(candidate)).digest("hex");
+  if (stored.requestHash === legacyHash(input)) return true;
+
+  // Unversioned unscheduled writes from the stable-identity release are
+  // indistinguishable from older hashes. Only an operator-verified cutoff can
+  // authorize the relaxed fallback. Missing/malformed configuration fails shut.
+  if (!legacyCreatedBefore) return false;
+  const cutoff = new Date(legacyCreatedBefore);
+  if (
+    !Number.isFinite(cutoff.getTime()) ||
+    cutoff.toISOString() !== legacyCreatedBefore ||
+    stored.createdAt.getTime() >= cutoff.getTime()
+  ) return false;
+
+  // Legacy writers discarded near/past instants before hashing. Their exact
+  // requested instant cannot be recovered. Bound that old equivalence class to
+  // the original row's creation time; retry-time now would widen it indefinitely.
+  return (
+    effectiveScheduledAt(input.scheduledAt, stored.createdAt) === null &&
+    stored.requestHash === legacyHash({ ...input, scheduledAt: null })
+  );
 }

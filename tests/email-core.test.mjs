@@ -5,6 +5,7 @@ import {
   EmailError,
   emailRequestHash,
   effectiveScheduledAt,
+  matchesEmailRequestHash,
   normalizeIdempotencyKey,
   parseSendEmailInput,
 } from "../src/lib/email-core.ts";
@@ -114,6 +115,7 @@ test("idempotency keys and canonical request hashes are deterministic", () => {
   assert.equal(
     emailRequestHash(first),
     createHash("sha256")
+      .update("paperboy:email-request:v2\0")
       .update(
         JSON.stringify({
           from: first.from,
@@ -133,6 +135,61 @@ test("idempotency keys and canonical request hashes are deterministic", () => {
   );
   assert.match(emailRequestHash(first), /^[0-9a-f]{64}$/);
   assert.throws(() => normalizeIdempotencyKey("contains a space"), EmailError);
+});
+
+test("legacy hashes replay only within a verified creation-time grace window", () => {
+  const createdAt = new Date("2026-09-06T01:30:00.000Z");
+  const cutoff = "2026-09-06T01:30:00.001Z";
+  const payload = {
+    from: "sender@example.com",
+    subject: "Hello",
+    text: "Body",
+    to: "reader@example.com",
+  };
+  const parse = (scheduled_at) => parseSendEmailInput({ ...payload, scheduled_at }, {
+    now: new Date("2026-09-06T02:00:00.000Z"),
+  });
+  // Independent pre-v2 SHA-256 fixtures: absent/near/past shared the null digest.
+  const legacyNull = {
+    createdAt,
+    requestHash: "b00341387738539ccc2a7a284d84cf58d3228f7fc1d7db80e9a4cf80d45e37b1",
+  };
+  const legacyFuture = {
+    createdAt,
+    requestHash: "9a1704485b3cca4e3fe285303f342508da8c5d6b3c6a441c937adca7c5d885b0",
+  };
+  for (const instant of [null, "2026-09-06T01:29:00Z", "2026-09-06T01:30:30Z", "2026-09-06T01:31:00Z"]) {
+    assert.equal(matchesEmailRequestHash(parse(instant), legacyNull, cutoff), true);
+  }
+  assert.equal(matchesEmailRequestHash(parse("2026-09-06T01:31:00.001Z"), legacyNull, cutoff), false);
+  // Exact old future identities survive becoming due without needing a cutoff.
+  assert.equal(matchesEmailRequestHash(parse("2026-09-06T01:32:00Z"), legacyFuture), true);
+  assert.equal(matchesEmailRequestHash(parse("2026-09-06T01:32:01Z"), legacyFuture, cutoff), false);
+  assert.equal(matchesEmailRequestHash(parse(null), legacyFuture, cutoff), false);
+  assert.equal(matchesEmailRequestHash(parse(null), legacyNull), true);
+  for (const untrustedCutoff of [undefined, "invalid", "2026-02-30T00:00:00.000Z", "2026-09-06T01:30:00Z", createdAt.toISOString()]) {
+    assert.equal(matchesEmailRequestHash(parse("2026-09-06T01:30:30Z"), legacyNull, untrustedCutoff), false);
+  }
+  assert.equal(matchesEmailRequestHash(parse("2026-09-06T01:30:30Z"), {
+    ...legacyNull, createdAt: new Date("2026-09-06T01:30:00.002Z"),
+  }, cutoff), false);
+  assert.equal(matchesEmailRequestHash({ ...parse(null), subject: "Changed" }, legacyNull, cutoff), false);
+  assert.equal(matchesEmailRequestHash(parse(null), { createdAt, requestHash: null }, cutoff), false);
+});
+
+test("versioned hashes keep omitted, near, past and future schedules distinct", () => {
+  const createdAt = new Date("2026-09-06T01:30:00.000Z");
+  const inputs = [null, "2026-09-06T01:29:00Z", "2026-09-06T01:30:30Z", "2026-09-06T01:32:00Z"]
+    .map((scheduled_at) => parseSendEmailInput({
+      from: "sender@example.com", subject: "Hello", text: "Body",
+      to: "reader@example.com", scheduled_at,
+    }, { now: createdAt }));
+  for (const original of inputs) {
+    const stored = { createdAt, requestHash: emailRequestHash(original) };
+    for (const retry of inputs) {
+      assert.equal(matchesEmailRequestHash(retry, stored, "2026-09-07T00:00:00.000Z"), original === retry);
+    }
+  }
 });
 
 test("scheduled request hashes remain stable across the grace window and due time", () => {
