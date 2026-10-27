@@ -177,6 +177,32 @@ func TestHTTPError(t *testing.T) {
 	}
 }
 
+func TestResponseSizeLimit(t *testing.T) {
+	t.Setenv("PAPERBOY_API_KEY", "test-key")
+	const limit = 20 << 20
+	for _, size := range []int{limit - 1, limit, limit + 1, 23 << 20} {
+		// A valid JSON response, including at the exact supported boundary.
+		payload := []byte(`{"body":"` + strings.Repeat("x", size-12) + `"}` + "\n")
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(payload)
+		}))
+		var out, stderr bytes.Buffer
+		err := run([]string{"-e", server.URL, "templates", "list", "--compact"}, &out, &stderr)
+		server.Close()
+		if size > limit {
+			if err == nil || !strings.Contains(err.Error(), "response exceeds") {
+				t.Errorf("size %d: expected explicit size error, got %v", size, err)
+			}
+			if out.Len() != 0 {
+				t.Errorf("size %d: printed %d truncated bytes", size, out.Len())
+			}
+		} else if err != nil || !bytes.Equal(out.Bytes(), payload) || !json.Valid(out.Bytes()) {
+			t.Errorf("size %d: response changed or failed: %v", size, err)
+		}
+	}
+}
+
 func TestMultipartUpload(t *testing.T) {
 	var gotCT string
 	var gotFile []byte
