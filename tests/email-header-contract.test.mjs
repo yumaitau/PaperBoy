@@ -66,6 +66,22 @@ const unicodeValues = [
   { value: "e\u0301".repeat(499) + "!", accepted: false },
 ];
 
+const rawHeaderValues = [
+  ...[42, null, false, [], {}, "", "first\nsecond", "first\rsecond", "value\n", "v".repeat(999)]
+    .map((value) => ({ value, accepted: false })),
+  ...["value", " \t café ", "\u2028\u2029", "v".repeat(998)]
+    .map((value) => ({ value, accepted: true })),
+  ...unicodeValues,
+];
+
+// Capture the actual registered input schemas, including preprocessing.
+const inputSchemas = new Map();
+registerPaperBoyEmailTools({
+  server: { registerTool: (name, config) => inputSchemas.set(name, config.inputSchema) },
+  authorize: async () => null,
+  services: {},
+});
+
 async function withEmailClient(run) {
   const server = new McpServer({ name: "header-contract", version: "1.0.0" });
   const calls = [];
@@ -164,6 +180,56 @@ for (const [mode, content] of Object.entries({ inline, template })) {
   for (const batch of [false, true]) {
     const name = batch ? "paperboy_send_email_batch" : "paperboy_send_email";
     const label = `${mode}, ${batch ? "later batch item" : "single"}`;
+
+    test(`raw special header values match shared parsing and MCP discovery (${label})`, async () => {
+      const spec = YAML.parse(await readFile(new URL("../openapi.yaml", import.meta.url), "utf8"));
+      await withEmailClient(async (client) => {
+        const { tools } = await client.listTools();
+        const input = tools.find((tool) => tool.name === name).inputSchema;
+        const discovery = batch ? input.properties.emails.items.properties.headers : input.properties.headers;
+        for (const key of ["__proto__", "constructor", "toString"]) {
+          for (const { value, accepted } of rawHeaderValues) {
+            const headers = JSON.parse(JSON.stringify({ [key]: value, "X(Test)": "compatible" }));
+            assert.equal(Object.hasOwn(headers, key), true);
+            checkSchema(spec.components.schemas.EmailHeaders, [headers], accepted);
+            checkSchema(discovery, [headers], accepted);
+            // Template sends resolve to inline content before the shared parser runs.
+            if (accepted) {
+              assert.doesNotThrow(() => parseSendEmailInput({ ...inline, headers }));
+            } else {
+              assert.throws(() => parseSendEmailInput({ ...inline, headers }), EmailError);
+            }
+            const payload = { ...content, headers };
+            const result = inputSchemas.get(name).safeParse(batch ? { emails: [inline, payload] } : payload);
+            assert.equal(result.success, accepted, JSON.stringify({ key, value }));
+            if (!accepted) {
+              assert.deepEqual(result.error.issues[0].path, batch ? ["emails", 1, "headers", key] : ["headers", key]);
+            }
+          }
+        }
+      });
+    });
+
+    test(`raw special header values are checked before any queue service runs (${label})`, async () => {
+      await withEmailClient(async (client, calls) => {
+        for (const key of ["__proto__", "constructor", "toString"]) {
+          for (const { value, accepted } of rawHeaderValues) {
+            const headers = JSON.parse(JSON.stringify({ [key]: value, "X(Test)": "compatible" }));
+            const before = calls.length;
+            const payload = { ...content, headers };
+            const result = await client.callTool({ name, arguments: batch ? { emails: [inline, payload] } : payload });
+            if (accepted) {
+              assert.notEqual(result.isError, true, JSON.stringify({ key, value }));
+              assert.equal(calls.length, before + (batch ? 2 : 1));
+              assert.deepEqual(calls.at(-1).headers, parseSendEmailInput({ ...inline, headers }).headers);
+            } else {
+              assert.equal(result.isError, true, JSON.stringify({ key, value }));
+              assert.equal(calls.length, before, "Invalid raw values must reject the entire batch before queueing");
+            }
+          }
+        }
+      });
+    });
 
     test(`raw header count includes an own JSON __proto__ property (${label})`, async () => {
       const spec = YAML.parse(await readFile(new URL("../openapi.yaml", import.meta.url), "utf8"));
