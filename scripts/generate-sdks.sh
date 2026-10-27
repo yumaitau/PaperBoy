@@ -68,6 +68,8 @@ generate typescript-fetch \
   "${ROOT}/sdk-generator/typescript.ignore" \
   "npmName=@paperboy/openapi,supportsES6=true,typescriptThreePlus=true,enumPropertyNaming=original,modelPropertyNaming=original,withoutRuntimeChecks=true,useSingleRequestParameter=true,hideGenerationTimestamp=true"
 
+python3 "${ROOT}/sdk-generator/fix-typescript-imports.py" "${ROOT}/sdks/typescript"
+
 generate php \
   "${ROOT}/sdks/php" \
   "${ROOT}/sdk-generator/php.ignore" \
