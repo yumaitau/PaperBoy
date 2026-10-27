@@ -48,3 +48,47 @@ test("natural schedule formatter includes fixed timezone abbreviation", () => {
     /Friday 4 December 2026 at 10:00 am AEDT/,
   );
 });
+
+test("relative schedules use the user's calendar across midnight boundaries", () => {
+  for (const [instant, zone, expected] of [
+    ["2026-08-25T16:00:30.123Z", "Australia/Sydney", "2026-08-27T00:00:00.000Z"],
+    ["2026-08-25T02:00:30.123Z", "America/New_York", "2026-08-25T14:00:00.000Z"],
+    ["2026-08-25T20:00:30.123Z", "Asia/Kolkata", "2026-08-27T04:30:00.000Z"],
+  ]) {
+    const parsed = parseNaturalLanguageSchedule("tomorrow at 10 am", new Date(instant), zone);
+    assert.equal(parsed.error, null, zone);
+    assert.equal(parsed.date?.toISOString(), expected, zone);
+  }
+});
+
+test("relative calendar schedules apply the target date's daylight-saving offset", () => {
+  const parsed = parseNaturalLanguageSchedule(
+    "tomorrow at 10 am",
+    new Date("2026-10-03T12:00:00.000Z"),
+    timeZone,
+  );
+  assert.equal(parsed.error, null);
+  assert.equal(parsed.date?.toISOString(), "2026-10-03T23:00:00.000Z");
+});
+
+test("natural schedule honors explicit timezone offsets", () => {
+  for (const [text, expected] of [
+    ["Thursday 3 September 2026 10 am UTC", "2026-09-03T10:00:00.000Z"],
+    ["Thursday 3 September 2026 10 am +0530", "2026-09-03T04:30:00.000Z"],
+    ["Thursday 3 September 2026 11 pm UTC", "2026-09-03T23:00:00.000Z"],
+  ]) {
+    const parsed = parseNaturalLanguageSchedule(text, reference, timeZone);
+    assert.equal(parsed.error, null, text);
+    assert.equal(parsed.date?.toISOString(), expected, text);
+  }
+});
+
+test("an explicit offset is not rejected by a gap in the display timezone", () => {
+  const parsed = parseNaturalLanguageSchedule(
+    "Sunday 4 October 2026 2:30 am UTC",
+    reference,
+    timeZone,
+  );
+  assert.equal(parsed.error, null);
+  assert.equal(parsed.date?.toISOString(), "2026-10-04T02:30:00.000Z");
+});
