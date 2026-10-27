@@ -120,6 +120,7 @@ export async function processInboundS3Queue(
       if (!orgId) return false;
 
       await receive({
+        ...(envelope ? { envelopeRecipients: [envelope] } : {}),
         payload: { email: raw },
         principal: {
           environment: "live",

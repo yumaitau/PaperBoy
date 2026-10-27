@@ -429,6 +429,10 @@ Send transactional mail through an API that looks familiar if you have used Rese
 - Not a closed hosted SaaS
 - No third-party send vendor as the default path
 
+## Local test prerequisites
+
+Install the PHP CLI before running `bun run test`; the generated PHP SDK regression tests invoke `php`. CI uses PHP 8.3.
+
 ## License
 
 [MIT](LICENSE)

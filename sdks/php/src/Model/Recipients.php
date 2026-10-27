@@ -236,14 +236,17 @@ class Recipients implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected $container = [];
 
+    private ?string $singleRecipient = null;
+
     /**
      * Constructor
      *
-     * @param mixed[]|null $data Associated array of property values
-     *                      initializing the model
+     * @param string|string[]|null $data One address or a list of addresses
      */
-    public function __construct(?array $data = null)
+    public function __construct(string|array|null $data = null)
     {
+        $this->singleRecipient = is_string($data) ? $data : null;
+        $this->container = is_string($data) ? [$data] : ($data ?? []);
     }
 
     /**
@@ -322,6 +325,7 @@ class Recipients implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     public function offsetSet($offset, $value): void
     {
+        $this->singleRecipient = null;
         if (is_null($offset)) {
             $this->container[] = $value;
         } else {
@@ -338,6 +342,7 @@ class Recipients implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     public function offsetUnset(mixed $offset): void
     {
+        $this->singleRecipient = null;
         unset($this->container[$offset]);
     }
 
@@ -351,7 +356,7 @@ class Recipients implements ModelInterface, ArrayAccess, \JsonSerializable
     #[\ReturnTypeWillChange]
     public function jsonSerialize()
     {
-       return ObjectSerializer::sanitizeForSerialization($this);
+        return $this->singleRecipient ?? array_values($this->container);
     }
 
     /**

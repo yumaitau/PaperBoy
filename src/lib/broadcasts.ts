@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, ilike, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   apiKeys,
@@ -7,6 +7,7 @@ import {
   contacts,
   emailSuppressions,
   events,
+  messages,
   orgMembers,
 } from "@/db/schema";
 import type { ApiKeyPrincipal } from "@/lib/api-key-auth";
@@ -29,6 +30,7 @@ import { DomainError } from "@/lib/domain-core";
 import { EmailError } from "@/lib/email-core";
 import {
   queueEmail,
+  type BroadcastRecipientLease,
   type MessageQueuePrincipal,
   type QueuedMessageRecord,
 } from "@/lib/messages";
@@ -79,6 +81,7 @@ export type BroadcastPrincipal = Omit<ApiKeyPrincipal, "apiKeyId"> & {
 
 export type BroadcastQueue = (input: {
   allowAttachments?: boolean;
+  broadcastRecipient?: BroadcastRecipientLease;
   idempotencyKey?: unknown;
   payload: unknown;
   principal: MessageQueuePrincipal;
@@ -113,6 +116,9 @@ const broadcastSelection = {
   templateText: broadcasts.templateText,
   updatedAt: broadcasts.updatedAt,
 };
+// A crashed worker leaves a reclaimable lease, not a permanent processing state.
+const RECIPIENT_LEASE_MS = 5 * 60 * 1000;
+
 const BROADCAST_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -343,12 +349,23 @@ async function claimRecipient(input: {
         data: broadcastRecipients.data,
         email: broadcastRecipients.email,
         id: broadcastRecipients.id,
+        messageId: broadcastRecipients.messageId,
+        status: broadcastRecipients.status,
       })
       .from(broadcastRecipients)
       .where(
         and(
           eq(broadcastRecipients.broadcastId, broadcast.id),
-          eq(broadcastRecipients.status, "pending"),
+          or(
+            eq(broadcastRecipients.status, "pending"),
+            and(
+              eq(broadcastRecipients.status, "processing"),
+              lte(
+                broadcastRecipients.updatedAt,
+                new Date(input.now.getTime() - RECIPIENT_LEASE_MS),
+              ),
+            ),
+          ),
         ),
       )
       .orderBy(asc(broadcastRecipients.position))
@@ -385,21 +402,36 @@ async function claimRecipient(input: {
       return null;
     }
 
+    // Older workers did not atomically link queued messages. Recover their
+    // already committed sends by the broadcast tag and frozen recipient.
+    if (recipient.status === "processing" && !recipient.messageId) {
+      const [existing] = await tx
+        .select({ id: messages.id })
+        .from(messages)
+        .where(
+          and(
+            eq(messages.orgId, broadcast.orgId),
+            eq(messages.environment, broadcast.environment),
+            sql`${messages.tags} @> jsonb_build_array(jsonb_build_object('name', 'broadcast_id', 'value', ${broadcast.id}::text))`,
+            sql`${messages.to} = jsonb_build_array(${recipient.email}::text)`,
+          ),
+        )
+        .orderBy(asc(messages.createdAt), asc(messages.id))
+        .limit(1);
+      recipient.messageId = existing?.id ?? null;
+    }
+
     await tx
       .update(broadcastRecipients)
-      .set({ status: "processing", updatedAt: input.now })
-      .where(
-        and(
-          eq(broadcastRecipients.id, recipient.id),
-          eq(broadcastRecipients.status, "pending"),
-        ),
-      );
+      .set({ messageId: recipient.messageId, status: "processing", updatedAt: input.now })
+      .where(eq(broadcastRecipients.id, recipient.id));
 
-    return { broadcast, recipient };
+    return { broadcast, recipient, claimedAt: input.now };
   });
 }
 
 async function finishRecipient(input: {
+  claimedAt: Date;
   broadcastId: string;
   failureCode?: string;
   messageId?: string;
@@ -411,7 +443,7 @@ async function finishRecipient(input: {
     .update(broadcastRecipients)
     .set({
       failureCode: input.failureCode ?? null,
-      messageId: input.messageId ?? null,
+      ...(input.messageId ? { messageId: input.messageId } : {}),
       processedAt: input.now,
       status: input.status,
       updatedAt: input.now,
@@ -420,6 +452,7 @@ async function finishRecipient(input: {
       and(
         eq(broadcastRecipients.id, input.recipientId),
         eq(broadcastRecipients.status, "processing"),
+        eq(broadcastRecipients.updatedAt, input.claimedAt),
       ),
     );
 
@@ -430,6 +463,7 @@ async function finishRecipient(input: {
 }
 
 async function deferRateLimitedBroadcast(input: {
+  claimedAt: Date;
   broadcastId: string;
   now: Date;
   recipientId: string;
@@ -446,7 +480,7 @@ async function deferRateLimitedBroadcast(input: {
       .for("update");
     const running = current?.status === "running";
 
-    await tx
+    const [recipient] = await tx
       .update(broadcastRecipients)
       .set({
         failureCode: null,
@@ -458,9 +492,11 @@ async function deferRateLimitedBroadcast(input: {
         and(
           eq(broadcastRecipients.id, input.recipientId),
           eq(broadcastRecipients.status, "processing"),
+          eq(broadcastRecipients.updatedAt, input.claimedAt),
         ),
-      );
-    if (!running) return [];
+      )
+      .returning({ id: broadcastRecipients.id });
+    if (!recipient || !running) return [];
 
     return tx
       .update(broadcasts)
@@ -498,7 +534,18 @@ export async function processBroadcast(
       return;
     }
 
-    const { broadcast, recipient } = claimed;
+    const { broadcast, recipient, claimedAt } = claimed;
+    if (recipient.messageId) {
+      await finishRecipient({
+        broadcastId: broadcast.id,
+        claimedAt,
+        messageId: recipient.messageId,
+        now: now(),
+        recipientId: recipient.id,
+        status: "queued",
+      });
+      continue;
+    }
     const [suppression] = await db
       .select({ id: emailSuppressions.id })
       .from(emailSuppressions)
@@ -513,6 +560,7 @@ export async function processBroadcast(
     if (suppression) {
       await finishRecipient({
         broadcastId: broadcast.id,
+        claimedAt,
         now: now(),
         recipientId: recipient.id,
         status: "suppressed",
@@ -532,9 +580,11 @@ export async function processBroadcast(
       );
       const message = await queue({
         allowAttachments: false,
-        ...(broadcast.apiKeyId
-          ? { idempotencyKey: `broadcast:${broadcast.id}:${recipient.id}` }
-          : {}),
+        broadcastRecipient: {
+          broadcastId: broadcast.id,
+          recipientId: recipient.id,
+          claimedAt,
+        },
         payload: {
           from: broadcast.from,
           ...(rendered.html === null ? {} : { html: rendered.html }),
@@ -554,6 +604,7 @@ export async function processBroadcast(
 
       await finishRecipient({
         broadcastId: broadcast.id,
+        claimedAt,
         messageId: message.id,
         now: now(),
         recipientId: recipient.id,
@@ -563,14 +614,21 @@ export async function processBroadcast(
       if (error instanceof RateLimitError) {
         await deferRateLimitedBroadcast({
           broadcastId: broadcast.id,
+          claimedAt,
           now: now(),
           recipientId: recipient.id,
           retryAfterSeconds: error.retryAfterSeconds,
         });
         return;
       }
+      // Unexpected persistence/provider failures may occur after commit. Leave
+      // the lease recoverable instead of reporting a terminal failed recipient.
+      if (!(error instanceof TemplateError || error instanceof EmailError || error instanceof DomainError)) {
+        throw error;
+      }
       await finishRecipient({
         broadcastId: broadcast.id,
+        claimedAt,
         failureCode: failureCode(error),
         now: now(),
         recipientId: recipient.id,

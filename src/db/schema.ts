@@ -196,6 +196,7 @@ export const orgInvites = pgTable(
       .notNull()
       .references(() => orgs.id, { onDelete: "cascade" }),
     email: text("email").notNull(),
+    tokenHash: text("token_hash"),
     role: text("role").default("member").notNull(),
     invitedByUserId: text("invited_by_user_id").references(() => users.id, {
       onDelete: "set null",
@@ -220,6 +221,11 @@ export const orgInvites = pgTable(
     ),
     index("org_invites_org_id_idx").on(table.orgId),
     index("org_invites_email_idx").on(table.email),
+    uniqueIndex("org_invites_token_hash_unique").on(table.tokenHash),
+    check(
+      "org_invites_token_hash_check",
+      sql`${table.tokenHash} is null or ${table.tokenHash} ~ '^[0-9a-f]{64}$'`,
+    ),
     check(
       "org_invites_role_check",
       sql`${table.role} in ('admin', 'agency', 'member')`,
@@ -1596,12 +1602,13 @@ export const receivedEmails = pgTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex("received_emails_org_id_content_sha256_unique").on(
+    uniqueIndex("received_emails_org_environment_content_sha256_unique").on(
       table.orgId,
+      table.environment,
       table.contentSha256,
     ),
-    uniqueIndex("received_emails_org_id_rfc822_message_id_unique")
-      .on(table.orgId, table.rfc822MessageId)
+    uniqueIndex("received_emails_org_environment_rfc822_message_id_unique")
+      .on(table.orgId, table.environment, table.rfc822MessageId)
       .where(sql`${table.rfc822MessageId} is not null`),
     index("received_emails_org_id_created_at_id_idx").on(
       table.orgId,
@@ -1910,11 +1917,11 @@ export const webhookDeliveries = pgTable(  "webhook_deliveries",
       .notNull(),
   },
   (table) => [
-    uniqueIndex("webhook_deliveries_event_id_unique")
-      .on(table.eventId)
+    uniqueIndex("webhook_deliveries_event_endpoint_unique")
+      .on(table.eventId, table.endpointId)
       .where(sql`${table.eventId} is not null`),
-    uniqueIndex("webhook_deliveries_received_email_id_unique")
-      .on(table.receivedEmailId)
+    uniqueIndex("webhook_deliveries_received_email_endpoint_unique")
+      .on(table.receivedEmailId, table.endpointId)
       .where(sql`${table.receivedEmailId} is not null`),
     index("webhook_deliveries_org_id_created_at_idx").on(
       table.orgId,

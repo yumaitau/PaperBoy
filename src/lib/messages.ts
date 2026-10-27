@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  broadcastRecipients,
+  broadcasts,
   domains,
   emailSuppressions,
   messageAttachments,
@@ -35,6 +37,7 @@ import {
   type SendEmailInput,
 } from "@/lib/email-core";
 import { authorizeSendingDomain } from "@/lib/domains";
+import { isOrganizationInviteMessage } from "@/lib/organization-invite-content";
 import type { providerVerifiedSenderDomains } from "@/lib/provider-sender-identities";
 import { insertMessageEvent } from "@/lib/message-events";
 import { requestMessageJob } from "@/lib/job-queue";
@@ -69,6 +72,12 @@ export type QueuedMessageRecord = {
 
 export type MessageQueuePrincipal = Omit<ApiKeyPrincipal, "apiKeyId"> & {
   apiKeyId: string | null;
+};
+
+export type BroadcastRecipientLease = {
+  broadcastId: string;
+  recipientId: string;
+  claimedAt: Date;
 };
 
 export type QueuedMessageBatchItem =
@@ -225,6 +234,8 @@ async function requireApiKeyCreatorCanSend(principal: MessageQueuePrincipal) {
 export async function queueEmail(input: {
   allowAttachments?: boolean;
   attachmentStore?: AttachmentStore;
+  /** Internal broadcast lease, never accepted from an email API payload. */
+  broadcastRecipient?: BroadcastRecipientLease;
   idempotencyKey?: unknown;
   payload: unknown;
   principal: MessageQueuePrincipal;
@@ -303,6 +314,51 @@ export async function queueEmail(input: {
 
   try {
     const created = await db.transaction(async (tx) => {
+      if (input.broadcastRecipient) {
+        // Hold the recipient lock through message creation and link persistence.
+        // Reclaims cannot enqueue a second message, even after API idempotency expires.
+        const [recipient] = await tx
+          .select({
+            messageId: broadcastRecipients.messageId,
+            status: broadcastRecipients.status,
+            updatedAt: broadcastRecipients.updatedAt,
+          })
+          .from(broadcastRecipients)
+          .innerJoin(broadcasts, eq(broadcasts.id, broadcastRecipients.broadcastId))
+          .where(
+            and(
+              eq(broadcastRecipients.id, input.broadcastRecipient.recipientId),
+              eq(broadcasts.id, input.broadcastRecipient.broadcastId),
+              eq(broadcasts.orgId, input.principal.orgId),
+              eq(broadcasts.environment, input.principal.environment),
+            ),
+          )
+          .for("update", { of: broadcastRecipients });
+        if (!recipient) throw new Error("Broadcast recipient is unavailable.");
+        if (recipient.messageId) {
+          const [existing] = await tx
+            .select({
+              createdAt: messages.createdAt,
+              deliveryMode: messages.deliveryMode,
+              domainId: messages.domainId,
+              environment: messages.environment,
+              id: messages.id,
+              nextAttemptAt: messages.nextAttemptAt,
+              provider: messages.outboundProvider,
+              status: messages.status,
+            })
+            .from(messages)
+            .where(eq(messages.id, recipient.messageId));
+          if (!existing) throw new Error("Broadcast message is unavailable.");
+          return { ...existing, replayed: true };
+        }
+        if (
+          recipient.status !== "processing" ||
+          recipient.updatedAt.getTime() !== input.broadcastRecipient.claimedAt.getTime()
+        ) {
+          throw new Error("Broadcast recipient lease is no longer current.");
+        }
+      }
       if (idempotencyKey && apiKeyId) {
         await tx
           .update(messages)
@@ -361,10 +417,11 @@ export async function queueEmail(input: {
           .limit(1);
         domainClickEnabled = domainRow?.enabled === true;
       }
+      const isInvitation = isOrganizationInviteMessage(email);
       const messageId = randomUUID();
       let html = email.html;
       let clickTrackingEnabled = false;
-      if (domainClickEnabled && html !== null) {
+      if (!isInvitation && domainClickEnabled && html !== null) {
         const rewritten = rewriteHtmlLinksForMessage({ html, messageId });
         if (rewritten.rewritten > 0) {
           html = rewritten.html;
@@ -372,7 +429,7 @@ export async function queueEmail(input: {
         }
       }
       let openTrackingEnabled = false;
-      if (organization.openTrackingEnabled && html !== null) {
+      if (!isInvitation && organization.openTrackingEnabled && html !== null) {
         html = appendOpenTrackingPixel({
           html,
           url: createOpenTrackingUrl({ messageId }),
@@ -465,14 +522,29 @@ export async function queueEmail(input: {
         });
       }
 
-      return inserted;
+      if (input.broadcastRecipient) {
+        await tx
+          .update(broadcastRecipients)
+          .set({
+            messageId: inserted.id,
+            // Commit completion too, so even deleting the message later cannot
+            // turn an interrupted acknowledgement into another send.
+            status: "queued",
+            processedAt: inserted.createdAt,
+            updatedAt: inserted.createdAt,
+          })
+          .where(eq(broadcastRecipients.id, input.broadcastRecipient.recipientId));
+      }
+      return { ...inserted, replayed: false };
     });
 
-    requestMessageJob({
-      attemptCount: 0,
-      messageId: created.id,
-      runAt: created.nextAttemptAt,
-    });
+    if (!created.replayed) {
+      requestMessageJob({
+        attemptCount: 0,
+        messageId: created.id,
+        runAt: created.nextAttemptAt,
+      });
+    }
 
     return {
       createdAt: created.createdAt,
@@ -481,7 +553,7 @@ export async function queueEmail(input: {
       environment: created.environment === "live" ? "live" : "test",
       id: created.id,
       provider: outboundProvider(created.provider),
-      replayed: false,
+      replayed: created.replayed,
       status: messageStatus(created.status),
     };
   } catch (error) {

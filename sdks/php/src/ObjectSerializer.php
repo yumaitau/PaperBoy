@@ -83,6 +83,11 @@ class ObjectSerializer
             return $isMap ? (object) $data : $data;
         }
 
+        // Value-union wrappers expose their JSON value without object properties.
+        if ($data instanceof \PaperBoy\OpenApi\Model\Recipients) {
+            return self::sanitizeForSerialization($data->jsonSerialize());
+        }
+
         if (is_object($data)) {
             $values = [];
             if ($data instanceof ModelInterface) {
@@ -401,6 +406,16 @@ class ObjectSerializer
     {
         if (null === $data) {
             return null;
+        }
+
+        if (ltrim($class, '\\') === \PaperBoy\OpenApi\Model\Recipients::class) {
+            if (is_string($data)) {
+                $decoded = json_decode($data, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $data = $decoded;
+                }
+            }
+            return new \PaperBoy\OpenApi\Model\Recipients($data);
         }
 
         if (strcasecmp(substr($class, -2), '[]') === 0) {
