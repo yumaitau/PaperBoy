@@ -11,7 +11,7 @@ export class OrganizationInviteEmailError extends Error {
 }
 
 export function organizationInviteAcceptUrl(
-  invitationId: string,
+  invitationToken: string,
   raw = process.env.PAPERBOY_PUBLIC_URL ?? process.env.BETTER_AUTH_URL,
 ): string {
   if (!raw) {
@@ -20,7 +20,7 @@ export function organizationInviteAcceptUrl(
 
   try {
     return new URL(
-      organizationInvitePath(invitationId),
+      organizationInvitePath(invitationToken),
       raw.endsWith("/") ? raw : `${raw}/`,
     ).href;
   } catch {
@@ -81,12 +81,13 @@ export async function queueOrganizationInviteEmail(
     actorUserId: string;
     email: string;
     invitationId: string;
+    invitationToken: string;
     orgId: string;
     orgName: string;
     role: string;
   },
   dependencies: {
-    acceptUrl: (invitationId: string) => string;
+    acceptUrl: (invitationToken: string) => string;
     queue: (value: {
       payload: ReturnType<typeof organizationInviteMessage>;
       principal: {
@@ -110,7 +111,7 @@ export async function queueOrganizationInviteEmail(
 
   return dependencies.queue({
     payload: organizationInviteMessage({
-      acceptUrl: dependencies.acceptUrl(input.invitationId),
+      acceptUrl: dependencies.acceptUrl(input.invitationToken),
       from: organizationInviteFromAddress(domain),
       invitationId: input.invitationId,
       orgName: input.orgName,
