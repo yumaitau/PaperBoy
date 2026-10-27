@@ -13,9 +13,7 @@
  */
 
 import * as runtime from '../runtime';
-import type {
-    ,
-} from '../models/index';
+import type { WebhookEvent } from '../models/index';
 
 export interface ReceiveMessageEventRequest {
     webhookId: string;

@@ -8,6 +8,7 @@ import { TemplateError } from "@/lib/template-core";
 import {
   createTemplate,
   deleteTemplate,
+  publishTemplate,
   updateTemplate,
 } from "@/lib/templates";
 
@@ -110,4 +111,20 @@ export async function deleteTemplateAction(formData: FormData) {
 
   revalidatePath("/app/templates");
   redirect("/app/templates?saved=deleted");
+}
+
+export async function publishTemplateAction(formData: FormData) {
+  const { organization, session } = await requireOrganization();
+  try {
+    await publishTemplate({
+      actorUserId: session.user.id,
+      orgId: organization.id,
+      templateId: String(formData.get("templateId")),
+    });
+  } catch (error) {
+    errorRedirect(error);
+  }
+  revalidatePath("/app/templates");
+  revalidatePath("/app/broadcasts");
+  redirect("/app/templates?saved=published");
 }

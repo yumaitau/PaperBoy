@@ -50,6 +50,21 @@ func TestParseBasics(t *testing.T) {
 	}
 }
 
+func TestCompactFlagPositions(t *testing.T) {
+	for _, args := range [][]string{
+		{"--compact", "templates", "get", "template-id"},
+		{"templates", "--compact", "get", "template-id"},
+		{"templates", "get", "--compact", "template-id"},
+		{"templates", "get", "template-id", "--compact"},
+	} {
+		cfg, inv := mustParse(t, args)
+		if !cfg.Compact || inv.Resource.Name != "templates" || inv.Action.Name != "get" ||
+			len(inv.Position) != 1 || inv.Position[0] != "template-id" {
+			t.Fatalf("wrong invocation for %v: %+v / %+v", args, cfg, inv)
+		}
+	}
+}
+
 func TestRequestURL(t *testing.T) {
 	_, inv := mustParse(t, []string{"contacts", "get", "reader@example.net"})
 	u, err := inv.RequestURL("http://localhost:3000/")
@@ -177,6 +192,32 @@ func TestHTTPError(t *testing.T) {
 	}
 }
 
+func TestResponseSizeLimit(t *testing.T) {
+	t.Setenv("PAPERBOY_API_KEY", "test-key")
+	const limit = 20 << 20
+	for _, size := range []int{limit - 1, limit, limit + 1, 23 << 20} {
+		// A valid JSON response, including at the exact supported boundary.
+		payload := []byte(`{"body":"` + strings.Repeat("x", size-12) + `"}` + "\n")
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(payload)
+		}))
+		var out, stderr bytes.Buffer
+		err := run([]string{"-e", server.URL, "templates", "list", "--compact"}, &out, &stderr)
+		server.Close()
+		if size > limit {
+			if err == nil || !strings.Contains(err.Error(), "response exceeds") {
+				t.Errorf("size %d: expected explicit size error, got %v", size, err)
+			}
+			if out.Len() != 0 {
+				t.Errorf("size %d: printed %d truncated bytes", size, out.Len())
+			}
+		} else if err != nil || !bytes.Equal(out.Bytes(), payload) || !json.Valid(out.Bytes()) {
+			t.Errorf("size %d: response changed or failed: %v", size, err)
+		}
+	}
+}
+
 func TestMultipartUpload(t *testing.T) {
 	var gotCT string
 	var gotFile []byte
@@ -234,5 +275,36 @@ func TestRunHelpAndVersion(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "paperboy templates create") {
 		t.Fatalf("help: %s", out.String())
+	}
+}
+
+func TestAttachmentDownloadPreservesBytes(t *testing.T) {
+	t.Setenv("PAPERBOY_API_KEY", "test-key")
+	for _, payload := range [][]byte{
+		{0x20, 0x09, 0x00, 0x01, 0xff, 0x0d, 0x0a},
+		[]byte("  {\"number\":9007199254740993} \r\n"),
+		[]byte(" \t text \r\n"),
+		{},
+	} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/api/v1/attachments/download" || r.URL.Query().Get("token") != "signed-token" {
+				t.Errorf("unexpected download URL: %s", r.URL)
+			}
+			_, _ = w.Write(payload)
+		}))
+		for _, compact := range []bool{false, true} {
+			args := []string{"-e", server.URL, "attachments", "download", "--query", "token=signed-token"}
+			if compact {
+				args = append(args, "--compact")
+			}
+			var out, stderr bytes.Buffer
+			if err := run(args, &out, &stderr); err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(out.Bytes(), payload) {
+				t.Errorf("compact=%t: got %x, want %x", compact, out.Bytes(), payload)
+			}
+		}
+		server.Close()
 	}
 }

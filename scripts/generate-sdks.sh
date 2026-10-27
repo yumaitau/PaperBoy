@@ -68,10 +68,14 @@ generate typescript-fetch \
   "${ROOT}/sdk-generator/typescript.ignore" \
   "npmName=@paperboy/openapi,supportsES6=true,typescriptThreePlus=true,enumPropertyNaming=original,modelPropertyNaming=original,withoutRuntimeChecks=true,useSingleRequestParameter=true,hideGenerationTimestamp=true"
 
+python3 "${ROOT}/sdk-generator/fix-typescript-imports.py" "${ROOT}/sdks/typescript"
+
 generate php \
   "${ROOT}/sdks/php" \
   "${ROOT}/sdk-generator/php.ignore" \
   "invokerPackage=PaperBoy\\OpenApi,packageName=paperboy/openapi,composerVendorName=paperboy,composerProjectName=openapi,srcBasePath=src,variableNamingConvention=snake_case,hideGenerationTimestamp=true"
+
+python3 "${ROOT}/sdk-generator/fix-php-map-serialization.py" "${ROOT}/sdks/php"
 
 # The PHP generator still emits these even when listed in the ignore file.
 rm -f \
