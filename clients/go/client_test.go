@@ -236,3 +236,34 @@ func TestRunHelpAndVersion(t *testing.T) {
 		t.Fatalf("help: %s", out.String())
 	}
 }
+
+func TestAttachmentDownloadPreservesBytes(t *testing.T) {
+	t.Setenv("PAPERBOY_API_KEY", "test-key")
+	for _, payload := range [][]byte{
+		{0x20, 0x09, 0x00, 0x01, 0xff, 0x0d, 0x0a},
+		[]byte("  {\"number\":9007199254740993} \r\n"),
+		[]byte(" \t text \r\n"),
+		{},
+	} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/api/v1/attachments/download" || r.URL.Query().Get("token") != "signed-token" {
+				t.Errorf("unexpected download URL: %s", r.URL)
+			}
+			_, _ = w.Write(payload)
+		}))
+		for _, compact := range []bool{false, true} {
+			args := []string{"-e", server.URL, "attachments", "download", "--query", "token=signed-token"}
+			if compact {
+				args = append(args, "--compact")
+			}
+			var out, stderr bytes.Buffer
+			if err := run(args, &out, &stderr); err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(out.Bytes(), payload) {
+				t.Errorf("compact=%t: got %x, want %x", compact, out.Bytes(), payload)
+			}
+		}
+		server.Close()
+	}
+}
