@@ -76,7 +76,7 @@ const MAX_TAG_LENGTH = 256;
 export const MAX_HEADERS = 50;
 export const MAX_HEADER_NAME_LENGTH = 128;
 export const MAX_HEADER_VALUE_LENGTH = 998;
-const MAX_CONTENT_ID_LENGTH = 256;
+export const MAX_CONTENT_ID_LENGTH = 256;
 const SEND_FIELDS = new Set([
   "attachments",
   "bcc",
@@ -579,7 +579,7 @@ function parseAttachments(
       normalizedContentId = null;
     } else if (
       typeof contentId !== "string" ||
-      contentId.length > MAX_CONTENT_ID_LENGTH ||
+      [...contentId].length > MAX_CONTENT_ID_LENGTH ||
       !CONTENT_ID_PATTERN.test(contentId)
     ) {
       issues.push({
