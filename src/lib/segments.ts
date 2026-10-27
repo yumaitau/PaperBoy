@@ -1416,8 +1416,8 @@ export async function createContactImport(input: {
           await tx
             .update(contacts)
             .set({
-              firstName: row.firstName,
-              lastName: row.lastName,
+              ...(Object.hasOwn(columnMap, "first_name") ? { firstName: row.firstName } : {}),
+              ...(Object.hasOwn(columnMap, "last_name") ? { lastName: row.lastName } : {}),
               ...(row.unsubscribed && !existing.unsubscribedAt
                 ? { unsubscribedAt: now }
                 : {}),
