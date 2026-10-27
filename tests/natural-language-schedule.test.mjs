@@ -48,3 +48,14 @@ test("natural schedule formatter includes fixed timezone abbreviation", () => {
     /Friday 4 December 2026 at 10:00 am AEDT/,
   );
 });
+
+test("natural schedule rejects ranges instead of silently choosing their start", () => {
+  for (const text of [
+    "3 September 2026 from 10 am to 11 am",
+    "3 September 2026 10 am - 4 September 2026 10 am",
+  ]) {
+    const parsed = parseNaturalLanguageSchedule(text, reference, timeZone);
+    assert.equal(parsed.date, null, text);
+    assert.match(parsed.error ?? "", /one unambiguous future date and time/, text);
+  }
+});
