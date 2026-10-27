@@ -98,6 +98,7 @@ function recordFromRow(
 
 async function findExistingReceivedEmail(input: {
   contentSha256: string;
+  environment: "live" | "test";
   orgId: string;
   rfc822MessageId: string | null;
 }) {
@@ -107,6 +108,7 @@ async function findExistingReceivedEmail(input: {
     .where(
       and(
         eq(receivedEmails.orgId, input.orgId),
+        eq(receivedEmails.environment, input.environment),
         eq(receivedEmails.contentSha256, input.contentSha256),
       ),
     )
@@ -121,6 +123,7 @@ async function findExistingReceivedEmail(input: {
     .where(
       and(
         eq(receivedEmails.orgId, input.orgId),
+        eq(receivedEmails.environment, input.environment),
         eq(receivedEmails.rfc822MessageId, input.rfc822MessageId),
       ),
     )
@@ -333,6 +336,7 @@ export async function receiveInboundEmail(input: {
     if (isUniqueViolation(error)) {
       const existing = await findExistingReceivedEmail({
         contentSha256: email.contentSha256,
+        environment: input.principal.environment,
         orgId: input.principal.orgId,
         rfc822MessageId: email.rfc822MessageId,
       });

@@ -1596,12 +1596,13 @@ export const receivedEmails = pgTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex("received_emails_org_id_content_sha256_unique").on(
+    uniqueIndex("received_emails_org_environment_content_sha256_unique").on(
       table.orgId,
+      table.environment,
       table.contentSha256,
     ),
-    uniqueIndex("received_emails_org_id_rfc822_message_id_unique")
-      .on(table.orgId, table.rfc822MessageId)
+    uniqueIndex("received_emails_org_environment_rfc822_message_id_unique")
+      .on(table.orgId, table.environment, table.rfc822MessageId)
       .where(sql`${table.rfc822MessageId} is not null`),
     index("received_emails_org_id_created_at_id_idx").on(
       table.orgId,
