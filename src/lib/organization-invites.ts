@@ -89,7 +89,7 @@ export async function inviteAndEmailOrganizationMember(input: {
     orgId: input.orgId,
     permission: "members.invite",
   });
-  const invitation = await inviteOrganizationMember({
+  const { invitation, invitationToken } = await inviteOrganizationMember({
     actorUserId,
     email: input.email,
     orgId: input.orgId,
@@ -110,6 +110,7 @@ export async function inviteAndEmailOrganizationMember(input: {
         actorUserId,
         email: invitation.email,
         invitationId: invitation.id,
+        invitationToken,
         orgId: input.orgId,
         orgName: organization.name,
         role: invitation.role,

@@ -20,7 +20,6 @@ import { parseCsvTable } from "@/lib/audience-core";
 import {
   SegmentError,
   contactEmail,
-  parseColumnMap,
   parseContactImportInput,
   parseCreateContactPropertyInput,
   parseCreateSegmentInput,
@@ -1249,12 +1248,19 @@ type ImportRow = {
 function parseImportRows(
   csv: string,
   columnMap: Record<string, string>,
-): ImportRow[] {
+): { columnMap: Record<string, string>; rows: ImportRow[] } {
   const table = parseCsvTable(csv);
   const header = (table.shift() ?? []).map((cell) => cell.trim().toLowerCase());
   const columns = new Map<string, number>();
 
-  for (const [field, label] of Object.entries(columnMap)) {
+  const mappedColumns = Object.keys(columnMap).length === 0
+    ? Object.fromEntries(
+        ["email", "first_name", "last_name", "unsubscribed"]
+          .filter((field) => header.includes(field))
+          .map((field) => [field, field]),
+      )
+    : columnMap;
+  for (const [field, label] of Object.entries(mappedColumns)) {
     const index = header.indexOf(label.trim().toLowerCase());
 
     if (index === -1) {
@@ -1267,6 +1273,12 @@ function parseImportRows(
     }
 
     columns.set(field, index);
+  }
+
+  if (!columns.has("email")) {
+    throw new SegmentError("VALIDATION_ERROR", [
+      { field: "column_map", message: "Include an email column or map one explicitly." },
+    ]);
   }
 
   const rows = table.filter(
@@ -1318,7 +1330,7 @@ function parseImportRows(
     deduplicated.set(row.email, row);
   }
 
-  return [...deduplicated.values()];
+  return { columnMap: mappedColumns, rows: [...deduplicated.values()] };
 }
 
 export async function createContactImport(input: {
@@ -1332,7 +1344,6 @@ export async function createContactImport(input: {
     permission: "audiences.manage",
   });
   const definition = parseContactImportInput(input.payload);
-  const columnMap = parseColumnMap(definition.columnMap) ?? definition.columnMap;
   const now = input.now ?? new Date();
 
   const [record] = await db
@@ -1351,7 +1362,7 @@ export async function createContactImport(input: {
   }
 
   try {
-    const rows = parseImportRows(definition.csv, columnMap);
+    const { rows, columnMap } = parseImportRows(definition.csv, definition.columnMap);
     let created = 0;
     let updated = 0;
     let skipped = 0;
@@ -1405,8 +1416,8 @@ export async function createContactImport(input: {
           await tx
             .update(contacts)
             .set({
-              firstName: row.firstName,
-              lastName: row.lastName,
+              ...(Object.hasOwn(columnMap, "first_name") ? { firstName: row.firstName } : {}),
+              ...(Object.hasOwn(columnMap, "last_name") ? { lastName: row.lastName } : {}),
               ...(row.unsubscribed && !existing.unsubscribedAt
                 ? { unsubscribedAt: now }
                 : {}),

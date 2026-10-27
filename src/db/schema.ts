@@ -196,6 +196,7 @@ export const orgInvites = pgTable(
       .notNull()
       .references(() => orgs.id, { onDelete: "cascade" }),
     email: text("email").notNull(),
+    tokenHash: text("token_hash"),
     role: text("role").default("member").notNull(),
     invitedByUserId: text("invited_by_user_id").references(() => users.id, {
       onDelete: "set null",
@@ -220,6 +221,11 @@ export const orgInvites = pgTable(
     ),
     index("org_invites_org_id_idx").on(table.orgId),
     index("org_invites_email_idx").on(table.email),
+    uniqueIndex("org_invites_token_hash_unique").on(table.tokenHash),
+    check(
+      "org_invites_token_hash_check",
+      sql`${table.tokenHash} is null or ${table.tokenHash} ~ '^[0-9a-f]{64}$'`,
+    ),
     check(
       "org_invites_role_check",
       sql`${table.role} in ('admin', 'agency', 'member')`,

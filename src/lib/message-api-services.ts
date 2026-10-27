@@ -79,45 +79,36 @@ export const messageApiServices: MessageHttpServices = {
   },
   listAttachments: (principal, messageId) => {
     requireKeyScope(principal.scopes, "messages.read");
-    return listMessageAttachments({
-      actorUserId: principal.actorUserId,
-      messageId,
-      orgId: principal.orgId,
-    });
+    return listMessageAttachments(context(principal, messageId));
   },
   getAttachment: (principal, messageId, attachmentId) => {
     requireKeyScope(principal.scopes, "messages.read");
     return getMessageAttachment({
-      actorUserId: principal.actorUserId,
+      ...context(principal, messageId),
       attachmentId,
-      messageId,
-      orgId: principal.orgId,
     });
   },
   attachmentDownloadUrl: (principal, messageId, attachmentId, origin) => {
     requireKeyScope(principal.scopes, "messages.read");
     return attachmentDownloadUrl({
-      actorUserId: principal.actorUserId,
+      ...context(principal, messageId),
       attachmentId,
       baseUrl: origin,
-      messageId,
-      orgId: principal.orgId,
     });
   },
   share: (principal, messageId, input) => {
     requireKeyScope(principal.scopes, "emails.share");
     return shareEmail({
-      actorUserId: principal.actorUserId,
+      ...context(principal, messageId),
       baseUrl: input.origin,
       expiresIn: input.expiresIn,
-      messageId,
-      orgId: principal.orgId,
     });
   },
   metrics: (principal, query) => {
     requireKeyScope(principal.scopes, "emails.metrics");
     return getEmailMetrics({
       actorUserId: principal.actorUserId,
+      environment: principal.environment,
       orgId: principal.orgId,
       query: parseMetricsQuery({
         broadcast_id: query["broadcast_id"],

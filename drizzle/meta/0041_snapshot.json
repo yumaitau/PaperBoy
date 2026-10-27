@@ -1,6 +1,6 @@
 {
-  "id": "6762782e-ecf6-4505-a1a0-325814566b41",
-  "prevId": "401fed87-d4bb-46c1-ad91-c06f4fbdb1ad",
+  "id": "be261ec8-5bbd-4ad5-8763-df995b6a1d2f",
+  "prevId": "48b795c9-8906-4282-902c-462917597ee9",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4279,6 +4279,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "role": {
           "name": "role",
           "type": "text",
@@ -4376,6 +4382,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "org_invites_token_hash_unique": {
+          "name": "org_invites_token_hash_unique",
+          "columns": [
+            {
+              "expression": "token_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -4423,6 +4444,10 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
+        "org_invites_token_hash_check": {
+          "name": "org_invites_token_hash_check",
+          "value": "\"org_invites\".\"token_hash\" is null or \"org_invites\".\"token_hash\" ~ '^[0-9a-f]{64}$'"
+        },
         "org_invites_role_check": {
           "name": "org_invites_role_check",
           "value": "\"org_invites\".\"role\" in ('admin', 'agency', 'member')"

@@ -18,6 +18,7 @@ import {
   type MessageDeliveryStatusRecord,
 } from "@/lib/message-statuses";
 import { MessageStatusError } from "@/lib/message-status-core";
+import { publicMessageContent } from "@/lib/organization-invite-content";
 import { webhookEventBody } from "@/lib/webhook-core";
 
 export type MessageAttachmentMetadata = {
@@ -189,7 +190,7 @@ export async function getMessageDetail(
     throw new MessageStatusError("MESSAGE_NOT_FOUND");
   }
 
-  return { ...delivery, ...message, attachments };
+  return { ...delivery, ...message, ...publicMessageContent(message), attachments };
 }
 
 export async function listMessageEvents(

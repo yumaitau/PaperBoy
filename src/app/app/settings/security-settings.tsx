@@ -53,7 +53,8 @@ export function SecuritySettings({
   async function changePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     begin();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const currentPassword = String(form.get("currentPassword"));
     const newPassword = String(form.get("newPassword"));
     const confirmation = String(form.get("confirmPassword"));
@@ -78,7 +79,7 @@ export function SecuritySettings({
       return;
     }
 
-    event.currentTarget.reset();
+    formElement.reset();
     setStatus("Password changed. Other signed-in devices were signed out.");
     setIsPending(false);
   }
@@ -162,7 +163,8 @@ export function SecuritySettings({
   async function addPasskey(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     begin();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const result = await authClient.passkey.addPasskey({
       name: String(form.get("name")).trim() || undefined,
     });
@@ -174,7 +176,7 @@ export function SecuritySettings({
       setIsPending(false);
       return;
     }
-    event.currentTarget.reset();
+    formElement.reset();
     if (result.data) setPasskeys((current) => [...current, result.data]);
     setStatus("Passkey added. You can use it from the sign-in page.");
     setIsPending(false);

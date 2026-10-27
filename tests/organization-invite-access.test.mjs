@@ -33,7 +33,7 @@ test("closed signup still lets an invited address create an account", async () =
   assert.match(auth, /disableSignUp: false/);
   assert.match(auth, /canCreateAccountForEmail/);
   // Closed sign-up is bound to the emailed invite link, never to the address alone.
-  assert.match(auth, /signUpInvitationId/);
+  assert.match(auth, /signUpInvitationToken/);
   assert.doesNotMatch(auth, /acceptPendingInvitationsForEmail/);
   assert.match(page, /Create an account with/);
   assert.match(email, /organizationInvitePath/);

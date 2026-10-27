@@ -25,6 +25,7 @@ import {
   MESSAGE_DELIVERY_MODES,
   MESSAGE_STATUSES,
   emailRequestHash,
+  effectiveScheduledAt,
   normalizeEmailAddress,
   normalizeIdempotencyKey,
   parseSendEmailInput,
@@ -32,6 +33,7 @@ import {
   type MessageStatus,
 } from "@/lib/email-core";
 import { authorizeSendingDomain } from "@/lib/domains";
+import { isOrganizationInviteMessage } from "@/lib/organization-invite-content";
 import type { providerVerifiedSenderDomains } from "@/lib/provider-sender-identities";
 import { insertMessageEvent } from "@/lib/message-events";
 import { requestMessageJob } from "@/lib/job-queue";
@@ -237,6 +239,7 @@ export async function queueEmail(input: {
     throw new Error("Idempotency keys require an API-key queue principal.");
   }
   const requestHash = emailRequestHash(email);
+  const scheduledAt = effectiveScheduledAt(email.scheduledAt);
   const normalizedRecipients = [...email.to, ...email.cc, ...email.bcc].flatMap(
     (recipient) => normalizeEmailAddress(recipient) ?? [],
   );
@@ -351,10 +354,11 @@ export async function queueEmail(input: {
           .limit(1);
         domainClickEnabled = domainRow?.enabled === true;
       }
+      const isInvitation = isOrganizationInviteMessage(email);
       const messageId = randomUUID();
       let html = email.html;
       let clickTrackingEnabled = false;
-      if (domainClickEnabled && html !== null) {
+      if (!isInvitation && domainClickEnabled && html !== null) {
         const rewritten = rewriteHtmlLinksForMessage({ html, messageId });
         if (rewritten.rewritten > 0) {
           html = rewritten.html;
@@ -362,7 +366,7 @@ export async function queueEmail(input: {
         }
       }
       let openTrackingEnabled = false;
-      if (organization.openTrackingEnabled && html !== null) {
+      if (!isInvitation && organization.openTrackingEnabled && html !== null) {
         html = appendOpenTrackingPixel({
           html,
           url: createOpenTrackingUrl({ messageId }),
@@ -386,12 +390,12 @@ export async function queueEmail(input: {
           replyTo: email.replyTo,
           id: messageId,
           idempotencyKey,
-          nextAttemptAt: email.scheduledAt ?? undefined,
+          nextAttemptAt: scheduledAt ?? undefined,
           openTrackingEnabled,
           orgId: input.principal.orgId,
           outboundProvider: domain.provider,
           requestHash: idempotencyKey ? requestHash : null,
-          scheduledAt: email.scheduledAt,
+          scheduledAt,
           subject: email.subject,
           tags: email.tags,
           textBody: email.text,
@@ -419,10 +423,10 @@ export async function queueEmail(input: {
         type: "queued",
       });
 
-      if (email.scheduledAt) {
+      if (scheduledAt) {
         await insertMessageEvent(tx, {
           createdAt: inserted.createdAt,
-          data: { scheduled_at: email.scheduledAt.toISOString() },
+          data: { scheduled_at: scheduledAt.toISOString() },
           messageId: inserted.id,
           type: "scheduled",
         });
