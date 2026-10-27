@@ -402,6 +402,12 @@ export function parseRescheduledAt(value: unknown, now = new Date()): Date | nul
   return effectiveScheduledAt(scheduledAt, now);
 }
 
+/**
+ * Collect allowed custom headers without changing name casing or values.
+ * Missing input yields an empty map; invalid names, reserved delivery headers,
+ * excess entries, and invalid values append issues. Callers must reject the
+ * entire request if issues remain rather than send this partial result.
+ */
 function parseHeaders(
   value: unknown,
   issues: EmailValidationIssue[],
@@ -460,6 +466,12 @@ function parseHeaders(
   return headers;
 }
 
+/**
+ * Decode canonical Base64 and derive byte sizes, SHA-256 digests, lowercase MIME
+ * types, and nullable CIDs. Validate filenames, content IDs, and bounded counts
+ * by appending issues; the returned list is usable only if the caller finds none.
+ * Throw ATTACHMENTS_TOO_LARGE immediately for encoded or aggregate byte limits.
+ */
 function parseAttachments(
   value: unknown,
   issues: EmailValidationIssue[],
@@ -600,6 +612,13 @@ function parseAttachments(
   return attachments;
 }
 
+/**
+ * Validate a Resend-shaped payload and return normalized send fields, decoded
+ * attachments, and the requested schedule instant. Require a sender, subject,
+ * nonempty body, and at most 50 recipients across To/CC/BCC; reply-to is separate.
+ * Batch callers can forbid attachments, and tests can supply the validation clock.
+ * Throw EmailError with field issues or ATTACHMENTS_TOO_LARGE; no I/O occurs.
+ */
 export function parseSendEmailInput(
   value: unknown,
   options: { allowAttachments?: boolean; now?: Date } = {},
@@ -785,6 +804,12 @@ function canonicalEmailRequest(input: SendEmailInput): string {
   });
 }
 
+/**
+ * Hash normalized send fields using the current versioned idempotency identity.
+ * Include recipients, custom headers, tags, the exact requested schedule, and
+ * attachment digests/metadata (including CID), rather than raw attachment bytes.
+ * Use matchesEmailRequestHash when checking stored hashes from older writers.
+ */
 export function emailRequestHash(input: SendEmailInput): string {
   // Domain separation keeps new unscheduled identities out of the legacy
   // null-schedule equivalence class, without changing the stored hash format.

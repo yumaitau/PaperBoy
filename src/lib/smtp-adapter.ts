@@ -296,6 +296,12 @@ function cloudflareProviderEvent(input: {
   ];
 }
 
+/**
+ * Create the SMTP or Cloudflare-over-SMTP adapter from explicit transport settings
+ * (or process.env). Validate TLS/credentials before creating the transport; an
+ * injected factory supports offline tests. Cloudflare keeps its own return path,
+ * while SMTP may use a configured bounce address. Call close() to release it.
+ */
 export function createSmtpAdapter(
   input: SmtpAdapterInput = {},
 ): OutboundProviderAdapter & {
@@ -347,6 +353,14 @@ export function createSmtpAdapter(
       }));
     },
     provider,
+    /**
+     * Send validated fields only for this adapter's live provider identity.
+     * Deduplicate normalized To/CC/BCC envelope recipients while preserving MIME
+     * fields and omitting BCC from DATA. Enforce Cloudflare's encoded size limit,
+     * and treat partial recipient acceptance as permanent to avoid replaying mail
+     * to accepted recipients. Return a safe receipt ID or null; transport failures
+     * become OutboundDeliveryError retry decisions.
+     */
     async send(message) {
       if (
         message.deliveryMode !== "live" ||

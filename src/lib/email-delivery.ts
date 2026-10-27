@@ -35,6 +35,12 @@ type MimeMessage = DeliveryMessage & {
   messageId?: string;
 };
 
+/**
+ * Build unsigned delivery MIME from validated semantic fields and attachment
+ * bytes, preserving CC, reply-to, custom headers, and inline CIDs. BCC stays out
+ * of MIME; adapters must supply envelope recipients separately. Extra internal
+ * headers override matching custom keys, and file/URL loading is disabled.
+ */
 export function buildSmtpMimeMessage(message: MimeMessage): Promise<Buffer> {
   return buildMimeMessage(message, false);
 }
@@ -83,6 +89,12 @@ async function buildMimeMessage(
   return mime.build();
 }
 
+/**
+ * Convert validated fields into Cloudflare's unsigned structured send payload,
+ * including envelope BCC, reply_to, custom headers, and Base64/CID attachments.
+ * Omit absent optional fields and leave Date/signing to the provider. This does
+ * not submit mail; throw MESSAGE_TOO_LARGE when serialized JSON exceeds 5 MiB.
+ */
 export function prepareCloudflareEmailMessage(message: DeliveryMessage) {
   const cc = message.cc ?? [];
   const bcc = message.bcc ?? [];

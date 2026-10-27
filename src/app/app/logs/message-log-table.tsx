@@ -58,6 +58,12 @@ function SortHeader({
   );
 }
 
+/**
+ * Render supplied log rows and fetch authorized details on row activation.
+ * Request tokens discard results for a closed or superseded drawer. Message HTML
+ * uses the sandboxed preview; recipient/header/CID metadata renders as text.
+ * Sorting uses supplied links, and download visibility follows the server result.
+ */
 export function MessageLogTable({
   order,
   rows,
