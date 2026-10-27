@@ -77,6 +77,7 @@ generate php \
 
 python3 "${ROOT}/sdk-generator/fix-php-map-serialization.py" "${ROOT}/sdks/php"
 python3 "${ROOT}/sdk-generator/fix-php-recipients.py" "${ROOT}/sdks/php"
+python3 "${ROOT}/sdk-generator/fix-php-attachment-cid.py" "${ROOT}/sdks/php"
 
 # The PHP generator still emits these even when listed in the ignore file.
 rm -f \

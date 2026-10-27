@@ -4746,7 +4746,7 @@ components:
           type: string
           minLength: 1
           maxLength: 256
-          pattern: '^[^\\s<>,;]+$'
+          pattern: '^[^\s<>,;]+$'
           description: 'Optional CID reference for inline images used as cid: URIs in HTML.'
         filename:
           type: string
