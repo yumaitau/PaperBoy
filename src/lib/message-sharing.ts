@@ -1,3 +1,4 @@
+import type { ApiKeyEnvironment } from "@/lib/api-key-crypto";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -77,6 +78,7 @@ async function requireSharePermission(input: {
 
 async function requireMessageInOrg(input: {
   actorUserId: string | null;
+  environment: ApiKeyEnvironment;
   messageId: string;
   orgId: string;
   permission: "emails.share" | "messages.read";
@@ -110,7 +112,11 @@ async function requireMessageInOrg(input: {
     .select({ environment: messages.environment, id: messages.id })
     .from(messages)
     .where(
-      and(eq(messages.id, input.messageId), eq(messages.orgId, input.orgId)),
+      and(
+        eq(messages.id, input.messageId),
+        eq(messages.orgId, input.orgId),
+        eq(messages.environment, input.environment),
+      ),
     )
     .limit(1);
 
@@ -140,6 +146,7 @@ function publicBaseUrl(baseUrl?: string): string {
 
 export async function shareEmail(input: {
   actorUserId: string | null;
+  environment: ApiKeyEnvironment;
   baseUrl?: string;
   expiresIn?: unknown;
   messageId: string;
@@ -149,6 +156,7 @@ export async function shareEmail(input: {
   await requireSharePermission({ actorUserId: input.actorUserId, orgId: input.orgId });
   const message = await requireMessageInOrg({
     actorUserId: input.actorUserId,
+    environment: input.environment,
     messageId: input.messageId,
     orgId: input.orgId,
     permission: "emails.share",
@@ -229,11 +237,13 @@ const attachmentSelection = {
 
 export async function listMessageAttachments(input: {
   actorUserId: string | null;
+  environment: ApiKeyEnvironment;
   messageId: string;
   orgId: string;
 }): Promise<MessageAttachmentRecord[]> {
   const message = await requireMessageInOrg({
     actorUserId: input.actorUserId,
+    environment: input.environment,
     messageId: input.messageId,
     orgId: input.orgId,
     permission: "messages.read",
@@ -248,12 +258,14 @@ export async function listMessageAttachments(input: {
 
 export async function getMessageAttachment(input: {
   actorUserId: string | null;
+  environment: ApiKeyEnvironment;
   attachmentId: string;
   messageId: string;
   orgId: string;
 }): Promise<MessageAttachmentRecord> {
   const message = await requireMessageInOrg({
     actorUserId: input.actorUserId,
+    environment: input.environment,
     messageId: input.messageId,
     orgId: input.orgId,
     permission: "messages.read",
@@ -283,6 +295,7 @@ export async function getMessageAttachment(input: {
 
 export async function attachmentDownloadUrl(input: {
   actorUserId: string | null;
+  environment: ApiKeyEnvironment;
   attachmentId: string;
   baseUrl?: string;
   messageId: string;
@@ -291,6 +304,7 @@ export async function attachmentDownloadUrl(input: {
 }): Promise<{ expiresAt: Date; url: string }> {
   const message = await requireMessageInOrg({
     actorUserId: input.actorUserId,
+    environment: input.environment,
     messageId: input.messageId,
     orgId: input.orgId,
     permission: "messages.read",

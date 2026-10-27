@@ -1,3 +1,4 @@
+import type { ApiKeyEnvironment } from "@/lib/api-key-crypto";
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orgMembers } from "@/db/schema";
@@ -258,6 +259,7 @@ export function parseMetricsQuery(value: {
 
 export async function getEmailMetrics(input: {
   actorUserId: string | null;
+  environment: ApiKeyEnvironment;
   orgId: string;
   query: MetricsQuery;
 }): Promise<EmailMetricsResult & { data: MetricsRow[] }> {
@@ -294,6 +296,7 @@ export async function getEmailMetrics(input: {
 
   const conditions = [
     sql`"messages"."org_id" = ${input.orgId}`,
+    sql`"messages"."environment" = ${input.environment}`,
     sql`"messages"."created_at" >= ${query.startDate.toISOString()}`,
     sql`"messages"."created_at" <= ${query.endDate.toISOString()}`,
   ];
