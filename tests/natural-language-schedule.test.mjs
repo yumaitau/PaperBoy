@@ -92,3 +92,14 @@ test("an explicit offset is not rejected by a gap in the display timezone", () =
   assert.equal(parsed.error, null);
   assert.equal(parsed.date?.toISOString(), "2026-10-04T02:30:00.000Z");
 });
+
+test("natural schedule rejects ranges instead of silently choosing their start", () => {
+  for (const text of [
+    "3 September 2026 from 10 am to 11 am",
+    "3 September 2026 10 am - 4 September 2026 10 am",
+  ]) {
+    const parsed = parseNaturalLanguageSchedule(text, reference, timeZone);
+    assert.equal(parsed.date, null, text);
+    assert.match(parsed.error ?? "", /one unambiguous future date and time/, text);
+  }
+});

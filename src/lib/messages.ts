@@ -25,6 +25,7 @@ import {
   MESSAGE_DELIVERY_MODES,
   MESSAGE_STATUSES,
   emailRequestHash,
+  effectiveScheduledAt,
   normalizeEmailAddress,
   normalizeIdempotencyKey,
   parseSendEmailInput,
@@ -237,6 +238,7 @@ export async function queueEmail(input: {
     throw new Error("Idempotency keys require an API-key queue principal.");
   }
   const requestHash = emailRequestHash(email);
+  const scheduledAt = effectiveScheduledAt(email.scheduledAt);
   const normalizedRecipients = [...email.to, ...email.cc, ...email.bcc].flatMap(
     (recipient) => normalizeEmailAddress(recipient) ?? [],
   );
@@ -386,12 +388,12 @@ export async function queueEmail(input: {
           replyTo: email.replyTo,
           id: messageId,
           idempotencyKey,
-          nextAttemptAt: email.scheduledAt ?? undefined,
+          nextAttemptAt: scheduledAt ?? undefined,
           openTrackingEnabled,
           orgId: input.principal.orgId,
           outboundProvider: domain.provider,
           requestHash: idempotencyKey ? requestHash : null,
-          scheduledAt: email.scheduledAt,
+          scheduledAt,
           subject: email.subject,
           tags: email.tags,
           textBody: email.text,
@@ -419,10 +421,10 @@ export async function queueEmail(input: {
         type: "queued",
       });
 
-      if (email.scheduledAt) {
+      if (scheduledAt) {
         await insertMessageEvent(tx, {
           createdAt: inserted.createdAt,
-          data: { scheduled_at: email.scheduledAt.toISOString() },
+          data: { scheduled_at: scheduledAt.toISOString() },
           messageId: inserted.id,
           type: "scheduled",
         });
