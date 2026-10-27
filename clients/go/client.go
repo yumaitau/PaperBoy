@@ -65,7 +65,7 @@ func ParseArgs(args []string) (Config, *Invocation, error) {
 			if idx := strings.IndexByte(key, '='); idx >= 0 {
 				value = key[idx+1:]
 				key = key[:idx]
-			} else if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") &&
+			} else if key != "compact" && i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") &&
 				!strings.HasPrefix(args[i+1], "-") {
 				i++
 				value = args[i]
