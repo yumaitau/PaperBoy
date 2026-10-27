@@ -14,11 +14,30 @@ import {
   prepareCloudflareEmailMessage,
 } from "../src/lib/email-delivery.ts";
 import { createSmtpAdapter } from "../src/lib/smtp-adapter.ts";
+import {
+  mimeContentIds,
+  rewriteMimeCidReferences,
+} from "../src/lib/mime-content-ids.ts";
 
 const accent = "\u00e9";
 const emoji = "\ud83d\ude00";
 const bytes = Buffer.from("inline image fixture");
 const now = () => new Date("2026-10-27T00:00:00.000Z");
+
+function noscriptHtml(label, id = label) {
+  return (
+    `<!doctype html><html><head><noscript>` +
+    `<link rel="stylesheet" href="cid:${id}">` +
+    `<style>/* cid:${label} */.fallback{background:url(cid:${id});content:'cid:${label}'}</style>` +
+    `</noscript></head><body><img src="cid:${id}">` +
+    `<noscript><picture><source srcset="cid:${id} 1x, cid:missing 2x">` +
+    `<img SRC = 'cid:${id}'></picture><div style="background:url(cid:${id})">` +
+    `<p title="cid:${label}">cid:${label}</p><!-- <img src="cid:${label}"> -->` +
+    `</div></noscript><script src="cid:${label}">` +
+    `const fallback = '<noscript><img src="cid:${label}"></noscript>';</script>` +
+    `<textarea><noscript><img src="cid:${label}"></noscript></textarea></body></html>`
+  );
+}
 function message(labels = [accent], html = `<img src="cid:${labels[0]}">`) {
   return {
     attemptCount: 1,
@@ -54,7 +73,7 @@ function assertWire(id) {
 }
 function attrs(html, tag, name) {
   const result = [];
-  const pending = [parse(html)];
+  const pending = [parse(html, { scriptingEnabled: false })];
   while (pending.length) {
     const node = pending.pop();
     if (node.tagName === tag) {
@@ -129,8 +148,52 @@ async function smtpLoopback() {
   };
 }
 
+for (const [form, render] of [
+  ["implicit document", (_label, id) => `<noscript><img src="cid:${id}"></noscript>`],
+  ["valid head and body", noscriptHtml],
+  [
+    "malformed head and unclosed body",
+    (_label, id) =>
+      `<html><head><noscript><img src="cid:${id}"></noscript></head>` +
+      `<body><noscript><img src="cid:${id}">`,
+  ],
+  [
+    "nested body recovery",
+    (_label, id) =>
+      `<body><noscript><noscript><img src="cid:${id}"></noscript>` +
+      `<img src="cid:${id}"></noscript>`,
+  ],
+]) {
+  for (const label of ["ascii", accent, emoji]) {
+    test(`noscript ${form}: ${label} references follow scripting-disabled HTML parsing`, () => {
+      const mapping = mimeContentIds([label]);
+      const id = mapping.get(label) ?? label;
+      const html = render(label, label);
+      const rewritten = rewriteMimeCidReferences(html, mapping);
+      assert.equal(rewritten, render(label, id));
+      const images = attrs(rewritten, "img", "src");
+      assert.ok(images.length > 0);
+      assert.ok(images.every((src) => src === `cid:${id}`));
+    });
+  }
+}
+
+test("noscript markup in script raw text, comments and prose stays untouched", () => {
+  const mapping = mimeContentIds([accent]);
+  for (const html of [
+    `<script src="cid:${accent}">const x = '<noscript><img src="cid:${accent}"></noscript>';</script>`,
+    `<script>const x = '<noscript><img src="cid:${accent}"></noscript>';`,
+    `<body><noscript><script>const x = '<img src="cid:${accent}">';</script></noscript>`,
+    `<!-- <noscript><img src="cid:${accent}"></noscript> -->`,
+    `<textarea><noscript><img src="cid:${accent}"></noscript></textarea>`,
+    `<noscript><p title="cid:${accent}">cid:${accent}</p></noscript>`,
+  ]) {
+    assert.equal(rewriteMimeCidReferences(html, mapping), html);
+  }
+});
+
 for (const transport of ["smtp", "ses", "archive", "cloudflare-email"]) {
-  test(`${transport}: ASCII controls and Unicode MIME bind without changing originals or privacy`, async () => {
+  test(`${transport}: ASCII controls and Unicode noscript MIME bind without changing originals or privacy`, async () => {
     const loopback =
       transport === "smtp" || transport === "cloudflare-email"
         ? await smtpLoopback()
@@ -155,7 +218,7 @@ for (const transport of ["smtp", "ses", "archive", "cloudflare-email"]) {
         emoji.repeat(128),
         emoji.repeat(256),
       ]) {
-        const input = message([label]);
+        const input = message([label], noscriptHtml(label));
         const original = structuredClone(input);
         let raw;
         if (adapter) {
@@ -210,10 +273,12 @@ for (const transport of ["smtp", "ses", "archive", "cloudflare-email"]) {
         else assert.equal(attachment.cid, label);
         assert.deepEqual(attrs(parsed.html, "img", "src"), [
           `cid:${attachment.cid}`,
+          `cid:${attachment.cid}`,
         ]);
-        assert.match(
-          (await simpleParser(raw)).html,
-          /src="data:image\/png;base64,/,
+        assert.equal(parsed.html, noscriptHtml(label, attachment.cid));
+        assert.deepEqual(
+          attrs((await simpleParser(raw)).html, "img", "src"),
+          Array(2).fill(`data:image/png;base64,${bytes.toString("base64")}`),
         );
         assert.equal(attachment.contentDisposition, "inline");
         assert.equal(attachment.filename, "original.png");

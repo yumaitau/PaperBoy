@@ -295,7 +295,12 @@ export function rewriteMimeCidReferences(
   mapping: ReadonlyMap<string, string>,
 ): string {
   if (mapping.size === 0) return html;
-  const document = parse(html, { sourceCodeLocationInfo: true });
+  // Email renders noscript fallbacks; keep head/body HTML recovery consistent
+  // with scripting disabled while script contents remain raw text.
+  const document = parse(html, {
+    sourceCodeLocationInfo: true,
+    scriptingEnabled: false,
+  });
   const edits: Edit[] = [];
   const pending: Html.Node[] = [document];
   while (pending.length) {
