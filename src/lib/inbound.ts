@@ -154,11 +154,13 @@ async function authorizeInboundRecipient(input: {
   throw lastError;
 }
 
-async function enqueueReceivedEmailWebhook(input: {
+type InboundTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function insertReceivedEmailWebhooks(tx: InboundTransaction, input: {
   email: ReceivedEmailRecord;
   orgId: string;
 }) {
-  const endpoints = await db
+  const endpoints = await tx
     .select({
       encryptedSecret: webhookEndpoints.encryptedSecret,
       id: webhookEndpoints.id,
@@ -172,9 +174,9 @@ async function enqueueReceivedEmailWebhook(input: {
       ),
     );
 
-  if (endpoints.length === 0) return;
+  if (endpoints.length === 0) return [];
 
-  const created = await db
+  const created = await tx
     .insert(webhookDeliveries)
     .values(
       endpoints.map((endpoint) => ({
@@ -200,13 +202,7 @@ async function enqueueReceivedEmailWebhook(input: {
     .onConflictDoNothing()
     .returning({ id: webhookDeliveries.id });
 
-  for (const delivery of created) {
-    void enqueuePendingWebhook(delivery.id).catch(() => {
-      console.error(
-        `PaperBoy could not dispatch inbound webhook ${delivery.id}; BullMQ reconciliation will retry it.`,
-      );
-    });
-  }
+  return created.map((delivery) => delivery.id);
 }
 
 export async function findLiveOrgForInboundRecipients(
@@ -284,6 +280,11 @@ export async function receiveInboundEmail(input: {
         throw new Error("Inbound email insert returned no row.");
       }
 
+      const record = recordFromRow(inserted);
+      const deliveryIds = await insertReceivedEmailWebhooks(tx, {
+        email: record,
+        orgId: input.principal.orgId,
+      });
       const storedKeys: string[] = [];
       try {
         for (const [position, attachment] of email.attachments.entries()) {
@@ -321,14 +322,19 @@ export async function receiveInboundEmail(input: {
         throw error;
       }
 
-      return recordFromRow(inserted);
+      return { email: record, deliveryIds };
     });
 
-    await enqueueReceivedEmailWebhook({
-      email: created,
-      orgId: input.principal.orgId,
-    });
-    return created;
+    // Dispatch only after email, attachments and the webhook outbox commit.
+    // A queue outage is recoverable by the existing outbox reconciliation.
+    for (const deliveryId of created.deliveryIds) {
+      void enqueuePendingWebhook(deliveryId).catch(() => {
+        console.error(
+          `PaperBoy could not dispatch inbound webhook ${deliveryId}; BullMQ reconciliation will retry it.`,
+        );
+      });
+    }
+    return created.email;
   } catch (error) {
     if (isUniqueViolation(error)) {
       const existing = await findExistingReceivedEmail({
