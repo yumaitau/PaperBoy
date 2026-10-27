@@ -59,9 +59,13 @@ function mappedUrl(
 ): string | undefined {
   // URL input preprocessing precedes scheme recognition and percent decoding.
   // This is URL syntax; it does not normalize or validate attachment labels.
-  url = url
-    .replace(/^[\x00-\x20]+|[\x00-\x20]+$/g, "")
-    .replace(/[\t\n\r]/g, "");
+  // Scan the edges once; an end-anchored whitespace regex can retry quadratically
+  // on a long internal run followed by a nonspace, even in an unrelated URL.
+  let start = 0;
+  let end = url.length;
+  while (start < end && url.charCodeAt(start) <= 0x20) start++;
+  while (end > start && url.charCodeAt(end - 1) <= 0x20) end--;
+  url = url.slice(start, end).replace(/[\t\n\r]/g, "");
   if (url.slice(0, 4).toLowerCase() !== "cid:") return;
   try {
     // RFC 2392: decode exactly once; '+' is a literal plus, not a space.
