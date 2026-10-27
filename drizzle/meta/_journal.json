@@ -288,6 +288,13 @@
       "when": 1793086502326,
       "tag": "0040_invitation_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793088407171,
+      "tag": "0041_received_email_environment",
+      "breakpoints": true
     }
   ]
 }
