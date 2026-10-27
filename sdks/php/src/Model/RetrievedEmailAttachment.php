@@ -345,7 +345,7 @@ class RetrievedEmailAttachment implements ModelInterface, ArrayAccess, \JsonSeri
     /**
      * Sets content_id
      *
-     * @param string|null $content_id content_id
+     * @param string|null $content_id Persisted content identifier, or null when absent. For sent email, this is the original logical content_id label, not any ASCII Content-ID generated for MIME delivery or owner MIME downloads. For received email, this is the Content-ID header value parsed from incoming MIME, including any angle brackets, trimmed and limited to 256 UTF-16 code units; PaperBoy does not recover the sender's original logical label from a generated wire ID.
      *
      * @return self
      */

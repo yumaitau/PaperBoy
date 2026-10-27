@@ -350,7 +350,7 @@ class StoredAttachment implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets content_id
      *
-     * @param string|null $content_id CID reference for inline images, or null for regular attachments.
+     * @param string|null $content_id Original logical content_id label persisted for this outbound attachment, or null when absent. MIME delivery and owner MIME downloads may use a generated ASCII Content-ID for non-ASCII labels; that wire ID does not replace this stored value.
      *
      * @return self
      */

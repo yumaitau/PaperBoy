@@ -3740,7 +3740,7 @@ export interface RescheduleEmailInput {
  */
 export interface RetrievedEmailAttachment {
     /**
-     * 
+     * Persisted content identifier, or null when absent. For sent email, this is the original logical content_id label, not any ASCII Content-ID generated for MIME delivery or owner MIME downloads. For received email, this is the Content-ID header value parsed from incoming MIME, including any angle brackets, trimmed and limited to 256 UTF-16 code units; PaperBoy does not recover the sender's original logical label from a generated wire ID.
      * @type {string}
      * @memberof RetrievedEmailAttachment
      */
@@ -3993,7 +3993,7 @@ export interface SharedEmailContent {
  */
 export interface StoredAttachment {
     /**
-     * CID reference for inline images, or null for regular attachments.
+     * Original logical content_id label persisted for this outbound attachment, or null when absent. MIME delivery and owner MIME downloads may use a generated ASCII Content-ID for non-ASCII labels; that wire ID does not replace this stored value.
      * @type {string}
      * @memberof StoredAttachment
      */
