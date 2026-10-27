@@ -14,6 +14,11 @@ $mode = $argv[1];
 $value = str_starts_with($mode, 'single') ? 'Reader <reader@example.net>' : ['first@example.net', 'second@example.net'];
 $recipients = new Recipients($value);
 if ($mode === 'array-access') {
+    $unsetOnly = new Recipients('remove@example.net');
+    unset($unsetOnly[0]);
+    if (json_encode($unsetOnly, JSON_THROW_ON_ERROR) !== '[]') {
+        throw new RuntimeException('ArrayAccess unset retained a single recipient');
+    }
     $recipients = new Recipients('replace@example.net');
     $recipients[0] = 'first@example.net';
     $recipients[] = 'second@example.net';
