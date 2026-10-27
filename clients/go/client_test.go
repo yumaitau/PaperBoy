@@ -50,6 +50,21 @@ func TestParseBasics(t *testing.T) {
 	}
 }
 
+func TestCompactFlagPositions(t *testing.T) {
+	for _, args := range [][]string{
+		{"--compact", "templates", "get", "template-id"},
+		{"templates", "--compact", "get", "template-id"},
+		{"templates", "get", "--compact", "template-id"},
+		{"templates", "get", "template-id", "--compact"},
+	} {
+		cfg, inv := mustParse(t, args)
+		if !cfg.Compact || inv.Resource.Name != "templates" || inv.Action.Name != "get" ||
+			len(inv.Position) != 1 || inv.Position[0] != "template-id" {
+			t.Fatalf("wrong invocation for %v: %+v / %+v", args, cfg, inv)
+		}
+	}
+}
+
 func TestRequestURL(t *testing.T) {
 	_, inv := mustParse(t, []string{"contacts", "get", "reader@example.net"})
 	u, err := inv.RequestURL("http://localhost:3000/")
