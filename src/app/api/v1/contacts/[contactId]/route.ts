@@ -18,15 +18,15 @@ const dependencies = {
 
 export async function GET(request: Request, context: ContactRouteContext) {
   const { contactId } = await context.params;
-  return withApiLog(request, dependencies, async (scoped) => handleGetContactRequest(request, decodeURIComponent(contactId), scoped));
+  return withApiLog(request, dependencies, async (scoped) => handleGetContactRequest(request, contactId, scoped));
 }
 
 export async function PATCH(request: Request, context: ContactRouteContext) {
   const { contactId } = await context.params;
-  return withApiLog(request, dependencies, async (scoped) => handleUpdateContactRequest(request, decodeURIComponent(contactId), scoped));
+  return withApiLog(request, dependencies, async (scoped) => handleUpdateContactRequest(request, contactId, scoped));
 }
 
 export async function DELETE(request: Request, context: ContactRouteContext) {
   const { contactId } = await context.params;
-  return withApiLog(request, dependencies, async (scoped) => handleDeleteContactRequest(request, decodeURIComponent(contactId), scoped));
+  return withApiLog(request, dependencies, async (scoped) => handleDeleteContactRequest(request, contactId, scoped));
 }
