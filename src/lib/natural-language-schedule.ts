@@ -39,6 +39,13 @@ export function naturalLanguageScheduleInput(
   }).format(new Date(value));
 }
 
+/**
+ * Parse natural-language text containing one future day and time.
+ * Relative dates use the reference instant in the normalized user timezone;
+ * explicit offsets determine the instant, while labels use the user timezone.
+ * Returns a date and label on success, or null values with a validation message
+ * for missing, ambiguous, invalid, nonexistent local, or non-future input.
+ */
 export function parseNaturalLanguageSchedule(
   value: unknown,
   reference: Date,
