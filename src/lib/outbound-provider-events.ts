@@ -210,6 +210,8 @@ async function ingest(input: IngestInput & { actorUserId?: string | null }) {
           id: messages.id,
           providerMessageId: messages.providerMessageId,
           to: messages.to,
+          cc: messages.cc,
+          bcc: messages.bcc,
         })
         .from(messages)
         .where(and(...conditions))
@@ -223,7 +225,9 @@ async function ingest(input: IngestInput & { actorUserId?: string | null }) {
       }
       const message = candidates[0];
       const recipientSet = new Set(
-        message.to.flatMap((recipient) => normalizeEmailAddress(recipient) ?? []),
+        [...message.to, ...message.cc, ...message.bcc].flatMap(
+          (recipient) => normalizeEmailAddress(recipient) ?? [],
+        ),
       );
       const suppressions = (providerEvent.suppressions ?? []).filter(
         (suppression, suppressionIndex, all) =>
