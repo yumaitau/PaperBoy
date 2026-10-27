@@ -361,11 +361,15 @@ export function createSmtpAdapter(
 
       const envelopeFrom =
         bounceAddress ?? normalizeEmailAddress(message.from);
+      // Nodemailer deduplicates the envelope before issuing RCPT TO. Compare
+      // acceptance with that same set while preserving the original MIME fields.
       const envelopeTo = [
-        ...message.to,
-        ...(message.cc ?? []),
-        ...(message.bcc ?? []),
-      ].map(normalizeEmailAddress);
+        ...new Set([
+          ...message.to,
+          ...(message.cc ?? []),
+          ...(message.bcc ?? []),
+        ].map(normalizeEmailAddress)),
+      ];
 
       if (!envelopeFrom || envelopeTo.some((address) => !address)) {
         throw new OutboundDeliveryError({

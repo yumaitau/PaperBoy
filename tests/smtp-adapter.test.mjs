@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { createServer } from "node:net";
 import test from "node:test";
 import { simpleParser } from "mailparser";
 import {
@@ -402,6 +403,86 @@ test("SMTP response classes become safe retry decisions", async () => {
   }
 });
 
+test("duplicate To, CC, and BCC addresses succeed through Nodemailer's SMTP transport", async () => {
+  const transactions = [];
+  const sockets = new Set();
+  const server = createServer((socket) => {
+    sockets.add(socket);
+    socket.on("close", () => sockets.delete(socket));
+    let buffered = "";
+    let recipients = [];
+    let data = null;
+    socket.setEncoding("utf8");
+    socket.write("220 localhost ESMTP\r\n");
+    socket.on("data", (chunk) => {
+      buffered += chunk;
+      let end;
+      while ((end = buffered.indexOf("\r\n")) !== -1) {
+        const line = buffered.slice(0, end);
+        buffered = buffered.slice(end + 2);
+        if (data !== null) {
+          if (line === ".") {
+            transactions.push({ recipients, raw: data.join("\r\n") });
+            data = null;
+            socket.write("250 queued\r\n");
+          } else {
+            data.push(line.replace(/^\.\./, "."));
+          }
+        } else if (line.startsWith("MAIL FROM:")) {
+          recipients = [];
+          socket.write("250 OK\r\n");
+        } else if (line.startsWith("RCPT TO:")) {
+          recipients.push(line.match(/<([^>]+)>/)[1]);
+          socket.write("250 OK\r\n");
+        } else if (line === "DATA") {
+          data = [];
+          socket.write("354 Send message\r\n");
+        } else if (line === "QUIT") {
+          socket.end("221 Bye\r\n");
+        } else {
+          socket.write("250 OK\r\n");
+        }
+      }
+    });
+  });
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  const adapter = createSmtpAdapter({
+    environment: {
+      SMTP_TLS_MODE: "disabled",
+      SMTP_URL: `smtp://127.0.0.1:${server.address().port}`,
+    },
+  });
+  try {
+    for (const recipients of [
+      { to: ["Reader@Example.NET", "Same reader <reader@example.net>"] },
+      {
+        to: ["reader@example.net"],
+        cc: ["Copy <Reader@Example.NET>", "copy@example.net"],
+        bcc: ["reader@example.net", "hidden@example.net", "hidden@example.net"],
+      },
+    ]) {
+      await adapter.send(message(recipients));
+    }
+    assert.equal(transactions.length, 2);
+    assert.deepEqual(transactions[0].recipients, ["reader@example.net"]);
+    assert.deepEqual(transactions[1].recipients, [
+      "reader@example.net", "copy@example.net", "hidden@example.net",
+    ]);
+    const parsed = await simpleParser(transactions[1].raw);
+    assert.deepEqual(parsed.to.value.map(({ address }) => address), ["reader@example.net"]);
+    assert.deepEqual(parsed.cc.value.map(({ address }) => address.toLowerCase()),
+      ["reader@example.net", "copy@example.net"]);
+    assert.equal(parsed.bcc, undefined);
+  } finally {
+    adapter.close();
+    for (const socket of sockets) socket.destroy();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test("partial SMTP acceptance is permanent to avoid duplicate recipients", async () => {
   const fake = fakeTransport({
     async sendMail() {
@@ -421,7 +502,7 @@ test("partial SMTP acceptance is permanent to avoid duplicate recipients", async
 
   await assert.rejects(
     adapter.send(
-      message({ to: ["first@example.net", "second@example.net"] }),
+      message({ to: ["first@example.net", "first@example.net", "second@example.net"] }),
     ),
     (error) =>
       error instanceof OutboundDeliveryError &&
