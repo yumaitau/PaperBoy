@@ -16,6 +16,14 @@ type OverviewProps = {
   searchParams: Promise<{ range?: string }>;
 };
 
+/**
+ * Renders the authenticated user's active-organization overview. Awaits the range
+ * query and defaults missing or unsupported values to seven days. Dashboard queries
+ * receive the user's ID and effective timezone; a single `now` anchors the reporting
+ * window, range label, and recent-email ages. The range controls metrics, activity,
+ * and the export link; recent emails remain the organization's latest messages
+ * regardless of that range.
+ */
 export default async function Overview({ searchParams }: OverviewProps) {
   const [{ organization, session }, query] = await Promise.all([
     requireOrganization(),

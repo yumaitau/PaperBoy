@@ -21,6 +21,12 @@ function ageLabel(value: string, now: Date): string {
   return `${days}d ago`;
 }
 
+/**
+ * Renders emails in caller-supplied order without sorting or truncation, with status
+ * badges and relative ages calculated against the supplied `now` on each render.
+ * Future timestamps and ages under a minute display as "just now". An empty list
+ * shows a send-email prompt; the header always links to the full email log.
+ */
 export function RecentEmails({ emails, now }: { emails: DashboardEmail[]; now: Date }) {
   return (
     <PaperCard className="recent-emails-panel">

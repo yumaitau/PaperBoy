@@ -125,6 +125,11 @@ type RecipientSuppression = {
   reason: "manual" | "unsubscribed" | "bounced" | "complained";
 };
 
+/**
+ * Compare normalized To/CC/BCC addresses against the tenant's supplied suppression
+ * rows. Throw RECIPIENT_SUPPRESSED with original field/index paths for matches;
+ * unrelated rows do not block a send. The caller owns the tenant-scoped lookup.
+ */
 function requireRecipientsNotSuppressed(
   recipients: { bcc: string[]; cc: string[]; to: string[] },
   suppressions: RecipientSuppression[],
@@ -133,6 +138,7 @@ function requireRecipientsNotSuppressed(
   const reasons = new Map(
     suppressions.map((suppression) => [suppression.email, suppression.reason]),
   );
+  /** Map a stored suppression reason to a safe field error without recipient data. */
   const reasonMessage = (reason: RecipientSuppression["reason"]) =>
     reason === "bounced"
       ? "Recipient is suppressed after a permanent bounce."
@@ -231,6 +237,16 @@ async function requireApiKeyCreatorCanSend(principal: MessageQueuePrincipal) {
   requirePermission(membership.role, "messages.send");
 }
 
+/**
+ * Materialize templates and validate a send, then persist its normalized fields,
+ * provider snapshot, attachment metadata, and initial events in one transaction.
+ * Reauthorize API-key creators; trusted callers without an API key must authorize
+ * their own entry point. Domain/provider readiness, rate limits, and suppressions
+ * are enforced before a new message is committed. Active idempotency keys replay
+ * matching requests or raise a conflict. Notify the job queue only after commit.
+ * On failure, attempt to delete newly stored blobs; a concurrent idempotency-key
+ * conflict may resolve to a replay, otherwise the error propagates.
+ */
 export async function queueEmail(input: {
   allowAttachments?: boolean;
   attachmentStore?: AttachmentStore;

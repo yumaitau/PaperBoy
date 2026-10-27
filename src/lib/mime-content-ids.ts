@@ -27,7 +27,7 @@ export function mimeContentIds(labels: readonly (string | null | undefined)[]) {
     let wireId: string;
     let attempt = 0;
     do {
-      // UTF-16 preserves even distinct unpaired surrogates accepted by the API;
+      // UTF-16 also preserves distinct unpaired surrogates in internal/legacy input;
       // hashing UTF-8 would collapse them to the same replacement character.
       const digest = createHash("sha256")
         .update(`paperboy-cid-v1:${attempt++}:`)

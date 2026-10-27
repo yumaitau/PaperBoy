@@ -20,7 +20,7 @@ SVG style blocks use parsed text, including decoded HTML entities and CDATA cont
 
 Ordinary prose, comments, scripts, unrelated attributes, unmatched URLs, invalid percent escapes, malformed CSS URL tokens, and invalid srcset candidates are left intact. Arbitrary text that resembles HTML or CSS is not treated as a reference. Use valid HTML/CSS and UTF-8 percent-encoded CID URLs for portable rendering.
 
-Use well-formed Unicode labels without control characters. Literal NUL characters are replaced by HTML parsers, and unpaired UTF-16 surrogates cannot round-trip through UTF-8 storage, even where legacy input validation accepts them.
+The outbound API rejects ASCII controls (U+0000–U+001F and U+007F) and lone UTF-16 surrogates before queueing or attachment storage. Use well-formed Unicode labels without these controls, whitespace, angle brackets, commas, or semicolons. Valid labels retain their exact identity without normalization or replacement; existing stored messages are not rewritten.
 
 ## Determinism and duplicate labels
 
