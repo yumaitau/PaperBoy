@@ -8,6 +8,7 @@ import {
   tokenize,
 } from "@csstools/css-tokenizer";
 import { parse, type DefaultTreeAdapterTypes as Html } from "parse5";
+import { foreignCssSource } from "./mime-css-source";
 
 type Edit = { start: number; end: number; value: string };
 const htmlSpace = /[\t\n\f\r ]/;
@@ -56,6 +57,11 @@ function mappedUrl(
   url: string,
   mapping: ReadonlyMap<string, string>,
 ): string | undefined {
+  // URL input preprocessing precedes scheme recognition and percent decoding.
+  // This is URL syntax; it does not normalize or validate attachment labels.
+  url = url
+    .replace(/^[\x00-\x20]+|[\x00-\x20]+$/g, "")
+    .replace(/[\t\n\r]/g, "");
   if (url.slice(0, 4).toLowerCase() !== "cid:") return;
   try {
     // RFC 2392: decode exactly once; '+' is a literal plus, not a space.
@@ -81,7 +87,7 @@ function rewriteUrl(
     : value.slice(0, start) + replacement + value.slice(end);
 }
 
-function rewriteCss(css: string, mapping: ReadonlyMap<string, string>): string {
+function cssEdits(css: string, mapping: ReadonlyMap<string, string>): Edit[] {
   const edits: Edit[] = [];
   // Keep malformed tokens intact without losing valid URLs elsewhere in a block.
   const errors: { sourceStart: number; sourceEnd: number }[] = [];
@@ -134,7 +140,11 @@ function rewriteCss(css: string, mapping: ReadonlyMap<string, string>): string {
         edits.push({ start: value[2], end: value[3] + 1, value: `"${url}"` });
     }
   }
-  return applyEdits(css, edits);
+  return edits;
+}
+
+function rewriteCss(css: string, mapping: ReadonlyMap<string, string>): string {
+  return applyEdits(css, cssEdits(css, mapping));
 }
 
 function validDescriptors(descriptors: string[]): boolean {
@@ -351,6 +361,40 @@ export function rewriteMimeCidReferences(
       }
     }
     if (node.tagName === "style") {
+      if (node.namespaceURI !== "http://www.w3.org/1999/xhtml") {
+        // Foreign style is parsed text, unlike HTML's raw-text style content.
+        // Tokenize the semantic CSS first, then map only actual edits to source.
+        const css = node.childNodes
+          .filter((child): child is Html.TextNode => child.nodeName === "#text")
+          .map((child) => child.value)
+          .join("");
+        const changes = cssEdits(css, mapping);
+        const location = node.sourceCodeLocation;
+        if (changes.length && location?.startTag) {
+          const start = location.startTag.endOffset;
+          const end = location.endTag?.startOffset ?? location.endOffset;
+          const textRanges = node.childNodes.flatMap((child) =>
+            child.nodeName === "#text" && child.sourceCodeLocation
+              ? [
+                  {
+                    start: child.sourceCodeLocation.startOffset - start,
+                    end: child.sourceCodeLocation.endOffset - start,
+                  },
+                ]
+              : [],
+          );
+          const source = foreignCssSource(html.slice(start, end), textRanges);
+          // Fail closed if malformed tree recovery selected different text.
+          if (source.css === css)
+            for (const change of source.edits(changes))
+              edits.push({
+                start: start + change.start,
+                end: start + change.end,
+                value: change.value,
+              });
+        }
+        continue;
+      }
       for (const child of node.childNodes) {
         const location = child.sourceCodeLocation;
         if (child.nodeName !== "#text" || !location) continue;

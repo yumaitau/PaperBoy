@@ -219,6 +219,18 @@ for (const transport of ["smtp", "ses", "archive", "cloudflare-email"]) {
         emoji.repeat(256),
       ]) {
         const input = message([label], noscriptHtml(label));
+        const unicode = /[^\x00-\x7f]/.test(label);
+        if (unicode) {
+          const encoded = encodeURIComponent(label);
+          const entities = [...label]
+            .map((cp) => `&#${cp.codePointAt(0)};`)
+            .join("");
+          input.html +=
+            `<img src="c&#10;id:${encoded}">` +
+            `<style>url(" cid:${encoded} ")</style>` +
+            `<svg><style>url(ci<![CDATA[d:${encoded}]]>)</style>` +
+            `<style>url(cid:${entities})</style></svg>`;
+        }
         const original = structuredClone(input);
         let raw;
         if (adapter) {
@@ -274,11 +286,35 @@ for (const transport of ["smtp", "ses", "archive", "cloudflare-email"]) {
         assert.deepEqual(attrs(parsed.html, "img", "src"), [
           `cid:${attachment.cid}`,
           `cid:${attachment.cid}`,
+          ...(unicode ? [`cid:${attachment.cid}`] : []),
         ]);
-        assert.equal(parsed.html, noscriptHtml(label, attachment.cid));
+        const expectedFallback = noscriptHtml(label, attachment.cid);
+        if (unicode) assert.ok(parsed.html.startsWith(expectedFallback));
+        else assert.equal(parsed.html, expectedFallback);
+        if (unicode) {
+          const styles = [];
+          const pending = [parse(parsed.html, { scriptingEnabled: false })];
+          while (pending.length) {
+            const node = pending.pop();
+            if (node.tagName === "style")
+              styles.push(
+                node.childNodes.map((child) => child.value ?? "").join(""),
+              );
+            if (node.childNodes) pending.push(...node.childNodes);
+          }
+          assert.deepEqual(
+            styles.sort(),
+            [
+              `/* cid:${label} */.fallback{background:url(cid:${attachment.cid});content:'cid:${label}'}`,
+              `url("cid:${attachment.cid}")`,
+              `url(cid:${attachment.cid})`,
+              `url(cid:${attachment.cid})`,
+            ].sort(),
+          );
+        }
         assert.deepEqual(
           attrs((await simpleParser(raw)).html, "img", "src"),
-          Array(2).fill(`data:image/png;base64,${bytes.toString("base64")}`),
+          Array(unicode ? 3 : 2).fill(`data:image/png;base64,${bytes.toString("base64")}`),
         );
         assert.equal(attachment.contentDisposition, "inline");
         assert.equal(attachment.filename, "original.png");

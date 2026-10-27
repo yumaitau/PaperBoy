@@ -12,7 +12,11 @@ Cloudflare's structured compatibility payload keeps **original labels and origin
 
 Labels are case-sensitive and are not Unicode-normalized. The `cid:` scheme is case-insensitive. HTML entities in attributes, URL percent escapes (decoded once, as specified by RFC 2392), and CSS escapes in `url()` are understood. A plus sign is a literal plus. Percent-encode reserved URL characters in labels; also escape HTML quotes and ampersands when putting a URL inside an attribute.
 
+Matching first applies URL input preprocessing: leading and trailing C0 controls and spaces are trimmed, and ASCII tabs, line feeds, and carriage returns are removed. Percent decoding happens afterward. These URL syntax rules do not change the stored attachment label or normalize its Unicode characters.
+
 PaperBoy parses HTML and changes source spans for matching URL attributes, including image and media sources, links, backgrounds, SVG `href`/`xlink:href`, SVG presentation URLs, `img`/`source` `srcset`, and `link` `imagesrcset`. CSS `url()` references in style attributes and CSS style blocks are handled too. Unchanged source spans retain their original formatting. Changed attributes may be escaped again to retain their decoded meaning.
+
+SVG style blocks use parsed text, including decoded HTML entities and CDATA contents. Only actual CSS URL tokens change; decoded CSS strings and comments remain untouched. CDATA delimiters and other unchanged source spans are preserved. HTML style blocks retain their raw-text entity semantics.
 
 Ordinary prose, comments, scripts, unrelated attributes, unmatched URLs, invalid percent escapes, malformed CSS URL tokens, and invalid srcset candidates are left intact. Arbitrary text that resembles HTML or CSS is not treated as a reference. Use valid HTML/CSS and UTF-8 percent-encoded CID URLs for portable rendering.
 
