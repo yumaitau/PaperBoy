@@ -95,15 +95,17 @@ export function parseNaturalLanguageSchedule(
       label: null,
     };
   }
-  const date = parseLocalDateTime(
-    [
-      String(localParts.year).padStart(4, "0"),
-      String(localParts.month).padStart(2, "0"),
-      String(localParts.day).padStart(2, "0"),
-    ].join("-") +
-      `T${String(localParts.hour).padStart(2, "0")}:${String(localParts.minute).padStart(2, "0")}`,
-    zone,
-  );
+  const date = result.start.isCertain("timezoneOffset")
+    ? result.start.date()
+    : parseLocalDateTime(
+        [
+          String(localParts.year).padStart(4, "0"),
+          String(localParts.month).padStart(2, "0"),
+          String(localParts.day).padStart(2, "0"),
+        ].join("-") +
+          `T${String(localParts.hour).padStart(2, "0")}:${String(localParts.minute).padStart(2, "0")}`,
+        zone,
+      );
   if (!date) {
     return {
       date: null,
@@ -121,20 +123,25 @@ export function parseNaturalLanguageSchedule(
 
   const requestedWeekday = WEEKDAY_PATTERN.exec(text)?.[1];
   if (requestedWeekday) {
+    // Validate the weekday in the calendar the user typed, before converting
+    // an explicit offset to their display timezone (which can change the day).
+    const calendarDate = new Date(
+      Date.UTC(localParts.year, localParts.month - 1, localParts.day),
+    );
     const actualWeekday = new Intl.DateTimeFormat("en-AU", {
-      timeZone: zone,
+      timeZone: "UTC",
       weekday: "long",
-    }).format(date);
+    }).format(calendarDate);
     if (requestedWeekday.toLowerCase() !== actualWeekday.toLowerCase()) {
-      const calendarDate = new Intl.DateTimeFormat("en-AU", {
+      const calendarLabel = new Intl.DateTimeFormat("en-AU", {
         day: "numeric",
         month: "long",
-        timeZone: zone,
+        timeZone: "UTC",
         year: "numeric",
-      }).format(date);
+      }).format(calendarDate);
       return {
         date: null,
-        error: `${calendarDate} is ${actualWeekday}, not ${requestedWeekday}.`,
+        error: `${calendarLabel} is ${actualWeekday}, not ${requestedWeekday}.`,
         label: null,
       };
     }
