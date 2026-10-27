@@ -88,6 +88,7 @@ export default async function BroadcastsPage({
         })
       : null,
   ]);
+  const publishedTemplates = templates.filter((template) => template.status === "published");
   let readyDomains: string[] = [];
   if (outboundProviders) {
     try {
@@ -131,9 +132,9 @@ export default async function BroadcastsPage({
         <h2>Create broadcast</h2>
         {!canCreate ? (
           <p>Owners and admins create broadcasts.</p>
-        ) : audiences.length === 0 || templates.length === 0 || readyDomains.length === 0 ? (
+        ) : audiences.length === 0 || publishedTemplates.length === 0 || readyDomains.length === 0 ? (
           <p>
-            Create an audience and template first. Sender identities come from
+            Create an audience and publish a template first. Sender identities come from
             the configured email provider; PaperBoy does not onboard domains here.
           </p>
         ) : (
@@ -156,7 +157,7 @@ export default async function BroadcastsPage({
               <div className="field">
                 <label htmlFor="broadcast-template">Template</label>
                 <select id="broadcast-template" name="templateId" required>
-                  {templates.map((template) => (
+                  {publishedTemplates.map((template) => (
                     <option key={template.id} value={template.id}>
                       {template.name}
                     </option>

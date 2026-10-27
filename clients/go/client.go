@@ -65,7 +65,7 @@ func ParseArgs(args []string) (Config, *Invocation, error) {
 			if idx := strings.IndexByte(key, '='); idx >= 0 {
 				value = key[idx+1:]
 				key = key[:idx]
-			} else if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") &&
+			} else if key != "compact" && i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") &&
 				!strings.HasPrefix(args[i+1], "-") {
 				i++
 				value = args[i]
@@ -342,9 +342,13 @@ func (inv *Invocation) Do(cfg Config) ([]byte, int, error) {
 		return nil, 0, err
 	}
 	defer response.Body.Close()
-	payload, err := io.ReadAll(io.LimitReader(response.Body, 20<<20))
+	const maxResponseBytes = 20 << 20
+	payload, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes+1))
 	if err != nil {
 		return nil, 0, err
+	}
+	if len(payload) > maxResponseBytes {
+		return nil, response.StatusCode, fmt.Errorf("response exceeds %d-byte limit", maxResponseBytes)
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return payload, response.StatusCode, &httpError{Status: response.StatusCode, Body: payload}

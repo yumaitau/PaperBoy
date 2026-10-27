@@ -1,6 +1,7 @@
 import {
   createTemplateAction,
   deleteTemplateAction,
+  publishTemplateAction,
   updateTemplateAction,
 } from "./actions";
 import Link from "next/link";
@@ -20,6 +21,7 @@ type TemplatesPageProps = {
 const savedMessages: Record<string, string> = {
   created: "Template created.",
   deleted: "Template deleted.",
+  published: "Template published. It is ready for broadcasts.",
   updated: "Template updated.",
 };
 
@@ -154,6 +156,7 @@ export default async function TemplatesPage({
                 <div>
                   <h2>{template.name}</h2>
                   <p className="template-meta">
+                    {template.status === "published" ? "Published" : "Draft"} · {" "}
                     Updated {formatDateTime(template.updatedAt, session.user.timezone)}
                     {` · created ${formatDateTime(
                       template.createdAt,
@@ -163,6 +166,14 @@ export default async function TemplatesPage({
                 </div>
                 <div className="template-heading-actions">
                   <code>{template.id}</code>
+                  {canUpdate && template.status === "draft" ? (
+                    <form action={publishTemplateAction}>
+                      <input name="templateId" type="hidden" value={template.id} />
+                      <button className="btn btn-compact" type="submit">
+                        Publish saved version
+                      </button>
+                    </form>
+                  ) : null}
                   <Link
                     className="btn btn-compact"
                     href={`/app/templates/${template.id}/preview`}
