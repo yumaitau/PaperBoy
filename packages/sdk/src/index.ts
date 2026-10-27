@@ -1,6 +1,6 @@
 export type PaperBoyEnvironment = "live" | "test";
 export type PaperBoyDeliveryMode = "live" | "test-sink";
-export type PaperBoyMessageStatus = "queued" | "sending" | "sent" | "failed";
+export type PaperBoyMessageStatus = "queued" | "sending" | "sent" | "failed" | "cancelled";
 export type PaperBoyOutboundProvider =
   | "smtp"
   | "cloudflare-email"
