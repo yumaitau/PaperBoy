@@ -73,9 +73,9 @@ export const MAX_RECIPIENTS = 50;
 const MAX_SUBJECT_LENGTH = 998;
 const MAX_TAGS = 75;
 const MAX_TAG_LENGTH = 256;
-const MAX_HEADERS = 50;
-const MAX_HEADER_NAME_LENGTH = 128;
-const MAX_HEADER_VALUE_LENGTH = 998;
+export const MAX_HEADERS = 50;
+export const MAX_HEADER_NAME_LENGTH = 128;
+export const MAX_HEADER_VALUE_LENGTH = 998;
 const MAX_CONTENT_ID_LENGTH = 256;
 const SEND_FIELDS = new Set([
   "attachments",
@@ -93,9 +93,10 @@ const SEND_FIELDS = new Set([
 ]);
 const LOCAL_PART_PATTERN = /^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/i;
 const TAG_PATTERN = /^[A-Z0-9_-]+$/i;
-const HEADER_NAME_PATTERN = /^[\x21-\x39\x3b-\x7e]+$/;
+// RFC 5322 section 3.6.8 ftext, which permits parentheses unlike HTTP token.
+export const HEADER_NAME_PATTERN = /^[\x21-\x39\x3b-\x7e]+$/;
 const CONTENT_ID_PATTERN = /^[^\s<>,;]+$/;
-const RESERVED_HEADER_NAMES = new Set([
+export const RESERVED_HEADER_NAMES: ReadonlySet<string> = new Set([
   "bcc",
   "cc",
   "content-transfer-encoding",
@@ -444,7 +445,8 @@ function parseHeaders(
     if (
       typeof headerValue !== "string" ||
       headerValue.length === 0 ||
-      headerValue.length > MAX_HEADER_VALUE_LENGTH ||
+      // Match JSON Schema maxLength: supplementary characters count once.
+      [...headerValue].length > MAX_HEADER_VALUE_LENGTH ||
       /[\r\n]/.test(headerValue)
     ) {
       issues.push({
