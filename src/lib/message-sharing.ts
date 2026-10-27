@@ -18,6 +18,7 @@ import {
   receivedEmails,
 } from "@/db/schema";
 import { MessageStatusError } from "@/lib/message-status-core";
+import { publicMessageContent } from "@/lib/organization-invite-content";
 import {
   createShareToken,
   parseShareExpiry,
@@ -204,6 +205,7 @@ export async function getSharedEmail(input: {
       id: messages.id,
       subject: messages.subject,
       textBody: messages.textBody,
+      tags: messages.tags,
       to: messages.to,
     })
     .from(messages)
@@ -217,10 +219,9 @@ export async function getSharedEmail(input: {
   return {
     expiresAt: verified.expiresAt,
     from: row.from,
-    html: row.html,
+    ...publicMessageContent({ html: row.html, text: row.textBody, tags: row.tags }),
     id: row.id,
     subject: row.subject,
-    text: row.textBody,
     to: Array.isArray(row.to) ? row.to.map(String) : [],
   };
 }

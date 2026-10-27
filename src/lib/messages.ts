@@ -33,6 +33,7 @@ import {
   type MessageStatus,
 } from "@/lib/email-core";
 import { authorizeSendingDomain } from "@/lib/domains";
+import { isOrganizationInviteMessage } from "@/lib/organization-invite-content";
 import type { providerVerifiedSenderDomains } from "@/lib/provider-sender-identities";
 import { insertMessageEvent } from "@/lib/message-events";
 import { requestMessageJob } from "@/lib/job-queue";
@@ -353,10 +354,11 @@ export async function queueEmail(input: {
           .limit(1);
         domainClickEnabled = domainRow?.enabled === true;
       }
+      const isInvitation = isOrganizationInviteMessage(email);
       const messageId = randomUUID();
       let html = email.html;
       let clickTrackingEnabled = false;
-      if (domainClickEnabled && html !== null) {
+      if (!isInvitation && domainClickEnabled && html !== null) {
         const rewritten = rewriteHtmlLinksForMessage({ html, messageId });
         if (rewritten.rewritten > 0) {
           html = rewritten.html;
@@ -364,7 +366,7 @@ export async function queueEmail(input: {
         }
       }
       let openTrackingEnabled = false;
-      if (organization.openTrackingEnabled && html !== null) {
+      if (!isInvitation && organization.openTrackingEnabled && html !== null) {
         html = appendOpenTrackingPixel({
           html,
           url: createOpenTrackingUrl({ messageId }),

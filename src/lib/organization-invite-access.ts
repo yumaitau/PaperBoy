@@ -9,12 +9,12 @@ export function isOrganizationInvitationId(
   );
 }
 
-export function organizationInvitePath(invitationId: string): string {
-  if (!isOrganizationInvitationId(invitationId)) {
+export function organizationInvitePath(invitationToken: string): string {
+  if (!isOrganizationInvitationId(invitationToken)) {
     throw new Error("INVALID_INVITATION_ID");
   }
 
-  return `/invite/${invitationId}`;
+  return `/invite/${invitationToken}`;
 }
 
 export function safeAuthCallbackPath(value: unknown): string {

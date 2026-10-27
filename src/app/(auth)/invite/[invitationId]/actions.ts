@@ -9,8 +9,8 @@ import {
 import { requireSession } from "@/lib/session";
 
 export async function acceptInvitationFromLinkAction(formData: FormData) {
-  const invitationId = String(formData.get("invitationId"));
-  if (!isOrganizationInvitationId(invitationId)) {
+  const invitationToken = String(formData.get("invitationToken"));
+  if (!isOrganizationInvitationId(invitationToken)) {
     redirect("/sign-in");
   }
 
@@ -19,13 +19,13 @@ export async function acceptInvitationFromLinkAction(formData: FormData) {
   try {
     await acceptOrganizationInvitation({
       email: session.user.email,
-      invitationId,
+      invitationToken,
       proof: "invite-link",
       userId: session.user.id,
     });
   } catch (error) {
     if (error instanceof OrganizationError) {
-      redirect(`/invite/${invitationId}?error=unavailable`);
+      redirect(`/invite/${invitationToken}?error=unavailable`);
     }
     throw error;
   }

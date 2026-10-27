@@ -1,6 +1,7 @@
 import "server-only";
 
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { createHash, randomUUID } from "node:crypto";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import {
   apiKeys,
@@ -315,11 +316,20 @@ export async function listPendingInvitationsForUser(email: string) {
     .orderBy(asc(orgs.name));
 }
 
-export async function findOrganizationInvitationById(invitationId: string) {
-  if (!isOrganizationInvitationId(invitationId)) {
-    return null;
-  }
+function invitationTokenHash(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
+function invitationLinkCondition(token: string) {
+  return or(
+    eq(orgInvites.tokenHash, invitationTokenHash(token)),
+    // Legacy URLs remain usable only by an already verified recipient.
+    and(eq(orgInvites.id, token), isNull(orgInvites.tokenHash)),
+  );
+}
+
+export async function findOrganizationInvitationForLink(token: string) {
+  if (!isOrganizationInvitationId(token)) return null;
   const [invitation] = await db
     .select({
       acceptedAt: orgInvites.acceptedAt,
@@ -329,35 +339,36 @@ export async function findOrganizationInvitationById(invitationId: string) {
       orgName: orgs.name,
       revokedAt: orgInvites.revokedAt,
       role: orgInvites.role,
+      tokenHash: orgInvites.tokenHash,
     })
     .from(orgInvites)
     .innerJoin(orgs, eq(orgs.id, orgInvites.orgId))
-    .where(eq(orgInvites.id, invitationId))
+    .where(invitationLinkCondition(token))
     .limit(1);
-
-  return invitation ?? null;
+  if (!invitation) return null;
+  const { tokenHash, ...record } = invitation;
+  return { ...record, requiresVerifiedEmail: tokenHash === null };
 }
 
-/**
- * With public sign-up off, an account can only be created from the emailed
- * invitation link: the invitation id proves the sign-up came through the
- * invited inbox, not merely from someone who knows or guesses the address.
- */
+/** Only an independent emailed token may authorize invite-only sign-up. */
 export async function canCreateAccountForEmail(
   email: unknown,
-  invitationId?: string | null,
+  invitationToken?: string | null,
 ): Promise<boolean> {
-  if (publicSignUpEnabled()) {
-    return true;
-  }
-
+  if (publicSignUpEnabled()) return true;
   const normalized = normalizeInviteEmail(email);
-  if (!normalized || !invitationId) {
-    return false;
-  }
-
-  const pending = await listPendingInvitationsForUser(normalized);
-  return pending.some((invitation) => invitation.id === invitationId);
+  if (!normalized || !isOrganizationInvitationId(invitationToken)) return false;
+  const [invitation] = await db
+    .select({ id: orgInvites.id })
+    .from(orgInvites)
+    .where(and(
+      eq(orgInvites.email, normalized),
+      eq(orgInvites.tokenHash, invitationTokenHash(invitationToken)),
+      isNull(orgInvites.acceptedAt),
+      isNull(orgInvites.revokedAt),
+    ))
+    .limit(1);
+  return Boolean(invitation);
 }
 
 export async function inviteOrganizationMember(input: {
@@ -412,10 +423,13 @@ export async function inviteOrganizationMember(input: {
       throw new OrganizationError("ALREADY_MEMBER");
     }
 
+    const invitationToken = randomUUID();
+    const tokenHash = invitationTokenHash(invitationToken);
     const [invitation] = await tx
       .insert(orgInvites)
       .values({
         email,
+        tokenHash,
         invitedByUserId: input.actorUserId,
         orgId: input.orgId,
         role,
@@ -423,6 +437,7 @@ export async function inviteOrganizationMember(input: {
       .onConflictDoUpdate({
         target: [orgInvites.orgId, orgInvites.email],
         set: {
+          tokenHash,
           acceptedAt: null,
           acceptedByUserId: null,
           invitedByUserId: input.actorUserId,
@@ -442,33 +457,40 @@ export async function inviteOrganizationMember(input: {
       throw new OrganizationError("INVITATION_NOT_FOUND");
     }
 
-    return invitation;
+    return { invitation, invitationToken };
   });
 }
 
 export async function acceptOrganizationInvitation(input: {
   email: string;
-  invitationId: string;
-  /**
-   * "invite-link": the invitation id arrived from the emailed link, which proves
-   * inbox ownership and verifies the address. "verified-session": an in-app
-   * accept, allowed only once the account's email is already verified.
-   */
-  proof: "invite-link" | "verified-session";
   userId: string;
-}) {
+} & (
+  | { proof: "invite-link"; invitationToken: string }
+  | { proof: "verified-session"; invitationId: string }
+)) {
+  const locator = input.proof === "invite-link"
+    ? input.invitationToken
+    : input.invitationId;
+  if (!isOrganizationInvitationId(locator)) {
+    throw new OrganizationError("INVITATION_NOT_FOUND");
+  }
   return db.transaction(async (tx) => {
     const [account] = await tx
-      .select({ emailVerified: users.emailVerified })
+      .select({ email: users.email, emailVerified: users.emailVerified })
       .from(users)
       .where(eq(users.id, input.userId))
       .limit(1);
-    if (input.proof === "verified-session" && !account?.emailVerified) {
+    if (!account || normalizeInviteEmail(account.email) !== normalizeInviteEmail(input.email)) {
+      throw new OrganizationError("INVITATION_NOT_FOUND");
+    }
+    if (input.proof === "verified-session" && !account.emailVerified) {
       throw new OrganizationError("INVITATION_REQUIRES_LINK");
     }
 
     const [invitation] = await tx
       .select({
+        id: orgInvites.id,
+        tokenHash: orgInvites.tokenHash,
         acceptedAt: orgInvites.acceptedAt,
         email: orgInvites.email,
         orgId: orgInvites.orgId,
@@ -476,7 +498,9 @@ export async function acceptOrganizationInvitation(input: {
         role: orgInvites.role,
       })
       .from(orgInvites)
-      .where(eq(orgInvites.id, input.invitationId))
+      .where(input.proof === "invite-link"
+        ? invitationLinkCondition(locator)
+        : eq(orgInvites.id, locator))
       .for("update");
 
     const email = normalizeInviteEmail(input.email);
@@ -490,6 +514,10 @@ export async function acceptOrganizationInvitation(input: {
       invitation.role === "owner"
     ) {
       throw new OrganizationError("INVITATION_NOT_FOUND");
+    }
+
+    if (invitation.tokenHash === null && !account.emailVerified) {
+      throw new OrganizationError("INVITATION_REQUIRES_LINK");
     }
 
     await tx
@@ -509,7 +537,7 @@ export async function acceptOrganizationInvitation(input: {
         acceptedAt: new Date(),
         acceptedByUserId: input.userId,
       })
-      .where(eq(orgInvites.id, input.invitationId));
+      .where(eq(orgInvites.id, invitation.id));
 
     await tx
       .update(users)
