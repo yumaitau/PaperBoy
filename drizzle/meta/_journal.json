@@ -309,6 +309,13 @@
       "when": 1793099851844,
       "tag": "0043_cid_storage_locale",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793569629083,
+      "tag": "0044_accounts_issuer_nullable",
+      "breakpoints": true
     }
   ]
 }
