@@ -65,7 +65,6 @@ async function redisHeartbeatStore(): Promise<JobHeartbeatStore | null> {
     };
     return redisStore;
   } catch {
-    redisStore = null;
     return null;
   }
 }

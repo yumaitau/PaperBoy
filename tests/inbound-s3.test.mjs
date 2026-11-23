@@ -221,3 +221,103 @@ test("inbound S3 queue lists the prefix, stores a match, and deletes it", async 
   assert.equal(objects.has("inbound/ok"), false);
   assert.equal(objects.has("inbound/AMAZON_SES_SETUP_NOTIFICATION"), true);
 });
+
+test("inbound S3 queue routes multi-recipient mail via To, Cc, and Bcc when SES omits a single envelope recipient", async () => {
+  const multiRecipientRaw = [
+    "Received: from mail.example.com by inbound-smtp.ap-northeast-1.amazonaws.com with ESMTPS; Tue, 27 Oct 2026 00:00:00 +0000",
+    "From: Jane <jane@example.com>",
+    "To: external@unowned.example.org",
+    "Cc: support@snagspot.app",
+    "Bcc: archive@snagspot.app",
+    "Subject: Multi-recipient thread",
+    "Message-ID: <multi@example.com>",
+    "MIME-Version: 1.0",
+    "Content-Type: text/plain; charset=utf-8",
+    "",
+    "Looping in support.",
+    "",
+  ].join("\r\n");
+
+  const objects = new Map([["inbound/multi", Buffer.from(multiRecipientRaw)]]);
+  const resolved = [];
+  const received = [];
+  const client = {
+    async send(command) {
+      const name = command.constructor.name;
+      if (name === "ListObjectsV2Command") {
+        return {
+          Contents: [...objects.keys()].map((Key) => ({ Key })),
+          IsTruncated: false,
+        };
+      }
+      if (name === "GetObjectCommand") {
+        const value = objects.get(command.input.Key);
+        if (!value) throw new Error("NoSuchKey");
+        return {
+          Body: {
+            async transformToByteArray() {
+              return new Uint8Array(value);
+            },
+          },
+        };
+      }
+      if (name === "DeleteObjectCommand") {
+        objects.delete(command.input.Key);
+        return {};
+      }
+      throw new Error(name);
+    },
+  };
+
+  const { processInboundS3Queue } = await import("../src/lib/inbound-s3.ts");
+  const result = await processInboundS3Queue({
+    client,
+    environment: {
+      PAPERBOY_INBOUND_S3_BUCKET: "paperboy-inbound",
+      PAPERBOY_INBOUND_S3_REGION: "ap-northeast-1",
+    },
+    receive: async ({ envelopeRecipients, payload, principal }) => {
+      received.push({
+        envelopeRecipients,
+        hasEmail: Boolean(payload.email),
+        orgId: principal.orgId,
+      });
+      return {
+        bcc: ["archive@snagspot.app"],
+        cc: ["support@snagspot.app"],
+        createdAt: new Date("2026-10-27T00:00:00.000Z"),
+        environment: "live",
+        from: "jane@example.com",
+        html: null,
+        id: "22222222-2222-4222-8222-222222222222",
+        messageId: "multi@example.com",
+        replayed: false,
+        subject: "Multi-recipient thread",
+        text: "Looping in support.",
+        to: ["external@unowned.example.org"],
+      };
+    },
+    resolveOrg: async (recipients) => {
+      resolved.push(recipients);
+      return recipients.some((address) => address.includes("snagspot.app"))
+        ? "f8b090ae-4ba0-4c09-a8e5-86abe5e6eafb"
+        : null;
+    },
+  });
+
+  const expectedRecipients = [
+    "external@unowned.example.org",
+    "support@snagspot.app",
+    "archive@snagspot.app",
+  ];
+  assert.deepEqual(result, { deleted: 1, failed: 0, skipped: 0 });
+  assert.deepEqual(resolved, [expectedRecipients]);
+  assert.deepEqual(received, [
+    {
+      envelopeRecipients: expectedRecipients,
+      hasEmail: true,
+      orgId: "f8b090ae-4ba0-4c09-a8e5-86abe5e6eafb",
+    },
+  ]);
+  assert.equal(objects.has("inbound/multi"), false);
+});

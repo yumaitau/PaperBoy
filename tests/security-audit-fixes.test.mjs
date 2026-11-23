@@ -97,6 +97,14 @@ test("S3 inbound routing prefers the SES envelope recipient over the To header",
     sesEnvelopeRecipient("Received: by attacker for x@b.test;\r\nTo: x@b.test\r\n\r\nbody"),
     null,
   );
+  const forgedBeforeSes = [
+    "Received: from mx.evil.test (for <spoof@victim.test>;) by inbound-smtp.us-east-1.amazonaws.com with SMTP id abc for <real@tenant.test>; Mon, 1 Jan 2026 00:00:00 +0000",
+    "To: reply@tenant.test",
+    "Subject: hi",
+    "",
+    "body",
+  ].join("\r\n");
+  assert.equal(sesEnvelopeRecipient(forgedBeforeSes), "real@tenant.test");
 });
 
 test("received-email routes require the matching key scope", async () => {

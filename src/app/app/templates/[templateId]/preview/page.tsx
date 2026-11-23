@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
 import { previewTemplateAction } from "./actions";
 import { TemplatePreviewForm } from "./preview-form";
+import { AuthorizationError } from "@/lib/authorization";
 import { requireOrganization } from "@/lib/session";
 import {
+  TemplateError,
   previewTemplate,
   templateSampleData,
 } from "@/lib/template-core";
@@ -20,11 +23,25 @@ export default async function TemplatePreviewPage({
     requireOrganization(),
     params,
   ]);
-  const template = await getTemplate({
-    actorUserId: session.user.id,
-    orgId: organization.id,
-    templateId,
-  });
+  let template: Awaited<ReturnType<typeof getTemplate>>;
+  try {
+    template = await getTemplate({
+      actorUserId: session.user.id,
+      orgId: organization.id,
+      templateId,
+    });
+  } catch (error) {
+    if (error instanceof TemplateError && error.code === "TEMPLATE_NOT_FOUND") {
+      notFound();
+    }
+    if (
+      error instanceof AuthorizationError ||
+      (error instanceof TemplateError && error.code === "MEMBERSHIP_REQUIRED")
+    ) {
+      redirect("/app/templates");
+    }
+    throw error;
+  }
   const sampleData = templateSampleData(template);
   const initialPreview = previewTemplate(template, sampleData);
   const action = previewTemplateAction.bind(null, template.id);

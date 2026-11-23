@@ -37,6 +37,19 @@ function failure(error: unknown): Response {
     );
   }
   if (error instanceof OutboundProviderEventError) {
+    if (error.code === "MESSAGE_DELIVERY_PENDING") {
+      return json(
+        {
+          error: {
+            code: "provider_event_message_delivery_pending",
+            message:
+              "The matched message is still being delivered; retry after delivery completes.",
+          },
+        },
+        503,
+        { "Retry-After": "5" },
+      );
+    }
     const status =
       error.code === "NO_MATCHING_MESSAGE"
         ? 404

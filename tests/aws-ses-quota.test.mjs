@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   AWS_SES_DAILY_UTILIZATION,
+  AWS_SES_MAX_INLINE_DELAY_MS,
   AWS_SES_RATE_UTILIZATION,
   awsSesQuotaScopeHash,
   awsSesReservationKey,
@@ -22,6 +23,7 @@ test("SES quota snapshots are bounded and reserve operational headroom", () => {
     observedAt,
   );
   assert.ok(snapshot);
+  assert.equal(AWS_SES_MAX_INLINE_DELAY_MS, 5_000);
   assert.equal(AWS_SES_RATE_UTILIZATION, 0.8);
   assert.equal(AWS_SES_DAILY_UTILIZATION, 0.9);
   assert.equal(safeAwsSesRecipientsPerSecond(snapshot), 11);
@@ -71,8 +73,22 @@ test("SES quota scope and attempt reservations are deterministic hashes", () => 
     awsSesQuotaScopeHash(configuration),
   );
   assert.match(awsSesReservationKey([delivery]), /^[0-9a-f]{64}$/);
+  assert.equal(
+    awsSesReservationKey([delivery]),
+    awsSesReservationKey([delivery]),
+  );
+  assert.equal(
+    awsSesReservationKey([delivery]),
+    awsSesReservationKey([delivery], ""),
+  );
   assert.notEqual(
     awsSesReservationKey([delivery]),
     awsSesReservationKey([{ ...delivery, attemptCount: 3 }]),
   );
+  const firstNonceKey = awsSesReservationKey([delivery], "nonce-1");
+  const secondNonceKey = awsSesReservationKey([delivery], "nonce-2");
+  assert.match(firstNonceKey, /^[0-9a-f]{64}$/);
+  assert.match(secondNonceKey, /^[0-9a-f]{64}$/);
+  assert.notEqual(firstNonceKey, awsSesReservationKey([delivery]));
+  assert.notEqual(firstNonceKey, secondNonceKey);
 });

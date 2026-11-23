@@ -28,3 +28,17 @@ test("browser preview keeps a complete HTML document out of a nested body", () =
   assert.match(document, /Content-Security-Policy/);
   assert.doesNotMatch(document, /<body>\s*<!DOCTYPE html>/i);
 });
+
+test("browser preview strips PaperBoy open-tracking pixels while keeping authored images", () => {
+  const messageId = "123e4567-e89b-42d3-a456-426614174000";
+  const signature = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef0123456789_";
+  const pixel = `<img alt="" height="1" src="https://mail.example.test/o/${messageId}/${signature}.gif" width="1" />`;
+  const authored = '<img alt="Logo" src="https://images.example.test/logo.png">';
+
+  const document = templateBrowserPreviewDocument(
+    `<!DOCTYPE html><html><body><p>Hello</p>${authored}${pixel}</body></html>`,
+  );
+
+  assert.doesNotMatch(document, /\/o\/123e4567-e89b-42d3-a456-426614174000\//i);
+  assert.match(document, /https:\/\/images\.example\.test\/logo\.png/);
+});

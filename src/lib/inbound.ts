@@ -1,11 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   attachmentStorageKey,
   attachmentStore as configuredAttachmentStore,
+  type AttachmentStore,
 } from "@/lib/attachment-storage";
 import {
+  domains,
   orgMembers,
   orgs,
   receivedEmailAttachments,
@@ -211,26 +213,60 @@ async function insertReceivedEmailWebhooks(tx: InboundTransaction, input: {
   return created.map((delivery) => delivery.id);
 }
 
+const MAX_INBOUND_RECIPIENT_DOMAINS = 100;
+
 export async function findLiveOrgForInboundRecipients(
   to: string[],
 ): Promise<string | null> {
-  const organizations = await db.select({ id: orgs.id }).from(orgs);
+  const recipientDomains = inboundRecipientDomains(to);
+  if (
+    recipientDomains.length === 0 ||
+    recipientDomains.length > MAX_INBOUND_RECIPIENT_DOMAINS
+  ) {
+    return null;
+  }
+
+  const domainOwners = await db
+    .selectDistinct({ orgId: domains.orgId })
+    .from(domains)
+    .where(inArray(domains.name, recipientDomains));
+
+  const checkedOrgIds = new Set<string>();
   const matches: string[] = [];
 
-  for (const organization of organizations) {
+  async function checkOrganization(orgId: string): Promise<boolean> {
+    if (checkedOrgIds.has(orgId)) return true;
+    checkedOrgIds.add(orgId);
     try {
       await authorizeInboundRecipient({
         environment: "live",
-        orgId: organization.id,
+        orgId,
         to,
       });
-      matches.push(organization.id);
+      matches.push(orgId);
     } catch {
-      continue;
+      return true;
     }
 
-    if (matches.length > 1) {
+    return matches.length <= 1;
+  }
+
+  for (const owner of domainOwners) {
+    if (!(await checkOrganization(owner.orgId))) {
       return null;
+    }
+  }
+
+  if (matches.length === 0) {
+    const sesOrganizations = await db
+      .select({ id: orgs.id })
+      .from(orgs)
+      .where(eq(orgs.outboundProvider, "aws-ses"));
+
+    for (const organization of sesOrganizations) {
+      if (!(await checkOrganization(organization.id))) {
+        return null;
+      }
     }
   }
 
@@ -238,6 +274,7 @@ export async function findLiveOrgForInboundRecipients(
 }
 
 export async function receiveInboundEmail(input: {
+  attachmentStore?: AttachmentStore;
   /** Transport-owned recipients; never read this from the public API payload. */
   envelopeRecipients?: string[];
   payload: unknown;
@@ -257,7 +294,39 @@ export async function receiveInboundEmail(input: {
     to: input.envelopeRecipients ?? email.to,
   });
 
+  const attachmentStore = input.attachmentStore ?? configuredAttachmentStore;
+  const storedKeys: string[] = [];
+  const receivedEmailId = randomUUID();
+
   try {
+    const preparedAttachments: Array<{
+      attachment: (typeof email.attachments)[number];
+      attachmentId: string;
+      position: number;
+      storageKey: string;
+    }> = [];
+
+    for (const [position, attachment] of email.attachments.entries()) {
+      const attachmentId = randomUUID();
+      const storageKey = attachmentStorageKey({
+        attachmentId,
+        messageId: receivedEmailId,
+        orgId: input.principal.orgId,
+      });
+
+      await attachmentStore.put({
+        content: attachment.content,
+        storageKey,
+      });
+      storedKeys.push(storageKey);
+      preparedAttachments.push({
+        attachment,
+        attachmentId,
+        position,
+        storageKey,
+      });
+    }
+
     const created = await db.transaction(async (tx) => {
       await tx
         .select({ id: orgs.id })
@@ -273,6 +342,7 @@ export async function receiveInboundEmail(input: {
           environment: input.principal.environment,
           from: email.from,
           html: email.html,
+          id: receivedEmailId,
           orgId: input.principal.orgId,
           rfc822MessageId: email.rfc822MessageId,
           contentSha256: email.contentSha256,
@@ -293,41 +363,24 @@ export async function receiveInboundEmail(input: {
         email: record,
         orgId: input.principal.orgId,
       });
-      const storedKeys: string[] = [];
-      try {
-        for (const [position, attachment] of email.attachments.entries()) {
-          const attachmentId = randomUUID();
-          const storageKey = attachmentStorageKey({
-            attachmentId,
-            messageId: inserted.id,
-            orgId: input.principal.orgId,
-          });
 
-          await configuredAttachmentStore.put({
-            content: attachment.content,
-            storageKey,
-          });
-          storedKeys.push(storageKey);
-
-          await tx.insert(receivedEmailAttachments).values({
-            byteSize: attachment.size,
-            contentId: attachment.contentId,
-            contentSha256: attachment.contentSha256,
-            contentType: attachment.contentType,
-            filename: attachment.filename,
-            id: attachmentId,
-            position,
-            receivedEmailId: inserted.id,
-            storageKey,
-          });
-        }
-      } catch (error) {
-        await Promise.allSettled(
-          storedKeys.map((storageKey) =>
-            configuredAttachmentStore.delete(storageKey),
-          ),
-        );
-        throw error;
+      for (const {
+        attachment,
+        attachmentId,
+        position,
+        storageKey,
+      } of preparedAttachments) {
+        await tx.insert(receivedEmailAttachments).values({
+          byteSize: attachment.size,
+          contentId: attachment.contentId,
+          contentSha256: attachment.contentSha256,
+          contentType: attachment.contentType,
+          filename: attachment.filename,
+          id: attachmentId,
+          position,
+          receivedEmailId: inserted.id,
+          storageKey,
+        });
       }
 
       return { email: record, deliveryIds };
@@ -344,6 +397,10 @@ export async function receiveInboundEmail(input: {
     }
     return created.email;
   } catch (error) {
+    await Promise.allSettled(
+      storedKeys.map((storageKey) => attachmentStore.delete(storageKey)),
+    );
+
     if (isUniqueViolation(error)) {
       const existing = await findExistingReceivedEmail({
         contentSha256: email.contentSha256,

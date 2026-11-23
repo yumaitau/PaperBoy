@@ -65,6 +65,7 @@ function eventTime(
 ) {
   if (message.status === "sent") return message.sentAt;
   if (message.status === "failed") return message.failedAt;
+  if (message.status === "cancelled") return message.cancelledAt;
   if (message.status === "sending") return message.leaseExpiresAt;
   return message.nextAttemptAt;
 }
@@ -72,6 +73,7 @@ function eventTime(
 function eventLabel(status: string): string {
   if (status === "sent") return "Sent";
   if (status === "failed") return "Failed";
+  if (status === "cancelled") return "Cancelled";
   if (status === "sending") return "Lease expires";
   return "Next attempt";
 }
@@ -281,6 +283,9 @@ export default async function Logs({ searchParams }: LogsPageProps) {
       </nav>
     ) : null;
 
+  const dispatchedCount = integerParam(query.dispatched);
+  const remainingCount = integerParam(query.remaining) ?? 0;
+
   return (
     <section className="dashboard-wide">
       <h1 className="page-title">Delivery</h1>
@@ -314,12 +319,12 @@ export default async function Logs({ searchParams }: LogsPageProps) {
           and try again.
         </p>
       ) : null}
-      {integerParam(query.dispatched) !== null ? (
+      {dispatchedCount !== null ? (
         <p className="form-success" role="status">
-          Dispatched {query.dispatched} queued message
-          {query.dispatched === "1" ? "" : "s"} to the BullMQ worker.{" "}
-          {query.remaining ?? "0"} still queued
-          {Number(query.remaining) > 0 ? " — dispatch again to continue." : "."}
+          Dispatched {dispatchedCount} queued message
+          {dispatchedCount === 1 ? "" : "s"} to the BullMQ worker.{" "}
+          {remainingCount} still queued
+          {remainingCount > 0 ? " — dispatch again to continue." : "."}
         </p>
       ) : null}
 

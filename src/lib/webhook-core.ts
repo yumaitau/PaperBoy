@@ -31,6 +31,7 @@ export type WebhookDeliveryStatus =
 export type WebhookErrorCode =
   | "CONFIGURATION_INVALID"
   | "ENDPOINT_DISABLED"
+  | "EVENT_IN_PROGRESS"
   | "EVENT_NOT_FOUND"
   | "INVALID_INPUT"
   | "INVALID_URL"
@@ -271,7 +272,7 @@ export function isNonPublicAddress(address: string): boolean {
 }
 
 function isLoopbackHost(hostname: string): boolean {
-  const host = hostname.replace(/^\[|\]$/g, "");
+  const host = hostname.replace(/^\[|\]$/g, "").replace(/\.+$/, "");
   return (
     host === "localhost" ||
     host.endsWith(".localhost") ||
@@ -303,7 +304,8 @@ export function parseWebhookUrl(
   }
 
   const hostname = url.hostname.toLowerCase();
-  const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(hostname);
+  const normalizedHost = hostname.replace(/\.+$/, "");
+  const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(normalizedHost);
   const insecureLoopback =
     url.protocol === "http:" &&
     loopback &&
@@ -323,9 +325,9 @@ export function parseWebhookUrl(
   if (
     !allowPrivate &&
     !devLoopback &&
-    (hostname === "localhost" ||
-      hostname.endsWith(".localhost") ||
-      isNonPublicAddress(hostname))
+    (normalizedHost === "localhost" ||
+      normalizedHost.endsWith(".localhost") ||
+      isNonPublicAddress(normalizedHost))
   ) {
     throw new WebhookError("INVALID_URL");
   }

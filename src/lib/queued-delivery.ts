@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, lte, or } from "drizzle-orm";
 import { db } from "@/db";
 import { messages } from "@/db/schema";
 import { enqueuePendingMessage } from "@/lib/job-queue";
@@ -20,12 +20,15 @@ export async function dispatchQueuedOrganizationMessages(input: {
     Number.isInteger(input.limit) && input.limit !== undefined
       ? Math.max(1, Math.min(input.limit, QUEUED_SEND_BATCH))
       : QUEUED_SEND_BATCH;
+  const dueCondition = and(
+    eq(messages.orgId, input.orgId),
+    eq(messages.status, "queued"),
+    or(isNull(messages.scheduledAt), lte(messages.scheduledAt, now)),
+  );
   const rows = await db
     .select({ id: messages.id })
     .from(messages)
-    .where(
-      and(eq(messages.orgId, input.orgId), eq(messages.status, "queued")),
-    )
+    .where(dueCondition)
     .orderBy(asc(messages.nextAttemptAt), asc(messages.createdAt), asc(messages.id))
     .limit(limit);
 
@@ -35,8 +38,7 @@ export async function dispatchQueuedOrganizationMessages(input: {
       .set({ nextAttemptAt: now, updatedAt: now })
       .where(
         and(
-          eq(messages.orgId, input.orgId),
-          eq(messages.status, "queued"),
+          dueCondition,
           inArray(
             messages.id,
             rows.map((row) => row.id),
@@ -55,9 +57,7 @@ export async function dispatchQueuedOrganizationMessages(input: {
   const [remaining] = await db
     .select({ count: count() })
     .from(messages)
-    .where(
-      and(eq(messages.orgId, input.orgId), eq(messages.status, "queued")),
-    );
+    .where(dueCondition);
 
   return {
     dispatched,

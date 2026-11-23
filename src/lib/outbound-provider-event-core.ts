@@ -3,6 +3,7 @@ export class OutboundProviderEventError extends Error {
     readonly code:
       | "INVALID_EVENT"
       | "MEMBERSHIP_REQUIRED"
+      | "MESSAGE_DELIVERY_PENDING"
       | "NO_MATCHING_MESSAGE"
       | "UNSUPPORTED_PROVIDER",
   ) {

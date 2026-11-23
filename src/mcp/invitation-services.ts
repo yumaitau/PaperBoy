@@ -1,4 +1,4 @@
-import { requireKeyScope } from "@/lib/authorization";
+import { AuthorizationError, requireKeyScope } from "@/lib/authorization";
 import {
   inviteAndEmailOrganizationMember,
   listOrganizationInvitationsForActor,
@@ -8,6 +8,9 @@ import type { PaperBoyMcpInvitationServices } from "@/mcp/invitation-tools";
 export const paperBoyMcpInvitationServices: PaperBoyMcpInvitationServices = {
   invite: (principal, input) => {
     requireKeyScope(principal.scopes, "members.invite");
+    if (principal.environment !== "live") {
+      throw new AuthorizationError("members.invite");
+    }
     return inviteAndEmailOrganizationMember({
       actorUserId: principal.actorUserId,
       email: input.email,

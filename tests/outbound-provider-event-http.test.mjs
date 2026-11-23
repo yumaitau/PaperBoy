@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   handleIngestOutboundProviderEventRequest,
 } from "../src/lib/outbound-provider-event-http.ts";
+import { OutboundProviderEventError } from "../src/lib/outbound-provider-event-core.ts";
 import { handleAwsSesSnsRequest } from "../src/lib/outbound-provider-sns-http.ts";
 import { organizationAwsSesVariable } from "../src/lib/outbound-provider-configuration.ts";
 
@@ -143,4 +144,62 @@ test("the public per-org SNS endpoint verifies the configured topic before inges
   assert.equal(calls[1][1].orgId, orgId);
   assert.equal(calls[1][1].provider, "aws-ses");
   assert.deepEqual(calls[1][1].payload, payload);
+});
+
+test("SNS and authenticated event endpoints return 503 with Retry-After when delivery is pending", async () => {
+  const topicArn =
+    "arn:aws:sns:us-east-1:123456789012:paperboy-ses-events";
+  const payload = await fixture("aws-ses-sns-delivery");
+
+  const snsResponse = await handleAwsSesSnsRequest(
+    new Request(
+      `https://paperboy.test/api/v1/providers/aws-ses/events/${orgId}`,
+      { body: JSON.stringify(payload), method: "POST" },
+    ),
+    orgId,
+    {
+      environment: {
+        [organizationAwsSesVariable(orgId, "REGION")]: "us-east-1",
+        [organizationAwsSesVariable(orgId, "ROLE_ARN")]:
+          "arn:aws:iam::123456789012:role/paperboy-ses",
+        [organizationAwsSesVariable(orgId, "SNS_TOPIC_ARN")]: topicArn,
+      },
+      async ingest() {
+        throw new OutboundProviderEventError("MESSAGE_DELIVERY_PENDING");
+      },
+      async verify() {
+        return { ...payload, Type: "Notification" };
+      },
+    },
+  );
+  assert.equal(snsResponse.status, 503);
+  assert.equal(snsResponse.headers.get("Retry-After"), "5");
+  assert.deepEqual(await snsResponse.json(), { accepted: false });
+
+  const restResponse = await handleIngestOutboundProviderEventRequest(
+    new Request("https://paperboy.test/api/v1/providers/aws-ses/events", {
+      body: JSON.stringify(payload),
+      headers: {
+        Authorization: "Bearer test",
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    }),
+    "aws-ses",
+    {
+      authenticate: async () => principal,
+      async ingest() {
+        throw new OutboundProviderEventError("MESSAGE_DELIVERY_PENDING");
+      },
+    },
+  );
+  assert.equal(restResponse.status, 503);
+  assert.equal(restResponse.headers.get("Retry-After"), "5");
+  assert.deepEqual(await restResponse.json(), {
+    error: {
+      code: "provider_event_message_delivery_pending",
+      message:
+        "The matched message is still being delivered; retry after delivery completes.",
+    },
+  });
 });

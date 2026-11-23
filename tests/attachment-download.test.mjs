@@ -10,6 +10,7 @@ for (const filename of ["report.txt", "文件.txt", "résumé 📄.pdf", "100% (
     assert.equal(await response.text(), "attachment bytes");
     assert.equal(response.headers.get("Content-Type"), "application/octet-stream");
     assert.equal(response.headers.get("Cache-Control"), "private, max-age=3600");
+    assert.equal(response.headers.get("X-Content-Type-Options"), "nosniff");
     const disposition = response.headers.get("Content-Disposition");
     assert.match(disposition, /^attachment; filename="[\x20-\x21\x23-\x5b\x5d-\x7e]+"; filename\*=UTF-8''[A-Za-z0-9!#$&+.^_`|~%\-]+$/);
     assert.equal(

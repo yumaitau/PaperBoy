@@ -95,7 +95,8 @@ export async function inviteMemberAction(formData: FormData) {
   revalidatePath("/app");
   revalidatePath("/app/logs");
   revalidatePath("/app/organization");
-  const query = new URLSearchParams({ saved: "invitation" });
+  const query = new URLSearchParams();
+  if (!invited.emailError) query.set("saved", "invitation");
   if (invited.queuedId) query.set("queued", invited.queuedId);
   if (invited.emailError) query.set("error", invited.emailError.toLowerCase());
   redirect(`/app/organization?${query.toString()}`);
@@ -150,12 +151,13 @@ export async function renameOrganizationAction(formData: FormData) {
 }
 
 export async function removeMemberAction(formData: FormData) {
-  const session = await requireSession();
+  const { organization, session } = await requireOrganization();
 
   try {
     await removeOrganizationMember({
       actorUserId: session.user.id,
       membershipId: String(formData.get("membershipId")),
+      orgId: organization.id,
     });
   } catch (error) {
     redirect(errorLocation(error));

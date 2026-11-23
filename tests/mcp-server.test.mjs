@@ -3252,3 +3252,111 @@ test("DKIM rotation is a first-class tenant-bound MCP operation", async () => {
     },
   );
 });
+
+test("email attachment listing, metrics snake_case mapping, cancelled status, and batch errors work", async () => {
+  let capturedMetricsQuery = null;
+
+  await withClient(
+    dependencies({
+      deliveries: deliveryServices({
+        get: async () => ({ ...firstDelivery, status: "cancelled" }),
+        list: async () => [{ ...firstDelivery, status: "cancelled" }],
+      }),
+      emails: emailServices({
+        listAttachments: async () => [firstAttachment],
+        metrics: async (_principal, query) => {
+          capturedMetricsQuery = query;
+          return {
+            data: [],
+            endDate: fixedNow,
+            granularity: "daily",
+            startDate: fixedNow,
+            timezone: "UTC",
+            totals: { sent: 1 },
+          };
+        },
+        queueBatch: async () => {
+          throw new TemplateError("TEMPLATE_NOT_PUBLISHED");
+        },
+      }),
+    }),
+    async (client) => {
+      const listedAttachments = await client.callTool({
+        arguments: { messageId: firstMessage.id },
+        name: "paperboy_list_email_attachments",
+      });
+      assert.equal(listedAttachments.isError, undefined);
+      assert.deepEqual(listedAttachments.structuredContent.attachments, [
+        {
+          contentId: null,
+          contentType: "application/pdf",
+          downloadUrl: "http://paperboy.test/api/v1/attachments/download?token=x",
+          filename: "invoice.pdf",
+          id: firstAttachment.id,
+        },
+      ]);
+
+      const fetchedAttachment = await client.callTool({
+        arguments: {
+          attachmentId: firstAttachment.id,
+          messageId: firstMessage.id,
+        },
+        name: "paperboy_get_email_attachment",
+      });
+      assert.equal(fetchedAttachment.isError, undefined);
+      assert.deepEqual(fetchedAttachment.structuredContent.attachment, {
+        contentId: null,
+        contentType: "application/pdf",
+        downloadUrl: "http://paperboy.test/api/v1/attachments/download?token=x",
+        filename: "invoice.pdf",
+        id: firstAttachment.id,
+      });
+
+      const metricsResult = await client.callTool({
+        arguments: {
+          broadcastId: firstBroadcast.id,
+          domainId: firstDomain.id,
+          emailId: firstMessage.id,
+          endDate: "2026-08-24T00:00:00Z",
+          granularity: "daily",
+          startDate: "2026-08-20T00:00:00Z",
+          timezone: "UTC",
+        },
+        name: "paperboy_get_email_metrics",
+      });
+      assert.equal(metricsResult.isError, undefined);
+      assert.deepEqual(capturedMetricsQuery, {
+        broadcast_id: firstBroadcast.id,
+        domain_id: firstDomain.id,
+        email_id: firstMessage.id,
+        end_date: "2026-08-24T00:00:00Z",
+        granularity: "daily",
+        start_date: "2026-08-20T00:00:00Z",
+        timezone: "UTC",
+      });
+
+      const cancelledList = await client.callTool({
+        arguments: { status: "cancelled" },
+        name: "paperboy_list_delivery_statuses",
+      });
+      assert.equal(cancelledList.isError, undefined);
+      assert.equal(cancelledList.structuredContent.deliveries[0].status, "cancelled");
+
+      const failedBatch = await client.callTool({
+        arguments: {
+          emails: [
+            {
+              from: "sender@example.com",
+              subject: "Hello",
+              text: "Body",
+              to: "reader@example.net",
+            },
+          ],
+        },
+        name: "paperboy_send_email_batch",
+      });
+      assert.equal(failedBatch.isError, true);
+      assert.match(failedBatch.content[0].text, /Publish the template/);
+    },
+  );
+});

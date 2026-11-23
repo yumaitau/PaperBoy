@@ -141,3 +141,36 @@ test("email.received webhook strips display names so plus-address matching works
   assert.equal(body.data.from, "jane@example.com");
   assert.deepEqual(body.data.to, ["reply+abc123@mail.snagspot.test"]);
 });
+
+test("inbound attachment parsing skips empty parts and sanitizes filename and content type", async () => {
+  const mime = [
+    "From: Jane <jane@example.com>",
+    "To: reply@mail.snagspot.test",
+    "Subject: Attachments",
+    "MIME-Version: 1.0",
+    'Content-Type: multipart/mixed; boundary="b1"',
+    "",
+    "--b1",
+    "Content-Type: text/plain; charset=utf-8",
+    "",
+    "Body text",
+    "--b1",
+    'Content-Type: text/plain; charset="utf-8"',
+    'Content-Disposition: attachment; filename="empty.txt"',
+    "",
+    "--b1",
+    'Content-Type: APPLICATION/PDF; name="doc.pdf"',
+    'Content-Disposition: attachment; filename="doc\u0000\u0007.pdf"',
+    "Content-Transfer-Encoding: base64",
+    "",
+    Buffer.from("pdf-bytes").toString("base64"),
+    "--b1--",
+    "",
+  ].join("\r\n");
+
+  const parsed = await parseInboundMime(mime);
+  assert.equal(parsed.attachments.length, 1);
+  assert.equal(parsed.attachments[0].filename, "doc.pdf");
+  assert.equal(parsed.attachments[0].contentType, "application/pdf");
+  assert.equal(parsed.attachments[0].size, 9);
+});

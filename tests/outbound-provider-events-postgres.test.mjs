@@ -182,6 +182,43 @@ test(
           error instanceof OutboundProviderEventError &&
           error.code === "NO_MATCHING_MESSAGE",
       );
+
+      const pendingMessageId = randomUUID();
+      await db.insert(messages).values({
+        attemptCount: 1,
+        deliveryMode: "live",
+        environment: "live",
+        from: "news@example.com",
+        id: pendingMessageId,
+        lastAttemptAt: receivedAt,
+        leaseExpiresAt: new Date(receivedAt.getTime() + 60_000),
+        orgId,
+        outboundProvider: "aws-ses",
+        providerMessageId: null,
+        status: "sending",
+        subject: "SES pending delivery fixture",
+        textBody: "SES pending delivery fixture",
+        to: ["reader@example.net"],
+        workerId: "ses-pending-test-worker",
+      });
+      const pendingPayload = await fixture(
+        "aws-ses-sns-delivery",
+        pendingMessageId,
+      );
+      pendingPayload.MessageId = `pending-${randomUUID()}`;
+      await assert.rejects(
+        () =>
+          ingestOutboundProviderEvent({
+            actorUserId: userId,
+            now: receivedAt,
+            orgId,
+            payload: pendingPayload,
+            provider: "aws-ses",
+          }),
+        (error) =>
+          error instanceof OutboundProviderEventError &&
+          error.code === "MESSAGE_DELIVERY_PENDING",
+      );
     } finally {
       try {
         await db.delete(orgs).where(eq(orgs.id, orgId));

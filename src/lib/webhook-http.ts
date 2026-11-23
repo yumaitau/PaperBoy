@@ -166,6 +166,19 @@ function failure(error: unknown): Response {
       );
     }
 
+    if (error.code === "EVENT_IN_PROGRESS") {
+      return json(
+        {
+          error: {
+            code: "webhook_event_in_progress",
+            message:
+              "Wait for the in-progress webhook delivery to finish before replaying it.",
+          },
+        },
+        409,
+      );
+    }
+
     if (error.code === "INVALID_INPUT" || error.code === "INVALID_URL") {
       return json(
         {

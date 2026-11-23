@@ -209,6 +209,7 @@ async function ingest(input: IngestInput & { actorUserId?: string | null }) {
         .select({
           id: messages.id,
           providerMessageId: messages.providerMessageId,
+          status: messages.status,
           to: messages.to,
           cc: messages.cc,
           bcc: messages.bcc,
@@ -216,6 +217,15 @@ async function ingest(input: IngestInput & { actorUserId?: string | null }) {
         .from(messages)
         .where(and(...conditions))
         .limit(2);
+      if (
+        candidates.length === 1 &&
+        providerEvent.messageId &&
+        candidates[0].id === providerEvent.messageId &&
+        candidates[0].providerMessageId === null &&
+        (candidates[0].status === "sending" || candidates[0].status === "queued")
+      ) {
+        throw new OutboundProviderEventError("MESSAGE_DELIVERY_PENDING");
+      }
       if (
         candidates.length !== 1 ||
         !providerEvent.providerMessageId ||

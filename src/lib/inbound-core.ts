@@ -259,6 +259,8 @@ export async function parseInboundMime(raw: string): Promise<InboundEmailInput> 
 }
 
 const MAX_INBOUND_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const CONTENT_TYPE_PATTERN =
+  /^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+$/;
 
 /**
  * Bound mailparser's bracket-free, trimmed CID for received storage. Invalid
@@ -284,14 +286,22 @@ function parseInboundAttachments(attachments: Attachment[]): EmailAttachment[] {
     const content = Buffer.isBuffer(attachment.content)
       ? attachment.content
       : Buffer.from(attachment.content ?? "");
-    const filename =
-      typeof attachment.filename === "string" && attachment.filename.trim()
-        ? attachment.filename.trim().slice(0, 255)
-        : "attachment";
-    const contentType =
-      typeof attachment.contentType === "string" && attachment.contentType.includes("/")
-        ? attachment.contentType
-        : "application/octet-stream";
+    if (content.byteLength === 0) continue;
+
+    const sanitizedFilename =
+      typeof attachment.filename === "string"
+        ? attachment.filename.replace(/[\u0000-\u001f\u007f]/g, "").trim()
+        : "";
+    const filename = sanitizedFilename
+      ? sanitizedFilename.slice(0, 255)
+      : "attachment";
+    const normalizedContentType =
+      typeof attachment.contentType === "string"
+        ? (attachment.contentType.split(";")[0]?.trim().toLowerCase() ?? "")
+        : "";
+    const contentType = CONTENT_TYPE_PATTERN.test(normalizedContentType)
+      ? normalizedContentType
+      : "application/octet-stream";
     const contentId = receivedContentId(attachment.cid);
 
     total += content.byteLength;
@@ -433,10 +443,11 @@ function parseRawHeaders(raw: string): Map<string, string[]> {
  */
 export function sesEnvelopeRecipient(raw: string): string | null {
   const top = parseRawHeaders(raw).get("received")?.[0];
-  if (!top || !/\bby inbound-smtp\.[a-z0-9-]+\.amazonaws\.com\b/i.test(top)) {
-    return null;
-  }
-  const match = /\bfor\s+<?([^\s<>;]+@[^\s<>;]+)>?\s*;/i.exec(top);
+  if (!top) return null;
+  const sesHop = /\bby inbound-smtp\.[a-z0-9-]+\.amazonaws\.com\b/i.exec(top);
+  if (!sesHop) return null;
+  const afterSesHop = top.slice(sesHop.index + sesHop[0].length);
+  const match = /\bfor\s+<?([^\s<>;]+@[^\s<>;]+)>?\s*;/i.exec(afterSesHop);
   return match?.[1]?.toLowerCase() ?? null;
 }
 

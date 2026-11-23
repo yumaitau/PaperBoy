@@ -30,6 +30,9 @@ import { getOutboundProviderSettings } from "@/lib/outbound-providers";
 import { getRateLimitSettings } from "@/lib/rate-limits";
 import { formatDateTime } from "@/lib/time";
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 type OrganizationPageProps = {
   searchParams: Promise<{
     error?: string;
@@ -196,6 +199,10 @@ export default async function OrganizationPage({
   } catch {
     openTrackingOrigin = null;
   }
+  const queuedInviteId =
+    typeof status.queued === "string" && UUID_PATTERN.test(status.queued)
+      ? status.queued
+      : null;
 
   return (
     <section className="dashboard-wide">
@@ -484,7 +491,7 @@ export default async function OrganizationPage({
             <label className="confirmation-control" htmlFor="openTrackingEnabled">
               <input
                 defaultChecked={openTracking.enabled}
-                disabled={!openTrackingOrigin}
+                disabled={!openTrackingOrigin && !openTracking.enabled}
                 id="openTrackingEnabled"
                 name="enabled"
                 type="checkbox"
@@ -497,7 +504,7 @@ export default async function OrganizationPage({
             </p>
             <button
               className="btn btn-primary"
-              disabled={!openTrackingOrigin}
+              disabled={!openTrackingOrigin && !openTracking.enabled}
               type="submit"
             >
               Save open tracking
@@ -563,7 +570,7 @@ export default async function OrganizationPage({
                           >
                             <input
                               defaultChecked={domain.clickTrackingEnabled}
-                              disabled={!openTrackingOrigin}
+                              disabled={!openTrackingOrigin && !domain.clickTrackingEnabled}
                               id={`click-${domain.id}`}
                               name="enabled"
                               type="checkbox"
@@ -580,7 +587,7 @@ export default async function OrganizationPage({
                           />
                           <button
                             className="btn btn-compact"
-                            disabled={!openTrackingOrigin}
+                            disabled={!openTrackingOrigin && !domain.clickTrackingEnabled}
                             type="submit"
                           >
                             Save
@@ -673,9 +680,9 @@ export default async function OrganizationPage({
                   <Link href="/app/logs">Delivery</Link> like any other send. The
                   recipient signs in with this address and accepts it here.
                 </p>
-                {status.queued ? (
+                {queuedInviteId ? (
                   <p className="form-success" role="status">
-                    Invite email {status.queued} is on{" "}
+                    Invite email {queuedInviteId} is on{" "}
                     <Link href="/app/logs">Delivery</Link>.
                   </p>
                 ) : null}

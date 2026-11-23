@@ -192,3 +192,39 @@ test("4xx fails once without retry", async () => {
   assert.equal(failed.responseStatus, 400);
   assert.equal(calls.some(([operation]) => operation === "markRetry"), false);
 });
+
+test("408 and 429 webhook responses are retried", async () => {
+  const encryptionKey = Buffer.alloc(32, 5);
+  const endpointId = "66666666-6666-4666-8666-666666666666";
+  const orgId = "77777777-7777-4777-8777-777777777777";
+  const secret = createWebhookSigningSecret();
+
+  for (const status of [408, 429]) {
+    const { calls, store } = fakeStore({
+      body: "{}",
+      encryptedSecret: encryptWebhookSigningSecret({
+        context: { endpointId, orgId },
+        encryptionKey,
+        secret,
+      }),
+      endpointId,
+      eventId: "88888888-8888-4888-8888-888888888888",
+      id: "99999999-9999-4999-8999-999999999999",
+      orgId,
+      url: "https://hooks.example.com/paperboy",
+    });
+    const result = await processNextWebhook({
+      encryptionKey,
+      fetch: async () => new Response(null, { status }),
+      resolve: async () => ["93.184.216.34"],
+      now: () => firstAttemptAt,
+      store,
+      workerId: "webhook-worker",
+    });
+    const retry = calls.find(([operation]) => operation === "markRetry")?.[1];
+
+    assert.equal(result.state, "retry");
+    assert.equal(retry.code, `webhook_http_${status}`);
+    assert.equal(retry.responseStatus, status);
+  }
+});

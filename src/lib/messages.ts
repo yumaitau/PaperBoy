@@ -326,9 +326,38 @@ export async function queueEmail(input: {
   }
 
   const attachmentStore = input.attachmentStore ?? configuredAttachmentStore;
+  const messageId = randomUUID();
   const storedKeys: string[] = [];
 
   try {
+    const preparedAttachments: Array<{
+      attachment: (typeof email.attachments)[number];
+      attachmentId: string;
+      position: number;
+      storageKey: string;
+    }> = [];
+
+    for (const [position, attachment] of email.attachments.entries()) {
+      const attachmentId = randomUUID();
+      const storageKey = attachmentStorageKey({
+        attachmentId,
+        messageId,
+        orgId: input.principal.orgId,
+      });
+
+      await attachmentStore.put({
+        content: attachment.content,
+        storageKey,
+      });
+      storedKeys.push(storageKey);
+      preparedAttachments.push({
+        attachment,
+        attachmentId,
+        position,
+        storageKey,
+      });
+    }
+
     const created = await db.transaction(async (tx) => {
       if (input.broadcastRecipient) {
         // Hold the recipient lock through message creation and link persistence.
@@ -434,7 +463,6 @@ export async function queueEmail(input: {
         domainClickEnabled = domainRow?.enabled === true;
       }
       const isInvitation = isOrganizationInviteMessage(email);
-      const messageId = randomUUID();
       let html = email.html;
       let clickTrackingEnabled = false;
       if (!isInvitation && domainClickEnabled && html !== null) {
@@ -511,20 +539,12 @@ export async function queueEmail(input: {
         });
       }
 
-      for (const [position, attachment] of email.attachments.entries()) {
-        const attachmentId = randomUUID();
-        const storageKey = attachmentStorageKey({
-          attachmentId,
-          messageId: inserted.id,
-          orgId: input.principal.orgId,
-        });
-
-        await attachmentStore.put({
-          content: attachment.content,
-          storageKey,
-        });
-        storedKeys.push(storageKey);
-
+      for (const {
+        attachment,
+        attachmentId,
+        position,
+        storageKey,
+      } of preparedAttachments) {
         await tx.insert(messageAttachments).values({
           byteSize: attachment.size,
           contentId: attachment.contentId,
@@ -553,6 +573,12 @@ export async function queueEmail(input: {
       }
       return { ...inserted, replayed: false };
     });
+
+    if (created.replayed && storedKeys.length > 0) {
+      await Promise.allSettled(
+        storedKeys.map((storageKey) => attachmentStore.delete(storageKey)),
+      );
+    }
 
     if (!created.replayed) {
       requestMessageJob({

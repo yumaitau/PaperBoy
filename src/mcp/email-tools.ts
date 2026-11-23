@@ -22,6 +22,10 @@ import type {
 } from "@/lib/messages";
 import { OpenTrackingConfigurationError } from "@/lib/open-tracking-core";
 import {
+  OutboundProviderConfigurationError,
+  providerConfigurationErrorMessage,
+} from "@/lib/outbound-provider-configuration";
+import {
   RateLimitConfigurationError,
   RateLimitError,
 } from "@/lib/rate-limit-core";
@@ -355,7 +359,7 @@ const queuedEmailOutputShape = {
     "test-sink",
   ]),
   replayed: z.boolean(),
-  status: z.enum(["queued", "sending", "sent", "failed"]),
+  status: z.enum(["queued", "sending", "sent", "failed", "cancelled"]),
 };
 
 const sendEmailOutputSchema = z.object({
@@ -386,6 +390,7 @@ const sendEmailBatchOutputSchema = z.object({
             .optional(),
           limit: z.number().int().positive().optional(),
           message: z.string(),
+          provider: z.string().optional(),
           retryAfterSeconds: z.number().int().positive().optional(),
         }),
         index: z.number().int().min(0).max(99),
@@ -415,6 +420,7 @@ function errorDetails(error: unknown) {
     fields?: { field: string; message: string }[];
     limit?: number;
     message: string;
+    provider?: string;
     retryAfterSeconds?: number;
   } = {
     code: "internal_error",
@@ -440,6 +446,17 @@ function errorDetails(error: unknown) {
       code: "open_tracking_unavailable",
       message:
         "The operator must configure PaperBoy's public URL and dedicated open-tracking signing key.",
+    };
+  } else if (error instanceof OutboundProviderConfigurationError) {
+    details = {
+      code:
+        error.code === "CREDENTIALS_MISSING"
+          ? "provider_credentials_missing"
+          : error.code === "ADAPTER_UNAVAILABLE"
+            ? "provider_adapter_unavailable"
+            : "provider_configuration_invalid",
+      message: providerConfigurationErrorMessage(error),
+      provider: error.provider,
     };
   } else if (error instanceof EmailError) {
     details =
@@ -477,6 +494,12 @@ function errorDetails(error: unknown) {
       details = {
         code: "template_not_found",
         message: "No template with that ID exists in this organization.",
+      };
+    } else if (error.code === "TEMPLATE_NOT_PUBLISHED") {
+      details = {
+        code: "template_not_published",
+        message:
+          "Publish the template before sending with it. Draft templates cannot send.",
       };
     } else if (error.code === "MISSING_REQUIRED_VARIABLES") {
       details = {
@@ -613,23 +636,27 @@ export function registerPaperBoyEmailTools(input: {
         return unauthorizedResult();
       }
 
-      const batch = await input.services.queueBatch(principal, emails);
-      const output = {
-        data: batch.map((item, index) =>
-          item.ok
-            ? { ...queuedOutput(item.message), index }
-            : { error: errorDetails(item.error), index },
-        ),
-        protocolTimeZone: "UTC" as const,
-        schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
-      };
+      try {
+        const batch = await input.services.queueBatch(principal, emails);
+        const output = {
+          data: batch.map((item, index) =>
+            item.ok
+              ? { ...queuedOutput(item.message), index }
+              : { error: errorDetails(item.error), index },
+          ),
+          protocolTimeZone: "UTC" as const,
+          schemaVersion: PAPERBOY_MCP_SCHEMA_VERSION,
+        };
 
-      return {
-        content: [
-          { text: JSON.stringify(output, null, 2), type: "text" as const },
-        ],
-        structuredContent: output,
-      };
+        return {
+          content: [
+            { text: JSON.stringify(output, null, 2), type: "text" as const },
+          ],
+          structuredContent: output,
+        };
+      } catch (error) {
+        return errorResult(error);
+      }
     },
   );
 
@@ -710,13 +737,11 @@ export function registerPaperBoyEmailTools(input: {
       publicOrigin(),
     );
     return {
-      attachment: {
-        contentId: attachment.contentId,
-        contentType: attachment.contentType,
-        downloadUrl: download.url,
-        filename: attachment.filename,
-        id: attachment.id,
-      },
+      contentId: attachment.contentId,
+      contentType: attachment.contentType,
+      downloadUrl: download.url,
+      filename: attachment.filename,
+      id: attachment.id,
     };
   }
 
@@ -834,7 +859,7 @@ export function registerPaperBoyEmailTools(input: {
         );
         return successResult({
           ...metadata(),
-          ...(await attachmentOutput(principal, messageId, attachment)),
+          attachment: await attachmentOutput(principal, messageId, attachment),
         });
       } catch (error) {
         return errorResult(error);
@@ -877,9 +902,23 @@ export function registerPaperBoyEmailTools(input: {
       if (!principal) return unauthorizedResult();
 
       try {
+        const keyMap: Record<string, string> = {
+          broadcastId: "broadcast_id",
+          dimensions: "dimensions",
+          domainId: "domain_id",
+          emailId: "email_id",
+          endDate: "end_date",
+          granularity: "granularity",
+          metrics: "metrics",
+          startDate: "start_date",
+          timezone: "timezone",
+        };
         const query: Record<string, string> = {};
         for (const [key, value] of Object.entries(args ?? {})) {
-          if (typeof value === "string") query[key] = value;
+          const mappedKey = keyMap[key];
+          if (mappedKey && typeof value === "string") {
+            query[mappedKey] = value;
+          }
         }
         const result = await input.services.metrics(principal, query);
         return successResult({

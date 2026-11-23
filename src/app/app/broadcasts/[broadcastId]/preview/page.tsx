@@ -1,6 +1,8 @@
+import { notFound, redirect } from "next/navigation";
 import { BroadcastPreviewWorkspace } from "@/components/broadcasts/broadcast-preview-workspace";
-import { can } from "@/lib/authorization";
+import { AuthorizationError, can } from "@/lib/authorization";
 import { getAudience, listAudiences } from "@/lib/audiences";
+import { BroadcastError } from "@/lib/broadcast-core";
 import { getBroadcast } from "@/lib/broadcasts";
 import { naturalLanguageScheduleInput } from "@/lib/natural-language-schedule";
 import { requireOrganization } from "@/lib/session";
@@ -20,11 +22,25 @@ export default async function BroadcastPreviewPage({
     params,
     searchParams,
   ]);
-  const broadcast = await getBroadcast({
-    actorUserId: session.user.id,
-    broadcastId,
-    orgId: organization.id,
-  });
+  let broadcast: Awaited<ReturnType<typeof getBroadcast>>;
+  try {
+    broadcast = await getBroadcast({
+      actorUserId: session.user.id,
+      broadcastId,
+      orgId: organization.id,
+    });
+  } catch (error) {
+    if (error instanceof BroadcastError && error.code === "BROADCAST_NOT_FOUND") {
+      notFound();
+    }
+    if (
+      error instanceof AuthorizationError ||
+      (error instanceof BroadcastError && error.code === "MEMBERSHIP_REQUIRED")
+    ) {
+      redirect("/app/broadcasts?error=forbidden");
+    }
+    throw error;
+  }
   const audience = broadcast.sourceAudienceId
     ? await getAudience({
         actorUserId: session.user.id,

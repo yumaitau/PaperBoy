@@ -1,6 +1,6 @@
 import { and, asc, eq, lte, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { webhookDeliveries } from "@/db/schema";
+import { webhookDeliveries, webhookEndpoints } from "@/db/schema";
 import type { WebhookStore } from "@/lib/webhook-worker-core";
 
 function validWorkerId(workerId: string): boolean {
@@ -40,6 +40,13 @@ export const postgresWebhookStore: WebhookStore = {
       const [candidate] = await tx
         .select({ id: webhookDeliveries.id })
         .from(webhookDeliveries)
+        .innerJoin(
+          webhookEndpoints,
+          and(
+            eq(webhookEndpoints.id, webhookDeliveries.endpointId),
+            eq(webhookEndpoints.enabled, true),
+          ),
+        )
         .where(
           and(
             ...(input.deliveryId
@@ -63,7 +70,7 @@ export const postgresWebhookStore: WebhookStore = {
           asc(webhookDeliveries.id),
         )
         .limit(1)
-        .for("update", { skipLocked: true });
+        .for("update", { of: webhookDeliveries, skipLocked: true });
 
       if (!candidate) {
         return null;

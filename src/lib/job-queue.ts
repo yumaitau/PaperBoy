@@ -4,7 +4,7 @@ import {
   createBunRedisClient,
   type IRedisClient,
 } from "bullmq";
-import { and, asc, eq, inArray, lte, or } from "drizzle-orm";
+import { and, asc, eq, inArray, lte, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { broadcasts, messages, webhookDeliveries } from "@/db/schema";
 
@@ -177,7 +177,10 @@ export async function openJobQueues(
 }
 
 export function getJobQueues(): Promise<JobQueueBundle> {
-  sharedQueues ??= openJobQueues();
+  sharedQueues ??= openJobQueues().catch((error) => {
+    sharedQueues = null;
+    throw error;
+  });
   return sharedQueues;
 }
 
@@ -458,7 +461,10 @@ export async function reconcilePendingJobs(
       })
       .from(broadcasts)
       .where(inArray(broadcasts.status, ["running", "scheduled"]))
-      .orderBy(asc(broadcasts.scheduledFor), asc(broadcasts.createdAt))
+      .orderBy(
+        sql`${broadcasts.scheduledFor} asc nulls first`,
+        asc(broadcasts.createdAt),
+      )
       .limit(limit),
     db
       .select({

@@ -17,16 +17,19 @@ test(
       { eq },
       { db },
       { awsSesRateLimitStates, awsSesSendReservations },
+      { AWS_SES_MAX_INLINE_DELAY_MS },
       { postgresAwsSesQuotaGuard },
     ] = await Promise.all([
       import("drizzle-orm"),
       import("../src/db/index.ts"),
       import("../src/db/schema.ts"),
+      import("../src/lib/aws-ses-quota.ts"),
       import("../src/lib/postgres-aws-ses-quota-guard.ts"),
     ]);
     const suffix = randomUUID();
     const pacedScope = digest(`paced:${suffix}`);
     const dailyScope = digest(`daily:${suffix}`);
+    const deferredRateScope = digest(`rate-deferred:${suffix}`);
     const now = new Date();
     const pacingSnapshot = {
       max24HourSend: 1_000,
@@ -83,6 +86,52 @@ test(
         .from(awsSesSendReservations)
         .where(eq(awsSesSendReservations.scopeHash, dailyScope));
       assert.equal(stored.length, 1);
+
+      const rateDeferredSnapshot = {
+        max24HourSend: 1_000,
+        maxSendRate: 1.25,
+        observedAt: new Date(now.getTime() - 1_000),
+        sentLast24Hours: 0,
+      };
+      const firstRateAccepted = await postgresAwsSesQuotaGuard.reserve({
+        now,
+        recipientCount: Math.ceil(AWS_SES_MAX_INLINE_DELAY_MS / 1_000) + 5,
+        reservationKey: digest(`rate-deferred:first:${suffix}`),
+        scopeHash: deferredRateScope,
+        snapshot: rateDeferredSnapshot,
+      });
+      assert.equal("scheduledAt" in firstRateAccepted, true);
+      const [rateStateBefore] = await db
+        .select({ nextAvailableAt: awsSesRateLimitStates.nextAvailableAt })
+        .from(awsSesRateLimitStates)
+        .where(eq(awsSesRateLimitStates.scopeHash, deferredRateScope));
+      assert.ok(rateStateBefore);
+
+      const rateDeferred = await postgresAwsSesQuotaGuard.reserve({
+        now,
+        recipientCount: 1,
+        reservationKey: digest(`rate-deferred:second:${suffix}`),
+        scopeHash: deferredRateScope,
+        snapshot: rateDeferredSnapshot,
+      });
+      assert.equal("retryAt" in rateDeferred, true);
+      assert.equal(
+        rateDeferred.retryAt.getTime(),
+        rateStateBefore.nextAvailableAt.getTime(),
+      );
+      const deferredRateReservations = await db
+        .select({ id: awsSesSendReservations.id })
+        .from(awsSesSendReservations)
+        .where(eq(awsSesSendReservations.scopeHash, deferredRateScope));
+      assert.equal(deferredRateReservations.length, 1);
+      const [rateStateAfter] = await db
+        .select({ nextAvailableAt: awsSesRateLimitStates.nextAvailableAt })
+        .from(awsSesRateLimitStates)
+        .where(eq(awsSesRateLimitStates.scopeHash, deferredRateScope));
+      assert.equal(
+        rateStateAfter.nextAvailableAt.getTime(),
+        rateStateBefore.nextAvailableAt.getTime(),
+      );
     } finally {
       await db
         .delete(awsSesRateLimitStates)
@@ -90,6 +139,9 @@ test(
       await db
         .delete(awsSesRateLimitStates)
         .where(eq(awsSesRateLimitStates.scopeHash, dailyScope));
+      await db
+        .delete(awsSesRateLimitStates)
+        .where(eq(awsSesRateLimitStates.scopeHash, deferredRateScope));
     }
   },
 );

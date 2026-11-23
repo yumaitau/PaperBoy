@@ -5,6 +5,7 @@ import {
   awsSesSendReservations,
 } from "@/db/schema";
 import {
+  AWS_SES_MAX_INLINE_DELAY_MS,
   AWS_SES_QUOTA_REFRESH_MS,
   safeAwsSesDailyRecipients,
   safeAwsSesRecipientsPerSecond,
@@ -98,6 +99,10 @@ export const postgresAwsSesQuotaGuard: AwsSesQuotaGuard = {
       const scheduledAt = new Date(
         Math.max(databaseNow.getTime(), state.nextAvailableAt.getTime()),
       );
+      const delayMs = Math.max(0, scheduledAt.getTime() - databaseNow.getTime());
+      if (delayMs > AWS_SES_MAX_INLINE_DELAY_MS) {
+        return { retryAt: scheduledAt };
+      }
       const nextAvailableAt = new Date(
         scheduledAt.getTime() +
           Math.ceil((input.recipientCount * 1_000) / recipientsPerSecond),
@@ -116,7 +121,7 @@ export const postgresAwsSesQuotaGuard: AwsSesQuotaGuard = {
         .where(eq(awsSesRateLimitStates.scopeHash, input.scopeHash));
 
       return {
-        delayMs: Math.max(0, scheduledAt.getTime() - databaseNow.getTime()),
+        delayMs,
         scheduledAt,
       };
     });

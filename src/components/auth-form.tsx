@@ -85,7 +85,11 @@ export function AuthForm({
       "twoFactorRedirect" in result.data &&
       result.data.twoFactorRedirect
     ) {
-      window.location.replace("/two-factor");
+      const twoFactorUrl =
+        callbackURL && callbackURL !== "/app"
+          ? `/two-factor?callbackURL=${encodeURIComponent(callbackURL)}`
+          : "/two-factor";
+      window.location.replace(twoFactorUrl);
       return;
     }
 

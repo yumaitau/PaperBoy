@@ -16,6 +16,7 @@ import type {
   ApiKeyAuditDetails,
 } from "@/lib/api-key-audit-core";
 import {
+  AuthorizationError,
   can,
   isOrgRole,
   ORG_PERMISSIONS,
@@ -586,6 +587,7 @@ export async function revokeApiKey(input: {
   return db.transaction(async (tx) => {
     const [key] = await tx
       .select({
+        createdByUserId: apiKeys.createdByUserId,
         environment: apiKeys.environment,
         expiresAt: apiKeys.expiresAt,
         keyId: apiKeys.keyId,
@@ -598,6 +600,10 @@ export async function revokeApiKey(input: {
       .for("update");
 
     if (!key || (input.orgId && key.orgId !== input.orgId)) {
+      throw new ApiKeyError("KEY_NOT_FOUND");
+    }
+
+    if (input.callingKey && input.callingKey.environment !== key.environment) {
       throw new ApiKeyError("KEY_NOT_FOUND");
     }
 
@@ -617,6 +623,26 @@ export async function revokeApiKey(input: {
     }
 
     requirePermission(membership.role, "apiKeys.revoke");
+
+    if (key.createdByUserId && key.createdByUserId !== input.actorUserId) {
+      const [creator] = await tx
+        .select({ role: orgMembers.role })
+        .from(orgMembers)
+        .where(
+          and(
+            eq(orgMembers.orgId, key.orgId),
+            eq(orgMembers.userId, key.createdByUserId),
+          ),
+        )
+        .limit(1);
+      if (
+        creator &&
+        isOrgRole(creator.role) &&
+        !canManageKeysOf(membership.role, creator.role)
+      ) {
+        throw new AuthorizationError("apiKeys.revoke");
+      }
+    }
 
     const [revoked] = await tx
       .update(apiKeys)

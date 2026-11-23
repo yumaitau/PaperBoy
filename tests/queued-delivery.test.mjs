@@ -12,6 +12,8 @@ test("queued dispatch goes to BullMQ instead of the web process", async () => {
 
   assert.match(delivery, /enqueuePendingMessage/);
   assert.match(delivery, /dispatchQueuedOrganizationMessages/);
+  assert.match(delivery, /isNull\(messages\.scheduledAt\)/);
+  assert.match(delivery, /lte\(messages\.scheduledAt, now\)/);
   assert.doesNotMatch(delivery, /processNextMessage/);
   assert.doesNotMatch(delivery, /web-fallback/);
   assert.match(actions, /dispatchQueuedOrganizationMessages/);

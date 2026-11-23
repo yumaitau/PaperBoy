@@ -73,6 +73,22 @@ test(
         );
       }
 
+      // Test calling keys cannot revoke live keys, and admins cannot revoke an owner's key.
+      const liveOwnerKey = await apiKeysLib.createApiKey({ actorUserId: ownerId, environment: "live", name: "live-owner", orgId });
+      await assert.rejects(
+        apiKeysLib.revokeApiKey({
+          actorUserId: ownerId,
+          apiKeyId: liveOwnerKey.id,
+          callingKey: { environment: "test", scopes: ["apiKeys.revoke"] },
+          orgId,
+        }),
+        { code: "KEY_NOT_FOUND" },
+      );
+      await assert.rejects(
+        apiKeysLib.revokeApiKey({ actorUserId: adminId, apiKeyId: ownerKey.id, orgId }),
+        AuthorizationError,
+      );
+
       // Sending through a key requires the creator's current messages.send role.
       const memberKey = { actorUserId: memberId, apiKeyId: randomUUID(), environment: "test", orgId, scopes: null };
       await assert.rejects(

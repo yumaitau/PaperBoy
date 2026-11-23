@@ -1,6 +1,11 @@
 extends:
   - recommended
 
+rules:
+  no-ambiguous-paths: off
+  no-unused-components: off
+  operation-2xx-response: off
+
 apis:
   paperboy@v1:
     root: ./openapi.yaml

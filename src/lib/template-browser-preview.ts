@@ -57,11 +57,15 @@ function injectPreviewGuards(documentHtml: string): string {
   return wrapFragment(documentHtml);
 }
 
+const OPEN_TRACKING_PIXEL_PATTERN =
+  /<img[^>]*\bsrc=["'][^"']*\/o\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/[A-Za-z0-9_-]{43}\.gif["'][^>]*>/gi;
+
 export function templateBrowserPreviewDocument(
   html: string,
   options: { showEmptyState?: boolean } = {},
 ): string {
-  const content = html.trim() || (options.showEmptyState ? EMPTY_PREVIEW : "");
+  const sanitized = html.replace(OPEN_TRACKING_PIXEL_PATTERN, "");
+  const content = sanitized.trim() || (options.showEmptyState ? EMPTY_PREVIEW : "");
   if (!content) {
     return wrapFragment("");
   }

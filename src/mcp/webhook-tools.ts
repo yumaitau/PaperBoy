@@ -267,6 +267,10 @@ function errorResult(error: unknown) {
       case "ENDPOINT_DISABLED":
         message = "Enable the webhook before replaying its events.";
         break;
+      case "EVENT_IN_PROGRESS":
+        message =
+          "Wait for the in-progress webhook delivery to finish before replaying it.";
+        break;
       default:
         message =
           "Webhook secret encryption is unavailable. Ask the operator to check PAPERBOY_WEBHOOK_ENCRYPTION_KEY.";

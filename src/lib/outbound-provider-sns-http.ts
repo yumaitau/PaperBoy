@@ -22,9 +22,13 @@ type Dependencies = {
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function json(data: unknown, status: number): Response {
+function json(
+  data: unknown,
+  status: number,
+  headers?: Record<string, string>,
+): Response {
   return Response.json(data, {
-    headers: { "Cache-Control": "no-store" },
+    headers: { "Cache-Control": "no-store", ...headers },
     status,
   });
 }
@@ -109,6 +113,9 @@ export async function handleAwsSesSnsRequest(
       return json({ accepted: false }, 403);
     }
     if (error instanceof OutboundProviderEventError) {
+      if (error.code === "MESSAGE_DELIVERY_PENDING") {
+        return json({ accepted: false }, 503, { "Retry-After": "5" });
+      }
       return json({ accepted: false }, 422);
     }
     console.error("PaperBoy Amazon SNS event handling failed.");

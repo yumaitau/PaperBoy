@@ -114,13 +114,22 @@ export async function processInboundS3Queue(
 
       const parsed = await parseInboundEmailInput({ email: raw });
       // Route by the envelope recipient SES accepted, not the sender-written
-      // To header; fall back to To only when SES did not record a single one.
+      // headers; fall back to To/Cc/Bcc only when SES did not record a single one.
       const envelope = sesEnvelopeRecipient(raw);
-      const orgId = await resolveOrg(envelope ? [envelope] : parsed.to);
+      const fallbackRecipients = [...parsed.to, ...parsed.cc, ...parsed.bcc];
+      const orgId = await resolveOrg(
+        envelope ? [envelope] : fallbackRecipients,
+      );
       if (!orgId) return false;
 
+      const envelopeRecipients = envelope
+        ? [envelope]
+        : parsed.cc.length > 0 || parsed.bcc.length > 0
+          ? fallbackRecipients
+          : undefined;
+
       await receive({
-        ...(envelope ? { envelopeRecipients: [envelope] } : {}),
+        ...(envelopeRecipients ? { envelopeRecipients } : {}),
         payload: { email: raw },
         principal: {
           environment: "live",

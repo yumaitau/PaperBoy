@@ -3,6 +3,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
   attachmentStore as configuredAttachmentStore,
+  verifyStoredAttachment,
   type AttachmentStore,
 } from "@/lib/attachment-storage";
 import {
@@ -360,6 +361,8 @@ export async function downloadSharedAttachment(input: {
   if ("receivedEmailId" in verified) {
     const [row] = await db
       .select({
+        byteSize: receivedEmailAttachments.byteSize,
+        contentSha256: receivedEmailAttachments.contentSha256,
         contentType: receivedEmailAttachments.contentType,
         filename: receivedEmailAttachments.filename,
         storageKey: receivedEmailAttachments.storageKey,
@@ -378,11 +381,18 @@ export async function downloadSharedAttachment(input: {
     }
 
     const bytes = await store.read(row.storageKey);
+    verifyStoredAttachment({
+      content: bytes,
+      contentSha256: row.contentSha256,
+      size: row.byteSize,
+    });
     return { bytes, contentType: row.contentType, filename: row.filename };
   }
 
   const [row] = await db
     .select({
+      byteSize: messageAttachments.byteSize,
+      contentSha256: messageAttachments.contentSha256,
       contentType: messageAttachments.contentType,
       filename: messageAttachments.filename,
       storageKey: messageAttachments.storageKey,
@@ -401,6 +411,11 @@ export async function downloadSharedAttachment(input: {
   }
 
   const bytes = await store.read(row.storageKey);
+  verifyStoredAttachment({
+    content: bytes,
+    contentSha256: row.contentSha256,
+    size: row.byteSize,
+  });
 
   return { bytes, contentType: row.contentType, filename: row.filename };
 }

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import {
   events,
@@ -413,19 +413,31 @@ export async function deleteWebhook(input: {
   await requireWebhookPermission({ ...input, permission: "webhooks.delete" });
   requireWebhookId(input.webhookId);
 
-  const deleted = await db
-    .delete(webhookEndpoints)
-    .where(
-      and(
-        eq(webhookEndpoints.id, input.webhookId),
-        eq(webhookEndpoints.orgId, input.orgId),
-      ),
-    )
-    .returning({ id: webhookEndpoints.id });
+  await db.transaction(async (tx) => {
+    const deleted = await tx
+      .delete(webhookEndpoints)
+      .where(
+        and(
+          eq(webhookEndpoints.id, input.webhookId),
+          eq(webhookEndpoints.orgId, input.orgId),
+        ),
+      )
+      .returning({ id: webhookEndpoints.id });
 
-  if (deleted.length !== 1) {
-    throw new WebhookError("WEBHOOK_NOT_FOUND");
-  }
+    if (deleted.length !== 1) {
+      throw new WebhookError("WEBHOOK_NOT_FOUND");
+    }
+
+    await tx
+      .delete(webhookDeliveries)
+      .where(
+        and(
+          eq(webhookDeliveries.endpointId, input.webhookId),
+          eq(webhookDeliveries.orgId, input.orgId),
+          inArray(webhookDeliveries.status, ["queued"]),
+        ),
+      );
+  });
 }
 
 const deliverySelection = {
@@ -591,50 +603,87 @@ export async function replayWebhookEvent(input: {
   webhookId: string;
 }): Promise<WebhookEventRecord> {
   await requireWebhookPermission({ ...input, permission: "webhooks.manage" });
-  const endpoint = await requireEndpoint(input.orgId, input.webhookId);
-
-  if (!endpoint.enabled) {
-    throw new WebhookError("ENDPOINT_DISABLED");
-  }
+  requireWebhookId(input.webhookId);
 
   if (!UUID_PATTERN.test(input.eventId)) {
     throw new WebhookError("EVENT_NOT_FOUND");
   }
 
   const now = input.now ?? new Date();
-  const [requeued] = await db
-    .update(webhookDeliveries)
-    .set({
-      deliveredAt: null,
-      failedAt: null,
-      failureReason: null,
-      lastErrorCode: null,
-      nextAttemptAt: now,
-      responseStatus: null,
-      status: "queued",
-      updatedAt: now,
-    })
-    .where(
-      and(
-        eq(webhookDeliveries.id, input.eventId),
-        eq(webhookDeliveries.orgId, input.orgId),
-        eq(webhookDeliveries.endpointId, input.webhookId),
-      ),
-    )
-    .returning(deliverySelection);
 
-  if (!requeued) {
-    throw new WebhookError("EVENT_NOT_FOUND");
-  }
+  return db.transaction(async (tx) => {
+    const [endpoint] = await tx
+      .select()
+      .from(webhookEndpoints)
+      .where(
+        and(
+          eq(webhookEndpoints.id, input.webhookId),
+          eq(webhookEndpoints.orgId, input.orgId),
+        ),
+      )
+      .limit(1);
 
-  const [eventRow] = await db
-    .select({ type: events.type })
-    .from(webhookDeliveries)
-    .leftJoin(events, eq(events.id, webhookDeliveries.eventId))
-    .where(eq(webhookDeliveries.id, requeued.id))
-    .limit(1);
+    if (!endpoint) {
+      throw new WebhookError("WEBHOOK_NOT_FOUND");
+    }
 
-  return toEventRecord(requeued, eventRow?.type ?? null);
+    if (!endpoint.enabled) {
+      throw new WebhookError("ENDPOINT_DISABLED");
+    }
+
+    const [existing] = await tx
+      .select({ id: webhookDeliveries.id, status: webhookDeliveries.status })
+      .from(webhookDeliveries)
+      .where(
+        and(
+          eq(webhookDeliveries.id, input.eventId),
+          eq(webhookDeliveries.orgId, input.orgId),
+          eq(webhookDeliveries.endpointId, input.webhookId),
+        ),
+      )
+      .for("update");
+
+    if (!existing) {
+      throw new WebhookError("EVENT_NOT_FOUND");
+    }
+
+    if (existing.status === "sending") {
+      throw new WebhookError("EVENT_IN_PROGRESS");
+    }
+
+    const [requeued] = await tx
+      .update(webhookDeliveries)
+      .set({
+        attemptCount: 0,
+        deliveredAt: null,
+        encryptedSecret: endpoint.encryptedSecret,
+        failedAt: null,
+        failureReason: null,
+        lastErrorCode: null,
+        leaseExpiresAt: null,
+        nextAttemptAt: now,
+        responseStatus: null,
+        status: "queued",
+        updatedAt: now,
+        url: endpoint.url,
+        workerId: null,
+      })
+      .where(eq(webhookDeliveries.id, existing.id))
+      .returning(deliverySelection);
+
+    if (!requeued) {
+      throw new WebhookError("EVENT_NOT_FOUND");
+    }
+
+    const [eventRow] = await tx
+      .select({ type: events.type })
+      .from(webhookDeliveries)
+      .leftJoin(events, eq(events.id, webhookDeliveries.eventId))
+      .where(eq(webhookDeliveries.id, requeued.id))
+      .limit(1);
+
+    return toEventRecord(requeued, eventRow?.type ?? null);
+  });
 }
 
 export async function listWebhookEventAttempts(input: {

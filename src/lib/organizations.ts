@@ -604,6 +604,7 @@ export async function renameOrganization(input: {
 export async function removeOrganizationMember(input: {
   actorUserId: string;
   membershipId: string;
+  orgId?: string;
 }) {
   return db.transaction(async (tx) => {
     const [target] = await tx
@@ -617,6 +618,10 @@ export async function removeOrganizationMember(input: {
       .for("update");
 
     if (!target || !isOrgRole(target.role)) {
+      throw new OrganizationError("MEMBERSHIP_REQUIRED");
+    }
+
+    if (input.orgId && target.orgId !== input.orgId) {
       throw new OrganizationError("MEMBERSHIP_REQUIRED");
     }
 

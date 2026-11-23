@@ -80,7 +80,7 @@ const deliveryStatusSchema = z.object({
     "test-sink",
   ]),
   sentAt: z.iso.datetime({ offset: true }).nullable(),
-  status: z.enum(["queued", "sending", "sent", "failed"]),
+  status: z.enum(["queued", "sending", "sent", "failed", "cancelled"]),
   updatedAt: z.iso.datetime({ offset: true }),
 });
 
@@ -118,7 +118,7 @@ const deliveryListInputSchema = z
     createdAtFrom: z.iso.datetime({ offset: true }).optional(),
     domainId: z.string().uuid().optional(),
     limit: z.number().int().min(1).max(100).optional(),
-    status: z.enum(["queued", "sending", "sent", "failed"]).optional(),
+    status: z.enum(["queued", "sending", "sent", "failed", "cancelled"]).optional(),
   })
   .strict()
   .refine(

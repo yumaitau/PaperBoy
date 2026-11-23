@@ -4,9 +4,12 @@ title = "PaperBoy secret detection"
 useDefault = true
 
 [[allowlists]]
-description = "Published Svix HMAC test-vector secret"
+description = "Published Svix HMAC test-vector secret and documentation placeholder token"
 regexTarget = "secret"
-regexes = ['''^whsec_plJ3nmyCDGBKInavdOK15jsl$''']
+regexes = [
+  '''^whsec_plJ3nmyCDGBKInavdOK15jsl$''',
+  '''^pb_live_\.\.\.$''',
+]
 
 [[rules]]
 id = "paperboy-api-key"

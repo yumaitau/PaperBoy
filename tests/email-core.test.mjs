@@ -351,3 +351,70 @@ test("scheduled_at preserves the instant while delivery timing normalises the pa
     );
   }
 });
+
+test("unquoted display-name address-list injection and control bytes are rejected", () => {
+  const validQuoted = parseSendEmailInput({
+    from: '"Acme, Inc." <sender@example.com>',
+    subject: "Quarterly update",
+    text: "Hello",
+    to: '"Reader; VIP" <reader@example.com>',
+  });
+  assert.equal(validQuoted.from, '"Acme, Inc." <sender@example.com>');
+  assert.deepEqual(validQuoted.to, ['"Reader; VIP" <reader@example.com>']);
+
+  for (const injectedAddress of [
+    "spoofed@evil.com, Legit <sender@verified.com>",
+    "Team; Spoof <sender@verified.com>",
+    "spoofed@evil.com <sender@verified.com>",
+    '"Quoted", spoofed@evil.com <sender@verified.com>',
+    "Sender\u0000 <sender@verified.com>",
+    "sender\u0007@verified.com",
+  ]) {
+    assert.throws(
+      () =>
+        parseSendEmailInput({
+          from: injectedAddress,
+          subject: "Hello",
+          text: "Body",
+          to: "reader@example.com",
+        }),
+      (error) =>
+        error instanceof EmailError &&
+        error.code === "VALIDATION_ERROR" &&
+        error.issues.some((issue) => issue.field === "from"),
+      `expected from=${JSON.stringify(injectedAddress)} to fail`,
+    );
+
+    assert.throws(
+      () =>
+        parseSendEmailInput({
+          from: "sender@example.com",
+          subject: "Hello",
+          text: "Body",
+          to: injectedAddress,
+        }),
+      (error) =>
+        error instanceof EmailError &&
+        error.code === "VALIDATION_ERROR" &&
+        error.issues.some((issue) => issue.field === "to.0"),
+      `expected to=${JSON.stringify(injectedAddress)} to fail`,
+    );
+  }
+
+  for (const badSubject of ["Hello\u0000World", "Tab\tSubject", "Bell\u0007", "Del\u007f"]) {
+    assert.throws(
+      () =>
+        parseSendEmailInput({
+          from: "sender@example.com",
+          subject: badSubject,
+          text: "Body",
+          to: "reader@example.com",
+        }),
+      (error) =>
+        error instanceof EmailError &&
+        error.code === "VALIDATION_ERROR" &&
+        error.issues.some((issue) => issue.field === "subject"),
+      `expected subject=${JSON.stringify(badSubject)} to fail`,
+    );
+  }
+});

@@ -33,15 +33,15 @@
   --sidebar: #dce7e7;
   --sidebar-muted: #cfdddd;
   --ink: #1d2928;
-  --ink-muted: #66706b;
+  --ink-muted: #525c57;
   --postal-blue: #275f91;
   --postal-blue-dark: #174a74;
   --postal-blue-light: #afc9da;
   --airmail-red: #a45648;
   --tape: #d9c48f;
   --line: #d8d2c6;
-  --success: #66805c;
-  --warning: #8b6938;
+  --success: #436139;
+  --warning: #755524;
   --error: #8f433f;
   --paper-shadow:
     0 1px 1px rgba(53, 43, 26, 0.08),
@@ -2390,7 +2390,7 @@ body:has(.broadcast-workspace) {
 .delivery-counts {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   margin-bottom: 16px;
   width: 100%;
 }
@@ -4072,6 +4072,8 @@ body:has(.broadcast-workspace) {
   *,
   *::before,
   *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }

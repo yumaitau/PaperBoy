@@ -15,8 +15,20 @@ test("delivery events still upgrade a sent message", () => {
     "opened",
   );
   assert.equal(
-    resolveDashboardEmailStatus("sent", ["queued", "bounced"]),
+    resolveDashboardEmailStatus("sent", ["queued", "delivered", "opened", "clicked"]),
+    "clicked",
+  );
+  assert.equal(
+    resolveDashboardEmailStatus("failed", ["queued", "opened", "clicked"]),
+    "failed",
+  );
+  assert.equal(
+    resolveDashboardEmailStatus("sent", ["queued", "clicked", "bounced"]),
     "bounced",
+  );
+  assert.equal(
+    resolveDashboardEmailStatus("sent", ["queued", "clicked", "complained"]),
+    "complained",
   );
 });
 

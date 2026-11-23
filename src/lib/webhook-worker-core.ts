@@ -87,7 +87,7 @@ function httpFailure(status: number): WebhookDeliveryError {
     code: `webhook_http_${status}`,
     reason: `Webhook endpoint returned ${status}.`,
     responseStatus: status,
-    retryable: status >= 500,
+    retryable: status === 408 || status === 429 || status >= 500,
   });
 }
 

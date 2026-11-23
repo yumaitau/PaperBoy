@@ -21,21 +21,24 @@ test("dashboard aggregation preserves timezone totals; broadcast list uses const
   const actorUserId = randomUUID();
   const domainId = randomUUID();
   const messageId = randomUUID();
+  const earlierMessageId = randomUUID();
   const now = new Date("2026-10-05T12:00:00Z");
   const eventRows = [
-    ["2026-01-01T00:00:00Z", "delivered"],
-    ["2026-09-21T14:00:00Z", "delivered"],
-    ["2026-09-28T13:59:59.999Z", "delivered"],
-    ["2026-09-28T14:00:00Z", "delivered"],
-    ["2026-10-03T15:59:59.999Z", "bounced"],
-    ["2026-10-03T16:00:00Z", "complained"],
-    ["2026-10-04T12:59:59.999Z", "opened"],
-    ["2026-10-04T13:00:00Z", "delivered"],
-    ["2026-10-05T13:00:00Z", "delivered"],
-    ["2026-10-07T00:00:00Z", "delivered"],
-    ["2026-10-04T00:00:00Z", "queued"],
-    ...Array.from({ length: 500 }, () => ["2026-10-04T00:00:00Z", "delivered"]),
-  ].map(([createdAt, type]) => ({ createdAt: new Date(createdAt), type, messageId }));
+    ["2026-01-01T00:00:00Z", "delivered", messageId],
+    ["2026-09-21T14:00:00Z", "delivered", messageId],
+    ["2026-09-28T13:59:59.999Z", "delivered", messageId],
+    ["2026-09-28T14:00:00Z", "delivered", messageId],
+    ["2026-10-03T15:59:59.999Z", "bounced", messageId],
+    ["2026-10-03T16:00:00Z", "complained", messageId],
+    ["2026-10-04T12:59:59.999Z", "opened", messageId],
+    ["2026-10-04T12:59:59.999Z", "clicked", messageId],
+    ["2026-09-25T12:00:00Z", "clicked", earlierMessageId],
+    ["2026-10-04T13:00:00Z", "delivered", messageId],
+    ["2026-10-05T13:00:00Z", "delivered", messageId],
+    ["2026-10-07T00:00:00Z", "delivered", messageId],
+    ["2026-10-04T00:00:00Z", "queued", messageId],
+    ...Array.from({ length: 500 }, () => ["2026-10-04T00:00:00Z", "delivered", messageId]),
+  ].map(([createdAt, type, id]) => ({ createdAt: new Date(createdAt), type, messageId: id }));
   const originalLogger = db.session.logger;
 
   try {
@@ -43,7 +46,10 @@ test("dashboard aggregation preserves timezone totals; broadcast list uses const
     await db.insert(users).values({ id: actorUserId, email: `${actorUserId}@example.com`, name: "Owner" });
     await db.insert(orgMembers).values({ orgId, userId: actorUserId, role: "owner" });
     await db.insert(domains).values({ id: domainId, orgId, name: `${domainId}.example.com` });
-    await db.insert(messages).values({ id: messageId, orgId, domainId, from: "sender@example.com", to: ["reader@example.com"], subject: "Performance", textBody: "Hello", createdAt: now });
+    await db.insert(messages).values([
+      { id: messageId, orgId, domainId, from: "sender@example.com", to: ["reader@example.com"], subject: "Performance", textBody: "Hello", createdAt: now },
+      { id: earlierMessageId, orgId, domainId, from: "sender@example.com", to: ["reader@example.com"], subject: "Earlier click", textBody: "Hello", createdAt: new Date("2026-09-25T12:00:00Z") },
+    ]);
     await db.insert(events).values(eventRows);
 
     // ICU versions differ on Kathmandu's canonical spelling; use the runtime's
@@ -59,7 +65,7 @@ test("dashboard aggregation preserves timezone totals; broadcast list uses const
       for (const range of [7, 14, 30, "all"]) {
         const dashboard = await getPaperBoyDashboard({ actorUserId, orgId, now, range, timeZone });
         const window = dashboardWindow({ range, today: localDateKey(now, timeZone) });
-        for (const type of ["delivered", "opened", "bounced", "complained"]) {
+        for (const type of ["delivered", "opened", "clicked", "bounced", "complained"]) {
           const matching = eventRows.filter((event) => event.type === type).map((event) => localDateKey(event.createdAt, timeZone));
           const current = matching.filter((date) => (!window.currentStartKey || date >= window.currentStartKey) && date < window.endKey).length;
           const previous = matching.filter((date) => window.previousStartKey && date >= window.previousStartKey && date < window.currentStartKey).length;
@@ -77,6 +83,7 @@ test("dashboard aggregation preserves timezone totals; broadcast list uses const
           }
         }
         assert.equal(dashboard.recentEmails[0].status, "complained");
+        assert.equal(dashboard.recentEmails[1].status, "clicked");
       }
     }
     await assert.rejects(getPaperBoyDashboard({ actorUserId, orgId: otherOrgId, now, range: 7, timeZone: "UTC" }));

@@ -5,7 +5,11 @@ import { authClient } from "@/lib/auth-client";
 
 type VerificationMethod = "backup" | "totp";
 
-export function TwoFactorForm() {
+export function TwoFactorForm({
+  callbackURL = "/app",
+}: {
+  callbackURL?: string;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [method, setMethod] = useState<VerificationMethod>("totp");
@@ -38,7 +42,7 @@ export function TwoFactorForm() {
       return;
     }
 
-    window.location.replace("/app");
+    window.location.replace(callbackURL);
   }
 
   return (

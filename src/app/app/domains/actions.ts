@@ -192,7 +192,29 @@ export async function updateDomainClickTrackingAction(formData: FormData) {
       },
     });
   } catch (error) {
-    errorRedirect(error);
+    if (error instanceof AuthorizationError) {
+      redirect("/app/organization?error=forbidden");
+    }
+
+    if (error instanceof DomainError) {
+      redirect(
+        error.code === "MEMBERSHIP_REQUIRED"
+          ? "/app/organization?error=membership_required"
+          : "/app/organization?error=provider_domain_not_found",
+      );
+    }
+
+    if (error instanceof ClickTrackingError) {
+      redirect(
+        error.code === "NOT_FOUND"
+          ? "/app/organization?error=provider_domain_not_found"
+          : error.code === "MEMBERSHIP_REQUIRED"
+            ? "/app/organization?error=membership_required"
+            : "/app/organization?error=invalid_click_tracking",
+      );
+    }
+
+    throw error;
   }
 
   revalidatePath("/app/organization");

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { ApiKeyError, createApiKey, deleteApiKey, revokeApiKey } from "@/lib/api-keys";
 import { isApiKeyTtl, apiKeyExpiryForTtl } from "@/lib/api-key-ttl";
 import { AuthorizationError } from "@/lib/authorization";
-import { requireOrganization, requireSession } from "@/lib/session";
+import { requireOrganization } from "@/lib/session";
 
 export type CreateApiKeyState = {
   display: string | null;
@@ -78,12 +78,13 @@ export async function createApiKeyAction(
 }
 
 export async function revokeApiKeyAction(formData: FormData) {
-  const session = await requireSession();
+  const { organization, session } = await requireOrganization();
 
   try {
     await revokeApiKey({
       actorUserId: session.user.id,
       apiKeyId: String(formData.get("apiKeyId")),
+      orgId: organization.id,
     });
   } catch (error) {
     redirect(

@@ -824,7 +824,12 @@ export async function updateScheduledBroadcast(
 
   const runAt = await db.transaction(async (tx) => {
     const [locked] = await tx
-      .select({ scheduledFor: broadcasts.scheduledFor, status: broadcasts.status })
+      .select({
+        scheduledFor: broadcasts.scheduledFor,
+        status: broadcasts.status,
+        templateHtml: broadcasts.templateHtml,
+        templateText: broadcasts.templateText,
+      })
       .from(broadcasts)
       .where(
         and(
@@ -836,6 +841,27 @@ export async function updateScheduledBroadcast(
     if (!locked) throw new BroadcastError("BROADCAST_NOT_FOUND");
     if (locked.status !== "scheduled" || !locked.scheduledFor) {
       throw new BroadcastError("INVALID_TRANSITION");
+    }
+
+    const nextTemplateText =
+      template && templateBodies ? templateBodies.text : locked.templateText;
+    const nextTemplateHtml =
+      definition.html !== undefined
+        ? withUnsubscribeFooter({
+            html: definition.html,
+            text: nextTemplateText,
+          }).html
+        : template && templateBodies
+          ? templateBodies.html
+          : locked.templateHtml;
+
+    if (nextTemplateHtml === null && nextTemplateText === null) {
+      throw new BroadcastError("VALIDATION_ERROR", [
+        {
+          field: "html",
+          message: "A broadcast requires an HTML or plain-text body.",
+        },
+      ]);
     }
 
     await tx
@@ -861,12 +887,7 @@ export async function updateScheduledBroadcast(
           : {}),
         ...(definition.subject ? { templateSubject: definition.subject } : {}),
         ...(definition.html !== undefined
-          ? {
-              templateHtml: withUnsubscribeFooter({
-                html: definition.html,
-                text: templateBodies?.text ?? current.templateText,
-              }).html,
-            }
+          ? { templateHtml: nextTemplateHtml }
           : {}),
         updatedAt: now,
       })
@@ -1250,23 +1271,35 @@ export async function sendBroadcast(
     ]);
   }
 
-  const current = await readBroadcastRow(input);
+  await db.transaction(async (tx) => {
+    const [locked] = await tx
+      .select({ status: broadcasts.status })
+      .from(broadcasts)
+      .where(
+        and(eq(broadcasts.id, input.broadcastId), eq(broadcasts.orgId, input.orgId)),
+      )
+      .for("update");
 
-  if (current.status !== "scheduled" && current.status !== "paused") {
-    throw new BroadcastError("INVALID_TRANSITION");
-  }
+    if (!locked) {
+      throw new BroadcastError("BROADCAST_NOT_FOUND");
+    }
 
-  await db
-    .update(broadcasts)
-    .set({
-      pausedAt: null,
-      scheduledFor: scheduledAt,
-      status: scheduledAt ? "scheduled" : "running",
-      updatedAt: now,
-    })
-    .where(
-      and(eq(broadcasts.id, input.broadcastId), eq(broadcasts.orgId, input.orgId)),
-    );
+    if (locked.status !== "scheduled" && locked.status !== "paused") {
+      throw new BroadcastError("INVALID_TRANSITION");
+    }
+
+    await tx
+      .update(broadcasts)
+      .set({
+        pausedAt: null,
+        scheduledFor: scheduledAt,
+        status: scheduledAt ? "scheduled" : "running",
+        updatedAt: now,
+      })
+      .where(
+        and(eq(broadcasts.id, input.broadcastId), eq(broadcasts.orgId, input.orgId)),
+      );
+  });
 
   requestBroadcastJob({
     broadcastId: input.broadcastId,

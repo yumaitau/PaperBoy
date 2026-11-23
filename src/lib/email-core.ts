@@ -134,7 +134,7 @@ function parseAddress(value: unknown) {
 
   const input = value.trim();
 
-  if (!input || input.length > 320 || /[\r\n]/.test(input)) {
+  if (!input || input.length > 320 || /[\u0000-\u001f\u007f]/.test(input)) {
     return null;
   }
 
@@ -145,6 +145,7 @@ function parseAddress(value: unknown) {
   if (
     (!friendly && /[<>]/.test(address)) ||
     /[<>\r\n]/.test(displayName) ||
+    (/[,;@]/.test(displayName) && !/^"(?:[^"\\]|\\.)*"$/.test(displayName)) ||
     address.length > MAX_ADDRESS_LENGTH
   ) {
     return null;
@@ -698,7 +699,7 @@ export function parseSendEmailInput(
     typeof subject !== "string" ||
     subject.trim().length === 0 ||
     subject.length > MAX_SUBJECT_LENGTH ||
-    /[\r\n]/.test(subject)
+    /[\u0000-\u001f\u007f]/.test(subject)
   ) {
     issues.push({
       field: "subject",

@@ -85,6 +85,7 @@ export async function rescheduleEmail(input: {
     const [row] = await tx
       .select({
         apiKeyId: messages.apiKeyId,
+        attemptCount: messages.attemptCount,
         id: messages.id,
         nextAttemptAt: messages.nextAttemptAt,
         status: messages.status,
@@ -111,16 +112,16 @@ export async function rescheduleEmail(input: {
         updatedAt: now,
       })
       .where(eq(messages.id, row.id));
-    return { nextAttemptAt: previousRunAt };
+    return { attemptCount: row.attemptCount, nextAttemptAt: previousRunAt };
   });
 
   await removeMessageJob({
-    attemptCount: 0,
+    attemptCount: locked.attemptCount,
     messageId: input.messageId,
     runAt: locked.nextAttemptAt,
   });
   requestMessageJob({
-    attemptCount: 0,
+    attemptCount: locked.attemptCount,
     messageId: input.messageId,
     runAt: scheduledAt ?? now,
   });
@@ -139,6 +140,7 @@ export async function cancelEmail(input: {
     await requireSendPermission(tx, input.principal);
     const [row] = await tx
       .select({
+        attemptCount: messages.attemptCount,
         createdAt: messages.createdAt,
         id: messages.id,
         nextAttemptAt: messages.nextAttemptAt,
@@ -173,11 +175,11 @@ export async function cancelEmail(input: {
       messageId: row.id,
       type: "cancelled",
     });
-    return { nextAttemptAt: row.nextAttemptAt };
+    return { attemptCount: row.attemptCount, nextAttemptAt: row.nextAttemptAt };
   });
 
   await removeMessageJob({
-    attemptCount: 0,
+    attemptCount: locked.attemptCount,
     messageId: input.messageId,
     runAt: locked.nextAttemptAt,
   });

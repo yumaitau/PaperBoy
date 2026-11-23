@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { ProviderAwsSesConfiguration } from "@/lib/outbound-provider-configuration";
 import type { OutboundDeliveryMessage } from "@/lib/outbound-provider-core";
 
+export const AWS_SES_MAX_INLINE_DELAY_MS = 5_000;
 export const AWS_SES_QUOTA_REFRESH_MS = 60_000;
 export const AWS_SES_RATE_UTILIZATION = 0.8;
 export const AWS_SES_DAILY_UTILIZATION = 0.9;
@@ -90,12 +91,18 @@ export function awsSesQuotaScopeHash(
 
 export function awsSesReservationKey(
   messages: readonly OutboundDeliveryMessage[],
+  nonce?: string,
 ): string {
   const hash = createHash("sha256");
   for (const message of messages) {
     hash.update(message.id);
     hash.update(":");
     hash.update(String(message.attemptCount));
+    hash.update("\0");
+  }
+  if (nonce) {
+    hash.update("nonce:");
+    hash.update(nonce);
     hash.update("\0");
   }
   return hash.digest("hex");

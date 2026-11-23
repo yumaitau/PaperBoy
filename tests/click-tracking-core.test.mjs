@@ -187,3 +187,36 @@ test("non-http targets are never trackable", () => {
   assert.equal(isTrackableUrl("https://example.com"), true);
   assert.equal(isTrackableUrl("http://example.com"), true);
 });
+
+test("HTML entities in anchor hrefs are decoded before signing and link tags are untouched", () => {
+  const html = [
+    '<head><link rel="stylesheet" href="https://example.com/app.css"></head>',
+    '<body><a href="https://example.com/path?a=1&amp;b=2">Open</a></body>',
+  ].join("");
+  const { html: rewritten, rewritten: count } = rewriteHtmlLinksForMessage({
+    baseUrl: "https://mail.example.com",
+    html,
+    key,
+    messageId,
+  });
+
+  assert.equal(count, 1);
+  assert.ok(
+    rewritten.includes('<link rel="stylesheet" href="https://example.com/app.css">'),
+  );
+  const anchorHref = rewritten.match(/<a href="([^"]+)">Open<\/a>/)?.[1];
+  assert.ok(anchorHref);
+  const parsed = new URL(anchorHref.replaceAll("&amp;", "&"));
+  const expectedTarget = "https://example.com/path?a=1&b=2";
+  assert.equal(parsed.searchParams.get("u"), expectedTarget);
+  const signature = parsed.pathname.split("/").at(-1) ?? "";
+  assert.equal(
+    verifyClickTrackingSignature({
+      key,
+      messageId,
+      signature,
+      targetUrl: expectedTarget,
+    }),
+    true,
+  );
+});

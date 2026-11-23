@@ -13,6 +13,7 @@ import {
   createAwsSesAdapter,
   mapAwsSesEvent,
 } from "../src/lib/aws-ses-adapter.ts";
+import { AWS_SES_MAX_INLINE_DELAY_MS } from "../src/lib/aws-ses-quota.ts";
 import { OutboundDeliveryError } from "../src/lib/worker-core.ts";
 
 const messageId = "11111111-1111-4111-8111-111111111111";
@@ -486,4 +487,120 @@ test("recorded SNS and EventBridge fixtures map to stable events and safe suppre
   assert.equal(delay[0].data.delay_type, "MailboxFull");
   assert.equal(JSON.stringify(bounce[0].data).includes("reader@example.net"), false);
   assert.equal(JSON.stringify(bounce[0].data).includes("smtp"), false);
+});
+
+test("SES validates envelope before reserving quota and never retries post-accept missing MessageId", async () => {
+  let reserved = false;
+  const invalidFromAdapter = createAwsSesAdapter({
+    client: {
+      async send() {
+        throw new Error("should not call SES");
+      },
+    },
+    configuration,
+    quotaGuard: {
+      async reserve() {
+        reserved = true;
+        return { delayMs: 0, scheduledAt: new Date() };
+      },
+    },
+  });
+  await assert.rejects(
+    invalidFromAdapter.send(message({ from: "not-an-email" })),
+    (error) =>
+      error instanceof OutboundDeliveryError &&
+      error.code === "invalid_envelope" &&
+      error.retryable === false,
+  );
+  assert.equal(reserved, false);
+
+  const missingIdAdapter = createAwsSesAdapter({
+    client: {
+      async send() {
+        return {};
+      },
+    },
+    configuration,
+  });
+  await assert.rejects(
+    missingIdAdapter.send(message()),
+    (error) =>
+      error instanceof OutboundDeliveryError &&
+      error.code === "aws_ses_invalid_response" &&
+      error.retryable === false,
+  );
+});
+
+test("SES quota reservations use a fresh nonce on retry and defer inline delays above the cap", async () => {
+  const reservations = [];
+  const sleeps = [];
+  const commands = [];
+  const scheduledAt = new Date("2026-08-24T01:00:10.000Z");
+  let callIndex = 0;
+
+  const adapter = createAwsSesAdapter({
+    client: {
+      async send(command) {
+        commands.push(command);
+        return command instanceof GetAccountCommand
+          ? {
+              ProductionAccessEnabled: true,
+              SendQuota: {
+                Max24HourSend: 50_000,
+                MaxSendRate: 14,
+                SentLast24Hours: 0,
+              },
+              SendingEnabled: true,
+            }
+          : { MessageId: "010001-nonce-send" };
+      },
+    },
+    configuration,
+    now: () => new Date("2026-08-24T01:00:00.000Z"),
+    quotaGuard: {
+      async reserve(input) {
+        reservations.push(input);
+        callIndex += 1;
+        if (callIndex === 1) {
+          return {
+            delayMs: AWS_SES_MAX_INLINE_DELAY_MS + 1,
+            scheduledAt,
+          };
+        }
+        return {
+          delayMs: 0,
+          scheduledAt: input.now,
+        };
+      },
+    },
+    async sleep(delayMs) {
+      sleeps.push(delayMs);
+    },
+  });
+
+  const payload = message({ attemptCount: 1 });
+  await assert.rejects(
+    adapter.send(payload),
+    (error) =>
+      error instanceof OutboundDeliveryError &&
+      error.code === "aws_ses_rate_quota_deferred" &&
+      error.consumeAttempt === false &&
+      error.retryable === true &&
+      error.retryAt?.getTime() === scheduledAt.getTime(),
+  );
+  assert.deepEqual(sleeps, []);
+  assert.equal(
+    commands.filter((command) => command instanceof SendEmailCommand).length,
+    0,
+  );
+
+  const result = await adapter.send(payload);
+  assert.deepEqual(result, { providerMessageId: "010001-nonce-send" });
+  assert.equal(reservations.length, 2);
+  assert.match(reservations[0].reservationKey, /^[0-9a-f]{64}$/);
+  assert.match(reservations[1].reservationKey, /^[0-9a-f]{64}$/);
+  assert.notEqual(
+    reservations[0].reservationKey,
+    reservations[1].reservationKey,
+  );
 });

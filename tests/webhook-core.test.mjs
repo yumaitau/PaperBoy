@@ -125,6 +125,8 @@ test("webhook URLs require HTTPS except explicit loopback development", () => {
     { url: "http://hooks.example.com/events" },
     { url: "https://user:pass@hooks.example.com/events" },
     { url: "https://hooks.example.com/events#secret" },
+    { url: "https://localhost./events" },
+    { url: "https://sub.localhost./events" },
     { url: "file:///tmp/webhook" },
     { extra: true, url: "https://hooks.example.com/events" },
   ]) {

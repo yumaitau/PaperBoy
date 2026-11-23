@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { decodeHTML } from "entities";
 import {
   openTrackingPublicUrl,
   parseOpenTrackingSigningKey,
@@ -181,6 +182,7 @@ function escapeHtmlAttribute(value: string): string {
   return value
     .replaceAll("&", "&amp;")
     .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
 }
@@ -191,16 +193,26 @@ export function rewriteHtmlLinks(input: {
 }): { html: string; rewritten: number } {
   let rewritten = 0;
   const html = input.html.replaceAll(
-    /href\s*=\s*("([^"]*)"|'([^']*)')/gi,
-    (match, _quoted: string, doubleQuoted?: string, singleQuoted?: string) => {
-      const quote = match.includes('"') ? '"' : "'";
-      const target = (doubleQuoted ?? singleQuoted ?? "").trim();
-      if (!isTrackableUrl(target)) return match;
-      // Never double-wrap an already-signed PaperBoy redirect.
-      if (/\/c\/[0-9a-f-]{36}\//i.test(target)) return match;
-      rewritten += 1;
-      return `href=${quote}${escapeHtmlAttribute(input.rewrite(target))}${quote}`;
-    },
+    /<(?:a|area)\b(?:"[^"]*"|'[^']*'|[^>"'])*>/gi,
+    (tag) =>
+      tag.replaceAll(
+        /(\s)href\s*=\s*("([^"]*)"|'([^']*)')/gi,
+        (
+          match,
+          leadingSpace: string,
+          quoted: string,
+          doubleQuoted?: string,
+          singleQuoted?: string,
+        ) => {
+          const quote = quoted[0] === '"' ? '"' : "'";
+          const target = decodeHTML(doubleQuoted ?? singleQuoted ?? "").trim();
+          if (!isTrackableUrl(target)) return match;
+          // Never double-wrap an already-signed PaperBoy redirect.
+          if (/\/c\/[0-9a-f-]{36}\//i.test(target)) return match;
+          rewritten += 1;
+          return `${leadingSpace}href=${quote}${escapeHtmlAttribute(input.rewrite(target))}${quote}`;
+        },
+      ),
   );
   return { html, rewritten };
 }

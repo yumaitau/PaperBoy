@@ -60,6 +60,10 @@ test("invitation IDs are not inbox proof; emailed tokens and verified legacy rec
     const [stored] = await db.select().from(schema.orgInvites).where(eq(schema.orgInvites.id, result.invitation.id));
     assert.equal(stored.tokenHash, createHash("sha256").update(token).digest("hex"));
     const listed = await services.list({ actorUserId: memberId, apiKeyId: randomUUID(), orgId, environment: "live", scopes: ["members.read"] });
+    assert.throws(
+      () => services.invite({ actorUserId: ownerId, apiKeyId: randomUUID(), orgId, environment: "test", scopes: ["members.invite"] }, { email: `${randomUUID()}@example.test`, role: "member" }),
+      (error) => error.name === "AuthorizationError",
+    );
     const pending = await organizations.listPendingInvitationsForUser(email);
     for (const data of [result, listed, pending]) {
       assert.equal(JSON.stringify(data).includes(token), false);

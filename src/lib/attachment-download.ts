@@ -15,6 +15,7 @@ export function attachmentDownloadResponse(attachment: {
       "Cache-Control": "private, max-age=3600",
       "Content-Disposition": `attachment; filename="${fallback}"; filename*=UTF-8''${encoded}`,
       "Content-Type": attachment.contentType,
+      "X-Content-Type-Options": "nosniff",
     },
     status: 200,
   });

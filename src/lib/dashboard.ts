@@ -94,6 +94,7 @@ export type PaperBoyDashboardExport = {
 
 type DashboardEventType =
   | "bounced"
+  | "clicked"
   | "complained"
   | "delivered"
   | "opened";
@@ -101,6 +102,7 @@ type DashboardEventType =
 const EVENT_TYPES: DashboardEventType[] = [
   "delivered",
   "opened",
+  "clicked",
   "bounced",
   "complained",
 ];
@@ -111,7 +113,7 @@ function percentageDelta(current: number, previous: number): number | null {
 }
 
 function emptyBucketCounts() {
-  return { bounced: 0, complained: 0, delivered: 0, opened: 0 };
+  return { bounced: 0, clicked: 0, complained: 0, delivered: 0, opened: 0 };
 }
 
 export async function getPaperBoyDashboard(input: {
@@ -208,7 +210,6 @@ export async function getPaperBoyDashboard(input: {
       plan.keys.map((key) => bucketCounts.get(key)?.[type] ?? 0),
     ]),
   ) as Record<DashboardEventType, number[]>;
-  const emptyTrend = plan.keys.map(() => 0);
   const periodDelta = (current: number, previous: number) =>
     comparison === "none" ? null : percentageDelta(current, previous);
   const metrics: DashboardMetric[] = [
@@ -230,12 +231,11 @@ export async function getPaperBoyDashboard(input: {
     },
     {
       comparison,
-      delta: null,
+      delta: periodDelta(currentCounts.clicked, previousCounts.clicked),
       id: "clicked",
       label: "Clicked",
-      note: "Click events are not collected yet.",
-      trend: emptyTrend,
-      value: null,
+      trend: trends.clicked,
+      value: currentCounts.clicked,
     },
     {
       comparison,
@@ -259,7 +259,7 @@ export async function getPaperBoyDashboard(input: {
     return {
       bounced: counts.bounced,
       bucket: key,
-      clicked: 0,
+      clicked: counts.clicked,
       complained: counts.complained,
       delivered: counts.delivered,
       opened: counts.opened,

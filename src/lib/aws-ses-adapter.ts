@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   GetAccountCommand,
   ListEmailIdentitiesCommand,
@@ -15,6 +15,7 @@ import { normalizeSendingDomain } from "@/lib/domain-core";
 import { buildSmtpMimeMessage } from "@/lib/email-delivery";
 import { normalizeEmailAddress } from "@/lib/email-core";
 import {
+  AWS_SES_MAX_INLINE_DELAY_MS,
   AWS_SES_QUOTA_REFRESH_MS,
   awsSesQuotaScopeHash,
   awsSesReservationKey,
@@ -634,7 +635,7 @@ export function createAwsSesAdapter(
     const reservation = await input.quotaGuard.reserve({
       now: now(),
       recipientCount,
-      reservationKey: awsSesReservationKey(messages),
+      reservationKey: awsSesReservationKey(messages, randomUUID()),
       scopeHash,
       snapshot,
     });
@@ -645,6 +646,16 @@ export function createAwsSesAdapter(
         reason:
           "Amazon SES rolling quota has no safe recipient capacity; delivery remains queued.",
         retryAt: reservation.retryAt,
+        retryable: true,
+      });
+    }
+    if (reservation.delayMs > AWS_SES_MAX_INLINE_DELAY_MS) {
+      throw new OutboundDeliveryError({
+        code: "aws_ses_rate_quota_deferred",
+        consumeAttempt: false,
+        reason:
+          "Amazon SES send rate pacing deferred this message to a later BullMQ retry.",
+        retryAt: reservation.scheduledAt,
         retryable: true,
       });
     }
@@ -746,9 +757,6 @@ export function createAwsSesAdapter(
           retryable: false,
         });
       }
-      if (input.quotaGuard) {
-        await reserve([message], await quotaSnapshot());
-      }
       const envelopeFrom = normalizeEmailAddress(message.from);
       if (!envelopeFrom) {
         throw new OutboundDeliveryError({
@@ -764,6 +772,9 @@ export function createAwsSesAdapter(
         extraHeaders: { "X-PaperBoy-Message-ID": message.id },
         messageId: `<${message.id}@${senderDomain}>`,
       });
+      if (input.quotaGuard) {
+        await reserve([message], await quotaSnapshot());
+      }
       try {
         const output = (await client.send(
           new SendEmailCommand({
@@ -799,7 +810,7 @@ export function createAwsSesAdapter(
           throw new OutboundDeliveryError({
             code: "aws_ses_invalid_response",
             reason: "Amazon SES accepted the request without a usable message ID.",
-            retryable: true,
+            retryable: false,
           });
         }
         return { providerMessageId };

@@ -104,10 +104,18 @@ export function MessageLogTable({
     setSelected(row);
     setResult(null);
     setLoading(true);
-    const loaded = await getMessageDrawerAction(row.id);
-    if (requestToken.current !== token) return;
-    setResult(loaded);
-    setLoading(false);
+    try {
+      const loaded = await getMessageDrawerAction(row.id);
+      if (requestToken.current !== token) return;
+      setResult(loaded);
+    } catch {
+      if (requestToken.current !== token) return;
+      setResult({ error: "Could not load that message.", ok: false });
+    } finally {
+      if (requestToken.current === token) {
+        setLoading(false);
+      }
+    }
   }
 
   function openFromKeyboard(
